@@ -1,9 +1,9 @@
 # LearnBot Lab - Project Plan
 
-AI tutor for maritime crew training. Upload a training document, ask doubts, take quizzes, see weak topics.
+AI tutor for maritime crew training. The user uploads their own PDFs; LearnBot explains and quizzes only from them, and shows weak topics. It must work on any readable PDF, not one fixed book.
 Built from scratch by Hari P (Data Science Intern). Idea inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache 2.0); all code here is our own.
 
-Status: Phase 1 (Data) in progress · Started 30 Oct 2026 · Target: ~5 working days
+Status: Phase 1 (Data) done, Phase 2 (Eval set) next · Started 30 Oct 2026 · Target: ~5 working days
 
 ---
 
@@ -13,7 +13,7 @@ Status: Phase 1 (Data) in progress · Started 30 Oct 2026 · Target: ~5 working 
 |---|---|
 | **User** | Ship crew, cadets and freshers studying a maritime topic |
 | **Problem** | Long rule books are hard to read alone, there is no one to ask doubts, and it is hard to know what you have really learned |
-| **Solution** | Upload a PDF, then (a) ask doubts and get an explanation with the exact source, (b) take quizzes made from the document, (c) see weak topics and practise them again |
+| **Solution** | Upload any PDF (it is self-checked first), then (a) ask doubts and get an explanation with the exact source, (b) take quizzes made from the document, (c) see weak topics and practise them again |
 | **Not in v1** | Login, video, voice, company documents, own backend API |
 
 ### Success metrics (must pass before "done")
@@ -30,17 +30,22 @@ Status: Phase 1 (Data) in progress · Started 30 Oct 2026 · Target: ~5 working 
 
 ## 1. Data
 
-- **Document:** USCG Navigation Rules and Regulations Handbook (COLREGs), corrected Aug 2024, 202 pages
+LearnBot is upload-based: users bring their own PDFs. The files below are only for testing.
+
+- **First test file:** USCG Navigation Rules and Regulations Handbook (COLREGs), corrected Aug 2024, 202 pages
 - **Source:** https://www.navcen.uscg.gov/navigation-rules-amalgamated (US Coast Guard NAVCEN, US government work)
 - **Stored at:** `data/raw/nav_rules.pdf` (not committed; README explains how to download)
-- **Data check (EDA) to do:** text vs scanned pages, characters per page, page layout (columns, International vs Inland text), rule numbering, tables/annexes, headers/footers to clean
+- **Later test files:** 1-2 more public PDFs with a different layout (e.g. a numbered-section manual), to prove nothing is book-specific
+- **Upload self-check (part of v1):** `src/learnbot/pdf_check.py` runs on every upload: size (max 50 MB), opens / password, pages (max 1000), text per page, low-text (scanned?) pages, tables, sample text, general heading finder (Rule / Section / Chapter / Article / Part / Annex / Appendix / 1.2) with numbering gaps, verdict OK / WARNING / FAIL. Limits and thresholds in `src/learnbot/config.py`
+- **Findings on nav_rules.pdf** (`reports/data_check_nav_rules.md`): verdict OK; Rule 1-38 and Annex I-V all found, no gaps; 12 blank divider pages; 15 pages with tables; table of contents on pages 4-5
+- **Cleaning rules for Phase 4:** cover page text is tripled by bold print (`IISSBBNN`; pdfplumber `dedupe_chars()` fixes it); some pages (e.g. 160) are two columns that get mixed line by line; International and Inland versions of the same rule sit on facing pages (headers `—INTERNATIONAL—` / `—INLAND—`) and must be kept apart
 
 ---
 
 ## 2. Architecture (v1)
 
 ```
-PDF -> read pages (pdfplumber) -> clean -> split by rule/section -> embeddings (local, sentence-transformers)
+PDF upload -> self-check (OK / WARNING / FAIL) -> read pages (pdfplumber) -> clean -> split by rule/section -> embeddings (local, sentence-transformers)
     -> vector store (ChromaDB, local) -> search top 3-5 pieces
     -> LLM writes answer / quiz (Gemini main, Groq fallback) -> checks -> Streamlit app
 progress (scores per topic) -> local file/SQLite
@@ -57,7 +62,7 @@ progress (scores per topic) -> local file/SQLite
 | # | Phase | Output | Done when |
 |---|---|---|---|
 | 0 | Problem framing | This plan | Hari agrees |
-| 1 | Data | `notebooks/01_data_check` or `scripts/data_check.py` + notes | We know layout, issues, cleaning rules |
+| 1 | Data + upload self-check | `src/learnbot/pdf_check.py`, `scripts/data_check.py`, reports | Self-check works on any PDF; we know layout, issues, cleaning rules |
 | 2 | Eval set first | `eval/explain_questions.csv`, `eval/quiz_rules.md`, trap questions | 20+ questions with expected rule/page |
 | 3 | Baseline | Keyword search answer | Baseline score recorded |
 | 4 | RAG pipeline | Read, chunk, embed, store, search, answer with source; Gemini + Groq fallback; timeouts | Beats baseline, meets explain target |
@@ -86,3 +91,4 @@ progress (scores per topic) -> local file/SQLite
 | Date | What was done |
 |---|---|
 | 30 Oct 2026 | Plan written, data source chosen (COLREGs handbook, 202 pages), LLM plan Gemini + Groq |
+| 30 Oct 2026 | Phase 1 done: scope changed to upload-based (any PDF). Built reusable upload self-check `pdf_check.py` + `scripts/data_check.py` (file or folder), 37 tests pass. nav_rules.pdf verdict OK, cleaning rules noted |
