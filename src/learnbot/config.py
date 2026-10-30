@@ -16,3 +16,7 @@ MESSY_TEXT_WARN_COUNT = 10
 
 # Characters shown as a sample of the extracted text.
 SAMPLE_CHARS = 300
+
+# Baseline keyword search (Phase 3): best BM25 score below this -> "Not in this document".
+# Chosen from the threshold sweep in eval/results.md.
+BASELINE_MIN_SCORE = 11.5

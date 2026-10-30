@@ -11,11 +11,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from learnbot.eval_check import (  # noqa: E402
+    PROBLEMS,
+    SKIPPED,
     DocumentPages,
     check_explain_row,
     check_trap_row,
     duplicate_ids,
     load_rows,
+    overall_result,
     verify_quotes,
     verify_trap,
 )
@@ -85,9 +88,12 @@ def main():
     for row_id, row_problems in problems.items():
         for problem in row_problems:
             print(f"FAIL {row_id}: {problem}")
-    ok = not problems and not missing_docs
-    print("\nRESULT:", "ALL PASS" if ok else "PROBLEMS FOUND")
-    return 0 if ok else 1
+    result = overall_result(problems, missing_docs)
+    if result == SKIPPED:
+        print(f"\nRESULT: SKIPPED ({len(missing_docs)} PDF(s) not in data/raw; nothing wrong found)")
+    else:
+        print("\nRESULT:", result)
+    return 1 if result == PROBLEMS else 0
 
 
 if __name__ == "__main__":

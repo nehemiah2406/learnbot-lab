@@ -32,7 +32,7 @@ EVAL_DIR = Path("eval")
 
 def explain_row(**changes):
     row = {
-        "doc": "book.pdf", "id": "X-01", "question": "How far?", "type": "number",
+        "doc": "book.pdf", "id": "X-01", "question": "How far under the International Rules?", "type": "number",
         "expected_answer": "6 miles", "rule": "Rule 22", "rule_set": "International",
         "page": "45", "source_quote": "a masthead light, 6 miles;",
     }
@@ -114,7 +114,7 @@ def test_compare_row_needs_two_pages_and_two_quotes():
     assert check_explain_row(good) == []
     one_quote = dict(good, source_quote="range of 5 miles and 2 miles")
     assert check_explain_row(one_quote) == ["compare row needs 2 page(s) and 2 quote(s)"]
-    wrong_set = dict(good, rule_set="Inland")
+    wrong_set = dict(good, rule_set="N/A")
     assert check_explain_row(wrong_set) == ["compare row must have rule_set Both"]
 
 
@@ -179,3 +179,20 @@ def test_quote_on_stated_page(row, docs):
 def test_trap_keywords_absent_from_document(row, docs):
     need_pdf(docs, row["doc"])
     assert verify_trap(row, docs) == []
+
+
+# --- Rule-set naming and overall result -------------------------------------------------
+def test_question_must_name_its_rule_set():
+    vague = explain_row(rule_set="International", question="How far must a masthead light be seen?")
+    assert check_explain_row(vague) == ["question must name its rule set (International)"]
+    clear = explain_row(rule_set="International", question="Under the International Rules, how far?")
+    assert check_explain_row(clear) == []
+    assert check_explain_row(explain_row(rule_set="N/A", question="How far?")) == []
+
+
+def test_overall_result():
+    from learnbot.eval_check import ALL_PASS, PROBLEMS, SKIPPED, overall_result
+
+    assert overall_result({}, set()) == ALL_PASS
+    assert overall_result({}, {"book.pdf"}) == SKIPPED
+    assert overall_result({"X-01": ["bad"]}, {"book.pdf"}) == PROBLEMS

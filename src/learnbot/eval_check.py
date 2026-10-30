@@ -124,6 +124,9 @@ def check_explain_row(row):
         problems.append(f"{row['type']} row needs {want} page(s) and {want} quote(s)")
     if row["type"] == "compare" and row["rule_set"] != "Both":
         problems.append("compare row must have rule_set Both")
+    # quiz_rules.md rule 8: the question must say which rule set it asks about.
+    if row["rule_set"] in ("International", "Inland") and row["rule_set"].lower() not in row["question"].lower():
+        problems.append(f"question must name its rule set ({row['rule_set']})")
 
     missing = missing_numbers(row["expected_answer"], " ".join(quotes))
     if missing:
@@ -207,3 +210,16 @@ def verify_quotes(row, docs):
 def verify_trap(row, docs):
     found = found_keywords(trap_keywords(row), docs.full_text(row["doc"]))
     return [f"keyword found in {row['doc']}: {k}" for k in found]
+
+
+# --- Overall result -----------------------------------------------------------------
+ALL_PASS, SKIPPED, PROBLEMS = "ALL PASS", "SKIPPED", "PROBLEMS FOUND"
+
+
+def overall_result(problems, missing_docs):
+    """ALL PASS, SKIPPED (only PDFs missing, nothing wrong) or PROBLEMS FOUND."""
+    if problems:
+        return PROBLEMS
+    if missing_docs:
+        return SKIPPED
+    return ALL_PASS
