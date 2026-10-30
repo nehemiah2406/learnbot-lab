@@ -8,11 +8,11 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 - PDF reading: pdfplumber
 - Embeddings: local sentence-transformers; vector store: ChromaDB (local, storage/)
 - LLM: Gemini (main) + Groq (fallback). Keys and model names in .env (template .env.example)
-- Main test document: data/raw/nav_rules.pdf (USCG Navigation Rules handbook, public, NOT committed)
+- Test documents: 3 public US government PDFs in data/raw/ (nav_rules.pdf, boaters_guide.pdf, coast_pilot4_ch1.pdf; NOT committed). Links and editions: PLAN.md Data section. LearnBot must work for ANY uploaded PDF; no file-specific code.
 
 ## Product rules (never break)
-1. Explanations and quiz answers come ONLY from the uploaded document. If not found: "Not in this document."
-2. Every answer and every quiz question shows its source (rule number and page).
+1. For ANY uploaded file, LearnBot gives only exact answers from that file's text: exact numbers and units, with page and source quote, checked before showing. If not found or unsure: 'Not in this document'. Never guess.
+2. Every answer and every quiz question shows its source (rule or section, and page).
 3. A quiz question is kept only if its correct answer is supported by the source text; otherwise drop it.
 4. Numbers, distances, lights and signals must be EXACT as in the document. Never invent or round.
 

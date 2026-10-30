@@ -3,7 +3,9 @@
 AI tutor for maritime crew training. The user uploads their own PDFs; LearnBot explains and quizzes only from them, and shows weak topics. It must work on any readable PDF, not one fixed book.
 Built from scratch by Hari P (Data Science Intern). Idea inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache 2.0); all code here is our own.
 
-Status: Phase 1 (Data) done, Phase 2 (Eval set) next · Started 30 Oct 2026 · Target: ~5 working days
+Status: Phase 2 (Eval set) done, Phase 3 (Baseline) next · Started 30 Oct 2026 · Target: ~5 working days
+
+> **Main product rule:** For ANY uploaded file, LearnBot gives only exact answers from that file's text: exact numbers and units, with page and source quote, checked before showing. If not found or unsure: 'Not in this document'. Never guess.
 
 ---
 
@@ -69,16 +71,17 @@ progress (scores per topic) -> local file/SQLite
 | 2 | Eval set first | `eval/explain_questions.csv`, `eval/quiz_rules.md`, trap questions | 20+ questions with expected rule/page |
 | 3 | Baseline | Keyword search answer | Baseline score recorded |
 | 4 | RAG pipeline | Read, chunk, embed, store, search, answer with source; Gemini + Groq fallback; timeouts | Beats baseline, meets explain target |
-| 5 | Quiz generation | MCQ from document + validation (answer must be in source) | 0 wrong answer keys on eval |
+| 5 | Quiz generation + upload self-test | MCQ from document + validation (answer must be in source, rules in `eval/quiz_rules.md`). **Upload self-test:** when any new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page | 0 wrong answer keys on eval; self-test passes on all 3 test PDFs |
 | 6 | Progress | Scores per topic, weak-topic re-quiz | Works across app restarts |
 | 7 | Evaluate + improve | `eval/results.md` table | All success metrics pass |
-| 8 | App | Streamlit UI, friendly errors | Demo works end to end |
+| 8 | App | Streamlit UI, friendly errors; runs the upload self-check and the upload self-test on every new file. **If the self-test fails, the user sees a warning** | Demo works end to end |
 | 9 | Ship | Tests, README, GitHub, resume line | Pushed + verified on GitHub |
 
 ---
 
 ## 4. Quality rules (from day 1)
 
+0. **Main product rule:** For ANY uploaded file, LearnBot gives only exact answers from that file's text: exact numbers and units, with page and source quote, checked before showing. If not found or unsure: 'Not in this document'. Never guess.
 1. Eval set first, with expected answers. Wrong answers must be 0.
 2. General rules only, never one-off fixes for one question.
 3. When unsure, say "Not in this document" instead of guessing. Never invent numbers.
@@ -96,3 +99,4 @@ progress (scores per topic) -> local file/SQLite
 | 30 Oct 2026 | Plan written, data source chosen (COLREGs handbook, 202 pages), LLM plan Gemini + Groq |
 | 30 Oct 2026 | Phase 1 done: scope changed to upload-based (any PDF). Built reusable upload self-check `pdf_check.py` + `scripts/data_check.py` (file or folder), 37 tests pass. nav_rules.pdf verdict OK, cleaning rules noted |
 | 30 Oct 2026 | Phase 2 prep: added boaters_guide.pdf and coast_pilot4_ch1.pdf (official URLs, editions recorded); column-aware reading (`pdf_text.py`); "no numbered headings" is now an info note; all 3 PDFs self-check OK; 46 tests pass |
+| 30 Oct 2026 | Phase 2 done: eval set over 3 documents. `eval/explain_questions.csv` 29 questions (nav_rules 13, boaters_guide 8, coast_pilot4_ch1 8; fact 9, number 9, compare 3, paraphrase 6, annex 2), `eval/trap_questions.csv` 8 traps (3/3/2), `eval/quiz_rules.md`. Checker `src/learnbot/eval_check.py` + `scripts/check_eval.py`: 29/29 quotes verified on their page, 8/8 trap keywords absent. Main product rule added first in CLAUDE.md and PLAN.md; upload self-test planned in Phase 5 and 8. 138 tests pass |

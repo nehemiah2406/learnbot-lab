@@ -1,0 +1,9 @@
+doc,id,question,type,expected_answer,keywords
+nav_rules.pdf,TRAP-NAV-01,How many lifeboats does SOLAS require on each side of a cargo ship?,maritime_outside,Not in this document,lifeboat;SOLAS
+nav_rules.pdf,TRAP-NAV-02,How many hours of rest must a watchkeeper have in any 24-hour period under STCW?,maritime_outside,Not in this document,STCW;hours of rest
+nav_rules.pdf,TRAP-NAV-03,What is the capital of Australia?,off_topic,Not in this document,Canberra;Australia
+boaters_guide.pdf,TRAP-BG-01,What must a ship's Safety Management System contain under the ISM Code?,maritime_outside,Not in this document,ISM Code;Safety Management System
+boaters_guide.pdf,TRAP-BG-02,Where is the load line (Plimsoll) mark painted on a ship?,maritime_outside,Not in this document,load line;Plimsoll
+boaters_guide.pdf,TRAP-BG-03,How do I bake sourdough bread?,off_topic,Not in this document,sourdough;yeast
+coast_pilot4_ch1.pdf,TRAP-CP-01,What are the duties of a Ship Security Officer under the ISPS Code?,maritime_outside,Not in this document,ISPS;Ship Security Officer
+coast_pilot4_ch1.pdf,TRAP-CP-02,Who won the 2018 FIFA World Cup?,off_topic,Not in this document,FIFA;World Cup
