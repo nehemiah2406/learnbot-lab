@@ -1,0 +1,23 @@
+# ---- Secrets: NEVER commit ----
+.env
+.env.*
+!.env.example
+
+# ---- Documents (download them, see README) ----
+*.pdf
+data/raw/
+data/uploads/
+
+# ---- Generated data ----
+storage/
+chroma_db/
+*.sqlite3
+cache/
+
+# ---- Python / tools ----
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.vscode/
