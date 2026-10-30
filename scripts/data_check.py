@@ -49,6 +49,8 @@ def main(argv=None):
         print(f"{pdf.name}: {result.verdict} ({result.page_count} pages)")
         for reason in result.reasons:
             print(f"  - {reason}")
+        for note in result.notes:
+            print(f"  - Note: {note}")
         print(f"  Report: {out.as_posix()}")
     return 1 if any_fail else 0
 

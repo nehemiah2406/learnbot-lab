@@ -13,6 +13,7 @@ from pdfminer.pdfdocument import PDFPasswordIncorrect
 from pdfplumber.utils.exceptions import PdfminerException
 
 from learnbot import config
+from learnbot.pdf_text import read_page
 
 OK, WARNING, FAIL = "OK", "WARNING", "FAIL"
 
@@ -57,6 +58,8 @@ class PdfCheckResult:
     errors: list = field(default_factory=list)  # problems that stop the check
     verdict: str = OK
     reasons: list = field(default_factory=list)
+    multi_column_pages: list = field(default_factory=list)
+    notes: list = field(default_factory=list)  # info only, never changes the verdict
 
 
 # --- Roman numerals -------------------------------------------------------------
@@ -279,8 +282,6 @@ def decide_verdict(result):
         warn.append(f"Pages {page_ranges(low)} have almost no text, maybe blank or scanned.")
     if result.messy_count >= config.MESSY_TEXT_WARN_COUNT:
         warn.append(f"Text has {result.messy_count} broken characters; answers may be less accurate.")
-    if not result.headings:
-        warn.append("No numbered headings found (Rule, Section, Chapter, 1.2 ...); text will be split by page.")
     for kind, missing in result.gaps.items():
         # Dotted numbers (legal codes like 161.1-161.6, 161.10) often skip on purpose,
         # so their gaps are shown in the report but do not change the verdict.
@@ -292,6 +293,20 @@ def decide_verdict(result):
     if warn:
         return WARNING, warn
     return OK, ["File looks good."]
+
+
+def make_notes(result):
+    """Info notes for the user. They never change the verdict."""
+    if result.errors:
+        return []
+    notes = []
+    if not result.headings:
+        notes.append("No numbered headings (Rule, Section, Chapter, 1.2 ...); normal for many books.")
+    if result.multi_column_pages:
+        notes.append(
+            f"Multi-column pages read column by column: {page_ranges(result.multi_column_pages)}."
+        )
+    return notes
 
 
 # --- Main check -----------------------------------------------------------------
@@ -330,6 +345,7 @@ def check_pdf(path):
         else:
             read_pdf(path, result)
     result.verdict, result.reasons = decide_verdict(result)
+    result.notes = make_notes(result)
     return result
 
 
@@ -342,8 +358,11 @@ def read_pdf(path, result):
                 result.errors.append(page_error)
                 return
             texts, table_counts = [], []
-            for page in pdf.pages:
-                texts.append(page.extract_text() or "")
+            for page_no, page in enumerate(pdf.pages, start=1):
+                text, columns = read_page(page)
+                texts.append(text)
+                if columns > 1:
+                    result.multi_column_pages.append(page_no)
                 table_counts.append(len(page.find_tables()))
                 page.close()  # free memory on big files
     except PdfminerException as error:
@@ -364,6 +383,7 @@ def build_report(result):
         f"**Verdict: {result.verdict}**",
         "",
         *[f"- {reason}" for reason in result.reasons],
+        *[f"- Note: {note}" for note in result.notes],
         "",
         "## File",
         "",

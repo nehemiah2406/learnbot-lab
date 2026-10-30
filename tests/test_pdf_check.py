@@ -13,6 +13,7 @@ from learnbot.pdf_check import (
     find_gaps,
     find_headings,
     find_low_text_pages,
+    make_notes,
     page_ranges,
     pick_samples,
     roman_to_int,
@@ -181,10 +182,21 @@ def test_few_blank_pages_do_not_warn():
     assert decide_verdict(analysed(texts))[0] == OK
 
 
-def test_verdict_warning_no_headings():
-    verdict, reasons = decide_verdict(analysed([FULL, FULL]))
-    assert verdict == WARNING
-    assert "No numbered headings" in reasons[0]
+def test_no_headings_is_only_a_note():
+    result = analysed([FULL, FULL])
+    assert decide_verdict(result) == (OK, ["File looks good."])
+    assert "No numbered headings" in make_notes(result)[0]
+
+
+def test_multi_column_pages_noted():
+    result = analysed([f"Rule 1\n{FULL}"] * 4)
+    result.multi_column_pages = [2, 3]
+    assert make_notes(result) == ["Multi-column pages read column by column: 2-3."]
+
+
+def test_no_notes_for_failed_file():
+    result = PdfCheckResult(path="x.pdf", errors=["File not found."])
+    assert make_notes(result) == []
 
 
 def test_verdict_warning_numbering_gap():

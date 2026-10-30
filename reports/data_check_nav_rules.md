@@ -3,6 +3,7 @@
 **Verdict: OK**
 
 - File looks good.
+- Note: Multi-column pages read column by column: 3, 156-166, 197.
 
 ## File
 
@@ -24,7 +25,7 @@
 | Rule | 38 | 1 | 38 | none |
 | Section | 3 | I | III | none |
 | Annex | 5 | I | V | none |
-| Numbered | 64 | 26.01 | 665.1 | 161.7, 161.8, 161.9, 161.14, 161.20, 161.21, 161.22, 161.23, 161.24, 161.25 ... (+4 more) |
+| Numbered | 63 | 26.01 | 665.1 | 161.7, 161.8, 161.9, 161.14, 161.20, 161.21, 161.22, 161.23, 161.24, 161.25 ... (+4 more) |
 
 ### Rule
 
@@ -126,7 +127,6 @@
 - Numbered 80.835: pages 155
 - Numbered 80.845: pages 155
 - Numbered 156.250: pages 196
-- Numbered 156.600: pages 197
 - Numbered 156.650: pages 199
 - Numbered 156.725: pages 198
 - Numbered 161.1: pages 176

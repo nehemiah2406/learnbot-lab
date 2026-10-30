@@ -30,15 +30,18 @@ Status: Phase 1 (Data) done, Phase 2 (Eval set) next · Started 30 Oct 2026 · T
 
 ## 1. Data
 
-LearnBot is upload-based: users bring their own PDFs. The files below are only for testing.
+LearnBot is upload-based: users bring their own PDFs. The 3 files below are only for testing, chosen for different layouts so nothing is book-specific. All are US government works (public domain). PDFs are not committed; download them into `data/raw/` with the names below. Answers in the eval are for these exact editions.
 
-- **First test file:** USCG Navigation Rules and Regulations Handbook (COLREGs), corrected Aug 2024, 202 pages
-- **Source:** https://www.navcen.uscg.gov/navigation-rules-amalgamated (US Coast Guard NAVCEN, US government work)
-- **Stored at:** `data/raw/nav_rules.pdf` (not committed; README explains how to download)
-- **Later test files:** 1-2 more public PDFs with a different layout (e.g. a numbered-section manual), to prove nothing is book-specific
-- **Upload self-check (part of v1):** `src/learnbot/pdf_check.py` runs on every upload: size (max 50 MB), opens / password, pages (max 1000), text per page, low-text (scanned?) pages, tables, sample text, general heading finder (Rule / Section / Chapter / Article / Part / Annex / Appendix / 1.2) with numbering gaps, verdict OK / WARNING / FAIL. Limits and thresholds in `src/learnbot/config.py`
-- **Findings on nav_rules.pdf** (`reports/data_check_nav_rules.md`): verdict OK; Rule 1-38 and Annex I-V all found, no gaps; 12 blank divider pages; 15 pages with tables; table of contents on pages 4-5
-- **Cleaning rules for Phase 4:** cover page text is tripled by bold print (`IISSBBNN`; pdfplumber `dedupe_chars()` fixes it); some pages (e.g. 160) are two columns that get mixed line by line; International and Inland versions of the same rule sit on facing pages (headers `—INTERNATIONAL—` / `—INLAND—`) and must be kept apart
+| File (`data/raw/`) | Document | Edition / date | Official URL | Downloaded | Layout |
+|---|---|---|---|---|---|
+| `nav_rules.pdf` | USCG Navigation Rules and Regulations Handbook | corrected Aug 2024; 202 pages, 7.2 MB | https://www.navcen.uscg.gov/navigation-rules-amalgamated | 30 Oct 2026 | Rule book; International / Inland on facing pages; Annex I-V; two-column CFR pages 156-166 |
+| `boaters_guide.pdf` | USCG "A Boater's Guide to the Federal Requirements for Recreational Boats" | revised Nov 2023; 49 pages, 2.4 MB | https://www.uscgboating.org/assets/1/AssetManager/Boaters-Guide-to-Federal-Requirements-for-Receational-Boats-20231108.pdf | 30 Oct 2026 | Booklet; title headings without numbers; few tables |
+| `coast_pilot4_ch1.pdf` | NOAA U.S. Coast Pilot 4, Chapter 1 "General Information" | 25 OCT 2026 edition (updated weekly; answers are for this edition); 36 pages, 1.2 MB | https://nauticalcharts.noaa.gov/publications/coast-pilot/files/cp4/CPB4_C01_WEB.pdf | 30 Oct 2026 | Two columns, numbered paragraphs (1), (2) ...; tables |
+
+- **Upload self-check (part of v1):** `src/learnbot/pdf_check.py` runs on every upload: size (max 50 MB), opens / password, pages (max 1000), text per page, low-text (scanned?) pages, tables, sample text, general heading finder (Rule / Section / Chapter / Article / Part / Annex / Appendix / 1.2) with numbering gaps, verdict OK / WARNING / FAIL plus info notes. Limits and thresholds in `src/learnbot/config.py`
+- **Column-aware reading:** `src/learnbot/pdf_text.py` `read_page_text()` finds column gutters from word positions and reads each column top to bottom; table-like columns (short cells) stay row by row. Everything that reads page text (self-check, eval checker, app) uses it
+- **Self-check results** (`reports/data_check_<file>.md`): all 3 files OK. nav_rules: Rule 1-38 and Annex I-V found, no gaps, 12 blank divider pages, contents on pages 4-5. boaters_guide: no numbered headings (note), 3 near-empty pages. coast_pilot4_ch1: no numbered headings (note), 30 of 36 pages two-column
+- **Cleaning rules for Phase 4:** cover page text of nav_rules is tripled by bold print (`IISSBBNN`; pdfplumber `dedupe_chars()` fixes it); International and Inland versions of the same rule sit on facing pages (headers `—INTERNATIONAL—` / `—INLAND—`) and must be kept apart; Coast Pilot paragraph numbers `(1)`, `(2)` sit on their own line
 
 ---
 
@@ -92,3 +95,4 @@ progress (scores per topic) -> local file/SQLite
 |---|---|
 | 30 Oct 2026 | Plan written, data source chosen (COLREGs handbook, 202 pages), LLM plan Gemini + Groq |
 | 30 Oct 2026 | Phase 1 done: scope changed to upload-based (any PDF). Built reusable upload self-check `pdf_check.py` + `scripts/data_check.py` (file or folder), 37 tests pass. nav_rules.pdf verdict OK, cleaning rules noted |
+| 30 Oct 2026 | Phase 2 prep: added boaters_guide.pdf and coast_pilot4_ch1.pdf (official URLs, editions recorded); column-aware reading (`pdf_text.py`); "no numbered headings" is now an info note; all 3 PDFs self-check OK; 46 tests pass |
