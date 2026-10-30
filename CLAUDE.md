@@ -19,7 +19,7 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 ## Safety rules
 - Never print, log, show or commit .env or any API key.
 - Never use company documents. Public documents only.
-- Do NOT git push. Commit only when I ask; I push myself.
+- Do NOT git push. Commit as described in "Git rules"; I push myself.
 - Every Gemini/Groq call has a timeout and a friendly fallback message.
 - Save free quota: ask me before running big LLM jobs or the full eval.
 
@@ -30,3 +30,13 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 - End every task with: what changed, test result, how I can try it.
 - Windows laptop, PowerShell, VS Code. Use .venv.
 - Update the Progress log in PLAN.md after each phase.
+
+## Definition of done
+- A phase is done only when ALL tests pass (.venv\Scripts\python -m pytest).
+- From Phase 4 onward it also needs the eval to meet every success metric in PLAN.md: 0 wrong answers, 9/10+ correct source (rule/page), "Not in this document" for every trap question.
+- Never say "done" with a failing test or a missed metric. Fix it first, then show the real numbers.
+
+## Git rules
+- After a change is finished and all tests pass, commit it yourself: one commit per change, clear message.
+- Before every commit run `git status` and check that no PDF, .env, API key, data/ or storage/ file is staged.
+- NEVER run git push. Hari pushes.
