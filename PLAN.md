@@ -24,7 +24,7 @@ Status: Phase 3 (Baseline) done, Phase 4 (RAG pipeline) next · Started 30 Oct 2
 |---|---|---|
 | Explain: answer comes from the right rule/page | 9 of 10 test questions or better | 17/29 (59%) right doc+page in top 1; 23/29 (79%) in top 3 |
 | Explain: exact answer (all numbers + key words) in the top result | (tracked) | 15/29 (52%) |
-| Wrong answers (answered from a wrong page) | 0 | 8 wrong + 4 missed |
+| Wrong answers (answer shown is not supported by its piece) | 0 | 7 wrong + 4 missed (+1 correct, other source) |
 | Quiz: correct answer is supported by the source text | 100% (wrong answer keys = 0) | n/a (Phase 5) |
 | Trap questions (not in the document) | Says "Not in this document" every time | 7/8 (1 trap answered) |
 | Answer time | Under 10 s | 2 ms search per question; 22-28 s to read + chunk the 3 PDFs once |
@@ -105,3 +105,4 @@ progress (scores per topic) -> local file/SQLite
 | 30 Oct 2026 | Phase 2 prep: added boaters_guide.pdf and coast_pilot4_ch1.pdf (official URLs, editions recorded); column-aware reading (`pdf_text.py`); "no numbered headings" is now an info note; all 3 PDFs self-check OK; 46 tests pass |
 | 30 Oct 2026 | Phase 2 done: eval set over 3 documents. `eval/explain_questions.csv` 29 questions (nav_rules 13, boaters_guide 8, coast_pilot4_ch1 8; fact 9, number 9, compare 3, paraphrase 6, annex 2), `eval/trap_questions.csv` 8 traps (3/3/2), `eval/quiz_rules.md`. Checker `src/learnbot/eval_check.py` + `scripts/check_eval.py`: 29/29 quotes verified on their page, 8/8 trap keywords absent. Main product rule added first in CLAUDE.md and PLAN.md; upload self-test planned in Phase 5 and 8. 138 tests pass |
 | 30 Oct 2026 | Phase 3 done: baseline. `chunking.py` (paragraph pieces per page, headings as titles, general rules), `baseline.py` (BM25 over all pieces of all 3 PDFs, threshold `BASELINE_MIN_SCORE` = 11.5 chosen by sweep rule), `evaluate.py` + `scripts/run_baseline.py` -> `eval/results.md`. Result: right page top 1 17/29, top 3 23/29, exact answer 15/29, traps refused 7/8, wrong 8, missed 4. Eval fix found by the baseline: 8 nav_rules questions did not say International/Inland (answer exists in both), wording fixed + new checker rule. `check_eval.py` prints SKIPPED when PDFs are missing. 171 tests pass |
+| 30 Oct 2026 | Eval scoring: new outcome "correct, other source" (top-1 piece from another doc/page that contains the row's source_quote, normalised). "Right doc + page" stays strict; "wrong" now means the answer shown is not supported. Baseline re-run: NAV-03 (Coast Pilot p.22 quotes Rule 34(d)) moves from wrong to correct, other source; wrong 7, threshold still 11.5. 174 tests pass |

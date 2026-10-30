@@ -17,7 +17,7 @@ from learnbot.baseline import NOT_FOUND, BM25Index, answer  # noqa: E402
 from learnbot.chunking import chunk_pdf  # noqa: E402
 from learnbot.eval_check import load_rows  # noqa: E402
 from learnbot.evaluate import (  # noqa: E402
-    MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
+    CORRECT_OTHER, MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
     choose_threshold, exact_answer_in, on_right_page, outcome, sweep,
 )
 
@@ -57,14 +57,16 @@ def group_table(records, key, title):
     groups = defaultdict(list)
     for r in records:
         groups[key(r)].append(r)
-    lines = [f"| {title} | Questions | Right page top 1 | Right page top 3 | Exact answer top 1 | Wrong | Missed |",
-             "|---|---|---|---|---|---|---|"]
+    lines = [f"| {title} | Questions | Right page top 1 | Right page top 3 | Exact answer top 1 "
+             "| Correct, other source | Wrong | Missed |",
+             "|---|---|---|---|---|---|---|---|"]
     for name in sorted(groups):
         g = groups[name]
         n = len(g)
         lines.append(
             f"| {name} | {n} | {pct(sum(r['outcome'] == RIGHT for r in g), n)} "
             f"| {pct(sum(r['top3'] for r in g), n)} | {pct(sum(r['exact'] for r in g), n)} "
+            f"| {sum(r['outcome'] == CORRECT_OTHER for r in g)} "
             f"| {sum(r['outcome'] == WRONG for r in g)} | {sum(r['outcome'] == MISSED for r in g)} |"
         )
     return lines
@@ -103,12 +105,17 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
         f"| Right doc + page, top 3 | {pct(sum(r['top3'] for r in explain), n)} |",
         f"| Exact answer in top-1 piece (all numbers + key words) | {pct(sum(r['exact'] for r in explain), n)} |",
         f"| Traps correctly \"{NOT_FOUND}\" | {pct(count(traps, REFUSED), t)} |",
-        f"| **Wrong: answered from a wrong page** (must be 0 in Phase 4) | **{count(explain, WRONG)}** |",
+        f"| Correct, other source: other doc/page, but the top-1 piece contains the source quote "
+        f"| {count(explain, CORRECT_OTHER)} |",
+        f"| **Wrong: answer shown is not supported** (must be 0 in Phase 4) | **{count(explain, WRONG)}** |",
         f"| **Traps answered** (also wrong) | **{count(traps, TRAP_ANSWERED)}** |",
         f"| Missed: real question but said \"{NOT_FOUND}\" | {count(explain, MISSED)} |",
         "",
         "Compare rows count as right page if the top piece is on either of their two pages. "
-        "\"Exact answer\" is strict: a compare answer needs both pages, so it cannot be in one piece.",
+        "\"Exact answer\" is strict: a compare answer needs both pages, so it cannot be in one piece. "
+        "\"Right doc + page\" stays strict; an answer from another doc or page counts as "
+        "\"correct, other source\" only if its top-1 piece contains the row's source quote "
+        "(normalised; compare rows: either quote). Every other answer from a wrong page is \"wrong\".",
         "",
         "### Per document",
         "",
@@ -126,15 +133,24 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
         "- **Too low:** trap questions get an answer from some unrelated piece (a wrong answer, worse).",
         "",
         "Rule, fixed before looking at single questions: pick the threshold with the most correct "
-        "outcomes (right page + traps refused); on a tie pick the higher one (\"never guess\"). "
-        f"With only {n} questions and {t} traps this is a first estimate, not a final value.",
+        "outcomes (right page + correct other source + traps refused); on a tie pick the higher one "
+        f"(\"never guess\"). With only {n} questions and {t} traps this is a first estimate, not a final value.",
         "",
-        "| Threshold | Right | Wrong | Missed | Traps refused | Traps answered | Correct total |",
-        "|---|---|---|---|---|---|---|",
+        "| Threshold | Right | Correct, other source | Wrong | Missed | Traps refused | Traps answered | Correct total |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for thr, c, correct in table:
         mark = " ← chosen" if thr == config.BASELINE_MIN_SCORE else ""
-        lines.append(f"| {thr} | {c[RIGHT]} | {c[WRONG]} | {c[MISSED]} | {c[REFUSED]} | {c[TRAP_ANSWERED]} | {correct}{mark} |")
+        lines.append(f"| {thr} | {c[RIGHT]} | {c[CORRECT_OTHER]} | {c[WRONG]} | {c[MISSED]} "
+                     f"| {c[REFUSED]} | {c[TRAP_ANSWERED]} | {correct}{mark} |")
+    lines += ["", "## Correct, other source", ""]
+    other = [r for r in explain if r["outcome"] == CORRECT_OTHER]
+    for r in other:
+        row = r["row"]
+        lines.append(f"- **{row['id']}** expected {row['doc']} p.{row['page']}: {row['question']}  \n"
+                     f"  Returned: {returned(r)}")
+    if not other:
+        lines.append("None.")
     lines += ["", "## Failed questions", ""]
     failed = [r for r in records if r["outcome"] in (WRONG, MISSED, TRAP_ANSWERED)]
     for r in failed:
@@ -183,7 +199,8 @@ def main():
     print(f"Right page top 3: {pct(sum(r['top3'] for r in explain_r), len(explain_r))}")
     print(f"Exact answer top 1: {pct(sum(r['exact'] for r in explain_r), len(explain_r))}")
     print(f"Traps refused: {pct(sum(r['outcome'] == REFUSED for r in trap_r), len(trap_r))}")
-    print(f"Wrong (answered, wrong page): {sum(r['outcome'] == WRONG for r in explain_r)}"
+    print(f"Correct, other source: {sum(r['outcome'] == CORRECT_OTHER for r in explain_r)}")
+    print(f"Wrong (answer not supported): {sum(r['outcome'] == WRONG for r in explain_r)}"
           f"  Traps answered: {sum(r['outcome'] == TRAP_ANSWERED for r in trap_r)}"
           f"  Missed: {sum(r['outcome'] == MISSED for r in explain_r)}")
     print(f"Saved {RESULTS.as_posix()}")

@@ -7,8 +7,8 @@ import pytest
 from learnbot.baseline import NOT_FOUND, BM25Index, Hit, answer, tokenize
 from learnbot.chunking import Chunk
 from learnbot.evaluate import (
-    MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
-    choose_threshold, exact_answer_in, on_right_page, outcome, sweep,
+    CORRECT_OTHER, MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
+    choose_threshold, exact_answer_in, has_source_quote, on_right_page, outcome, sweep,
 )
 
 CHUNKS = [
@@ -30,8 +30,8 @@ def index():
     return BM25Index(CHUNKS)
 
 
-def row(doc="rules.pdf", page="45", answer_text="6 miles"):
-    return {"doc": doc, "page": page, "expected_answer": answer_text}
+def row(doc="rules.pdf", page="45", answer_text="6 miles", quote="a masthead light, 6 miles;"):
+    return {"doc": doc, "page": page, "expected_answer": answer_text, "source_quote": quote}
 
 
 # --- Tokenizer and search -------------------------------------------------------------
@@ -106,6 +106,31 @@ def test_outcomes():
     assert outcome(row(), False, NOT_FOUND, hits_right) == MISSED
     assert outcome(row(), True, NOT_FOUND, hits_wrong) == REFUSED
     assert outcome(row(), True, None, hits_wrong) == TRAP_ANSWERED
+
+
+def test_other_source_with_the_quote_is_correct_not_wrong():
+    # Another document quotes the same rule word for word: supported, but not the right page.
+    quoting = [hit("pilot.pdf", 22, "Rule 34(d) says: a masthead light,\n6 miles; and more.")]
+    assert outcome(row(), False, None, quoting) == CORRECT_OTHER
+    # Similar topic but not the quote (different number): still wrong.
+    similar = [hit("rules.pdf", 46, "a masthead light, 5 miles;")]
+    assert outcome(row(), False, None, similar) == WRONG
+    # Right doc + page stays RIGHT (strict measure unchanged).
+    assert outcome(row(), False, None, [hit("rules.pdf", 45, "a masthead light, 6 miles;")]) == RIGHT
+
+
+def test_source_quote_check_is_normalised_and_handles_compare_rows():
+    assert has_source_quote(row(quote="the “prolonged blast” − 4 to 6 seconds"),
+                            hit("x.pdf", 1, 'the "prolonged  blast" - 4 to 6\nseconds'))
+    compare = row(page="107|108", quote="one short blast | two short blasts")
+    assert has_source_quote(compare, hit("x.pdf", 9, "two short blasts mean port"))
+    assert not has_source_quote(compare, hit("x.pdf", 9, "three short blasts"))
+
+
+def test_correct_other_source_counts_as_correct_in_sweep():
+    results = [(row(), False, [hit("pilot.pdf", 22, "a masthead light, 6 miles;", score=20)])]
+    (_, counts, correct), = sweep(results, [0])
+    assert counts[CORRECT_OTHER] == 1 and counts[WRONG] == 0 and correct == 1
 
 
 def test_sweep_and_choose_threshold_prefers_higher_on_tie():
