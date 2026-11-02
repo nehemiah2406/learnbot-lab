@@ -30,12 +30,19 @@ def test_page_label_comes_from_any_heading_on_the_page():
     assert rules.label("rules.pdf", 46) == "Inland"  # INLAND_LATER's own title has no rule set
 
 
-def test_rule_set_check_only_for_documents_with_two_sets():
+def test_rule_set_question_only_answered_from_pages_of_that_set():
     rules = RuleSets(CHUNKS)
     assert rules.docs_with_sets == {"rules.pdf"}  # guide has only "Inland" in a title
     question = "Under the International Rules, how far must the masthead light be visible?"
     assert rules.allowed(question, "rules.pdf", 45) and not rules.allowed(question, "rules.pdf", 46)
-    assert rules.allowed(question, "guide.pdf", 9)
+    assert not rules.allowed(question, "guide.pdf", 9)  # a page without the International label
+    assert rules.allowed("How far must the masthead light be visible?", "guide.pdf", 9)
+
+
+def test_no_rule_set_filter_when_no_document_has_rule_sets():
+    guide_only = RuleSets([c for c in CHUNKS if c.doc == "guide.pdf"])
+    assert guide_only.docs_with_sets == set()
+    assert guide_only.allowed("Under the International Rules, what is it?", "guide.pdf", 9)
 
 
 def test_question_naming_both_or_none_has_no_rule_set():

@@ -69,10 +69,21 @@ def test_wrong_rule_set_is_rejected():
     assert run(r, question=QUESTION.replace("International", "Inland")).ok
 
 
-def test_rule_set_not_checked_for_documents_without_rule_sets():
+def test_page_outside_the_named_rule_set_may_not_answer():
+    # Real case (NAV-13): an "Inland Rules" question answered from a guide page that only
+    # repeats the rule. When documents with rule sets are loaded, only pages of that set count.
     r = reply(answer="42 months after manufacture", quote="Check the expiration date (42 months after the date",
               doc="guide.pdf", page=16)
-    assert run(r, question="Under the International Rules, when do pyrotechnic signals expire?").ok
+    question = "Under the International Rules, when do pyrotechnic signals expire?"
+    assert run(r, question=question).reason == "wrong_rule_set"
+    assert run(r, question="When do pyrotechnic signals expire?").ok  # no rule set named
+
+
+def test_rule_set_not_checked_when_no_document_has_rule_sets():
+    r = reply(answer="42 months after manufacture", quote="Check the expiration date (42 months after the date",
+              doc="guide.pdf", page=16)
+    question = "Under the International Rules, when do pyrotechnic signals expire?"
+    assert check(question, r, [G16], page_text, RuleSets([G16])).ok
 
 
 def test_off_topic_quote_is_rejected():

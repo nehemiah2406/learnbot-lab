@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED, answer_question, build_prompt, parse_reply
+from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED, Answer, answer_question, build_prompt, parse_reply
 from learnbot.baseline import NOT_FOUND
 from learnbot.chunking import Chunk
 from learnbot.evaluate import (
@@ -162,3 +162,16 @@ def test_ai_gets_the_time_left_of_the_question_budget():
     answer_question(QUESTION, FakeSearcher([PIECE]), chain)
     from learnbot import config
     assert 0 < chain.budget_s <= config.QUESTION_TIME_BUDGET_S
+
+
+def test_other_answer_from_its_own_page_counts_as_right():
+    row = {"doc": "pilot.pdf", "page": "2", "question": "How long is a nautical mile?", "accepted_sources": "pilot.pdf:2",
+           "expected_answer": "One minute of latitude, or approximately 2,000 yards; about 1.15 statute miles.",
+           "source_quote": "A nautical mile is one minute of latitude, or approximately 2,000 yards",
+           "other_answers": "pilot.pdf:34=nautical mile - 1,852 meters / 6,076.12 feet"}
+    p34 = {"doc": "pilot.pdf", "page": 34, "quote": "nautical mile - 1,852 meters / 6,076.12 feet"}
+    ans = Answer(ANSWERED, "1,852 meters / 6,076.12 feet", [], sources=[p34])
+    assert score_answer(row, False, ans)[0] == RIGHT
+    # Same page, but numbers that are not that other answer: still wrong.
+    ans = Answer(ANSWERED, "1,800 meters", [], sources=[p34])
+    assert score_answer(row, False, ans)[0] == WRONG

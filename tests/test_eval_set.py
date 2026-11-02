@@ -25,9 +25,11 @@ from learnbot.eval_check import (
     quote_on_page,
     find_accepted_sources,
     format_sources,
+    parse_other_answers,
     parse_sources,
     quote_core,
     verify_accepted_sources,
+    verify_other_answers,
     verify_quotes,
     verify_trap,
 )
@@ -151,6 +153,15 @@ def docs():
     return DocumentPages()
 
 
+@pytest.fixture(scope="session")
+def rule_sets(docs):
+    """Page labels of all eval documents (as the app makes them); skips if a PDF is missing."""
+    names = sorted({r["doc"] for r in EXPLAIN_ROWS + TRAP_ROWS})
+    for name in names:
+        need_pdf(docs, name)
+    return docs.rule_sets(names)
+
+
 def need_pdf(docs, doc):
     if not docs.exists(doc):
         pytest.skip(f"{doc} not found in data/raw, see PLAN.md Data section for the download link")
@@ -182,11 +193,16 @@ def test_quote_on_stated_page(row, docs):
 
 
 @pytest.mark.parametrize("row", EXPLAIN_ROWS, ids=lambda r: r["id"])
-def test_accepted_sources_are_exactly_the_pages_with_the_quote(row, docs):
+def test_accepted_sources_are_exactly_the_pages_with_the_quote(row, docs, rule_sets):
     names = sorted({r["doc"] for r in EXPLAIN_ROWS + TRAP_ROWS})
-    for name in names:
-        need_pdf(docs, name)
-    assert verify_accepted_sources(row, docs, names) == []
+    assert verify_accepted_sources(row, docs, names, rule_sets) == []
+
+
+@pytest.mark.parametrize("row", EXPLAIN_ROWS, ids=lambda r: r["id"])
+def test_other_answers_are_on_their_page(row, docs):
+    for doc, _, _ in parse_other_answers(row.get("other_answers", "")) or []:
+        need_pdf(docs, doc)
+    assert verify_other_answers(row, docs) == []
 
 
 @pytest.mark.parametrize("row", TRAP_ROWS, ids=lambda r: r["id"])
@@ -248,3 +264,29 @@ def test_overall_result():
     assert overall_result({}, set()) == ALL_PASS
     assert overall_result({}, {"book.pdf"}) == SKIPPED
     assert overall_result({"X-01": ["bad"]}, {"book.pdf"}) == PROBLEMS
+
+
+# --- other_answers: another exact answer of the document --------------------------------
+def test_parse_other_answers():
+    assert parse_other_answers("") == []
+    assert parse_other_answers("a.pdf:34=nautical mile - 1,852 meters") == [("a.pdf", 34, "nautical mile - 1,852 meters")]
+    assert parse_other_answers("a.pdf:34") is None and parse_other_answers("a.pdf:x=text") is None
+
+
+def test_other_answers_format_is_checked():
+    assert any("other_answers" in p for p in check_explain_row(explain_row(other_answers="a.pdf=no page")))
+    assert not any("other_answers" in p for p in check_explain_row(explain_row(other_answers="")))
+
+
+def test_other_answer_text_must_be_on_its_page():
+    class Pages:
+        def exists(self, doc):
+            return True
+
+        def pages(self, doc, numbers):
+            return {n: "Measurements nautical mile – 1,852 meters / 6,076.12 feet" for n in numbers}
+
+    ok = {"other_answers": "x.pdf:34=nautical mile - 1,852 meters / 6,076.12 feet"}
+    bad = {"other_answers": "x.pdf:34=nautical mile - 1,850 meters"}
+    assert verify_other_answers(ok, Pages()) == []
+    assert verify_other_answers(bad, Pages())

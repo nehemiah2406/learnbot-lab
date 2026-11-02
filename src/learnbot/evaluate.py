@@ -3,7 +3,9 @@
 """
 
 from learnbot.baseline import NOT_FOUND, Hit, tokenize
-from learnbot.eval_check import normalize, numbers_in, parse_sources, row_pages, split_pair
+from learnbot.eval_check import (
+    normalize, numbers_in, parse_other_answers, parse_sources, row_pages, split_pair,
+)
 from learnbot.units import WORD_NUMBERS
 
 # Outcomes
@@ -17,9 +19,11 @@ NOT_TESTED = "not_tested"  # Phase 4: no AI could be reached ("AI busy"); the ru
 
 
 def right_sources(row):
-    """{(doc, page)}: the row's own page(s) (compare: either) plus its accepted_sources."""
+    """{(doc, page)}: the row's own page(s) (compare: either), its accepted_sources and the
+    pages of its other_answers."""
     own = {(row["doc"], p) for p in row_pages(row) or []}
-    return own | set(parse_sources(row.get("accepted_sources", "")) or [])
+    others = {(doc, page) for doc, page, _ in parse_other_answers(row.get("other_answers", "")) or []}
+    return own | set(parse_sources(row.get("accepted_sources", "")) or []) | others
 
 
 def on_right_page(row, hit):
@@ -102,6 +106,11 @@ def score_answer(row, is_trap, ans):
     if ans.status != "answered":
         reason = ans.reason + (f" ({ans.detail})" if ans.detail else "")
         return MISSED, reason if right_sent else f"search miss (right page not sent); {reason}"
+    for doc, page, text in parse_other_answers(row.get("other_answers", "")) or []:
+        # Another exact answer of the document (other_answers), shown from its own page.
+        if (any((s["doc"], s["page"]) == (doc, page) for s in ans.sources)
+                and not numbers_differ(text, ans.text, row["question"])):
+            return RIGHT, f"other answer from {doc} p.{page}"
     if numbers_differ(row["expected_answer"], ans.text, row["question"]):
         expected, shown = sorted(same_numbers(row["expected_answer"])), sorted(same_numbers(ans.text))
         return WRONG, f"numbers differ: expected {expected}, shown {shown}"

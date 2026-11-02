@@ -220,3 +220,68 @@ def test_fallback_is_skipped_when_too_little_time_is_left(monkeypatch):
 def test_no_budget_keeps_each_providers_timeout():
     slow, groq = Fake("gemini", "sleep", timeout_s=0.05), Fake("groq", '{"found": false}')
     assert LLMChain([slow, groq]).ask("q")[1] == "groq:fake-model"
+
+
+# --- A switched-off AI is tried again every RETRY_SWITCHED_OFF_EVERY questions -----------
+def test_switched_off_main_ai_is_tried_again_every_5_questions_and_used_again():
+    class Recovers(Fake):
+        def _call(self, prompt):
+            self.calls += 1
+            if self.calls <= 2:
+                raise HttpError(504)  # 2 failures in a row -> switched off
+            return "gemini answer"
+
+    gemini, groq = Recovers("gemini", None), Fake("groq", "groq answer")
+    chain = LLMChain([gemini, groq])
+    used = [chain.ask(f"q{i}")[1] for i in range(1, 9)]
+    # q1, q2 fail (switched off); q3-q6 skipped; q7 = 5th question since: tried, answers, used again.
+    assert used == ["groq:fake-model"] * 6 + ["gemini:fake-model"] * 2
+    assert gemini.calls == 4 and "gemini:fake-model" not in chain.switched_off
+
+
+def test_switched_off_ai_that_still_fails_stays_off():
+    gemini, groq = Fake("gemini", HttpError(503)), Fake("groq", "ok")
+    chain = LLMChain([gemini, groq])
+    for i in range(12):
+        chain.ask(f"q{i}")
+    assert gemini.calls == 2 + 2  # 2 failures, then one retry at the 5th and 10th question
+    assert "gemini:fake-model" in chain.switched_off
+
+
+def test_daily_limit_is_never_tried_again():
+    gemini, groq = Fake("gemini", HttpError(429, "quota per day exceeded")), Fake("groq", "ok")
+    chain = LLMChain([gemini, groq])
+    for i in range(12):
+        chain.ask(f"q{i}")
+    assert gemini.calls == 1
+
+
+# --- Eval warm-up: one tiny call to the main AI before a run ---------------------------
+def load_eval_script():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "run_answer_eval.py"
+    spec = importlib.util.spec_from_file_location("run_answer_eval", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_warm_up_reports_ok_or_the_error_kind():
+    script = load_eval_script()
+    chain = LLMChain([Fake("gemini", '{"ok": true}'), Fake("groq", "ok")])
+    ok, status = script.warm_up(chain)
+    assert ok and status.startswith("gemini:fake-model ok") and chain.calls == 1
+    chain = LLMChain([Fake("gemini", HttpError(504)), Fake("groq", "ok")])
+    ok, status = script.warm_up(chain)
+    assert not ok and status.startswith("gemini:fake-model unavailable")
+
+
+def test_fresh_run_asks_again_but_still_saves(tmp_path):
+    cache = ReplyCache(tmp_path)
+    gemini = Fake("gemini", "answer")
+    LLMChain([gemini], cache).ask("p")
+    fresh = LLMChain([gemini], cache, read_cache=False)
+    assert not fresh.is_cached("p") and fresh.ask("p")[2] is False and gemini.calls == 2
+    assert LLMChain([gemini], cache).is_cached("p")

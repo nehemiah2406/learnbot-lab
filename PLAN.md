@@ -22,7 +22,7 @@ Status: Phase 3 (Baseline) done, Phase 4 (RAG pipeline) next · Started 30 Oct 2
 
 | Metric | Target | Baseline (Phase 3, keyword search BM25, no AI) |
 |---|---|---|
-| Explain: answer comes from the right rule/page | 9 of 10 test questions or better | 17/29 (59%) right doc+page in top 1; 23/29 (79%) in top 3 |
+| Explain: answer comes from the right rule/page | Reported honestly every run (aim: 9 of 10); **not a gate** since 2 Nov 2026, see below | 17/29 (59%) right doc+page in top 1; 23/29 (79%) in top 3 |
 | Explain: exact answer (all numbers + key words) in the top result | (tracked) | 15/29 (52%) |
 | Wrong answers (answer shown is not supported by its piece) | 0 | 7 wrong + 4 missed (+1 correct, other source) |
 | Quiz: correct answer is supported by the source text | 100% (wrong answer keys = 0) | n/a (Phase 5) |
@@ -31,6 +31,10 @@ Status: Phase 3 (Baseline) done, Phase 4 (RAG pipeline) next · Started 30 Oct 2
 | Automated tests | All pass before every push | 171 pass |
 
 Baseline details and every failed question: `eval/results.md`. Phase 4 must beat these numbers on the same eval set.
+
+**Phase 4 pass gate (Hari's decision, 2 Nov 2026):** wrong = 0 + every trap "Not in this document" + max answer time under 10 s, on all three sets: the 29 eval questions, the 10 hold-out questions (step 7) and the new public PDF (step 8). Right page is reported honestly in every run but is not a gate.
+
+Why: the product promise is "exact answer with its source, or 'Not in this document'". A missed answer is safe (the user is told it is not found); a wrong answer is not. Reaching 9/10 right page now depends on accepting paraphrased questions that share no word with their quote (NAV-11, BG-08), and no local check could do that safely: both re-rankers and the embedding model scored those right quotes below wrong-number and trap quotes (`eval/results.md`, topic threshold sections). Loosening the proof to reach 9/10 would risk wrong answers, which breaks the main product rule. A second AI judging the answer was rejected: code must prove the answer.
 
 ---
 

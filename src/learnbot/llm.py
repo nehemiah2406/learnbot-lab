@@ -5,10 +5,11 @@
 - The AIs of one question share a time budget (ask(..., budget_s=...)): a fallback only
   gets the time that is left, and is skipped if less than config.MIN_AI_TIME_S is left.
 - Nothing is retried. A daily limit (HTTP 429, or a 429 that does not say "per minute")
-  switches that provider off for the rest of the run, so quota is never spent on
-  retries. So do config.MAX_FAILURES_IN_A_ROW failures in a row of any other kind
-  (timeout, 503, 504, per-minute limit, or e.g. a 400 from a bad setting); one failure
-  only sends that question to the fallback.
+  switches that provider off for the rest of the run, so quota is never spent on it.
+  config.MAX_FAILURES_IN_A_ROW failures in a row of any other kind (timeout, 503, 504,
+  per-minute limit, or e.g. a 400 from a bad setting) switch it off too, but only for a
+  while: every config.RETRY_SWITCHED_OFF_EVERY questions it is tried once more, and if
+  it answers it is used again. One failure only sends that question to the fallback.
 - If every provider fails, the caller shows a friendly "AI busy" note instead.
 - Error messages never contain keys: only the error kind (and HTTP status) is kept.
 - Replies are cached in config.CACHE_DIR by prompt + model names, so the same question
@@ -182,11 +183,14 @@ class ReplyCache:
 class LLMChain:
     """Ask providers in order; first success wins. Counts real (not cached) calls."""
 
-    def __init__(self, providers, cache=None):
+    def __init__(self, providers, cache=None, read_cache=True):
         self.providers = list(providers)
         self.cache = cache
-        self.switched_off = set()  # providers skipped for the rest of the run
-        self.failures_in_a_row = {}  # provider label -> slow/down failures since its last success
+        self.read_cache = read_cache  # False: ask again, but still save the new replies
+        self.switched_off = set()  # providers skipped (daily limit: for the rest of the run)
+        self.daily_limit = set()  # switched off for good: never tried again in this run
+        self.failures_in_a_row = {}  # provider label -> failures since its last success
+        self.questions_off = {}  # provider label -> questions skipped since it was last tried
         self.calls = 0
         self.last_attempts = []  # [(provider label, "ok" or error kind, seconds)] of the last ask()
 
@@ -194,7 +198,7 @@ class LLMChain:
         return ReplyCache.key([p.label for p in self.providers], prompt)
 
     def is_cached(self, prompt):
-        return self.cache is not None and self.cache.get(self.cache_key(prompt)) is not None
+        return self.cache is not None and self.read_cache and self.cache.get(self.cache_key(prompt)) is not None
 
     def ask(self, prompt, budget_s=None):
         """(reply text, provider label, from cache?) or raises AllProvidersFailed.
@@ -202,14 +206,18 @@ class LLMChain:
         key = self.cache_key(prompt)
         deadline = None if budget_s is None else time.perf_counter() + budget_s
         attempts = self.last_attempts = []
-        if self.cache is not None:
+        if self.cache is not None and self.read_cache:
             hit = self.cache.get(key)
             if hit is not None:
                 return hit["reply"], hit["provider"], True
         for p in self.providers:
             if p.label in self.switched_off:
-                attempts.append((p.label, "switched_off", 0.0))
-                continue
+                waited = self.questions_off.get(p.label, 0) + 1
+                if p.label in self.daily_limit or waited < config.RETRY_SWITCHED_OFF_EVERY:
+                    self.questions_off[p.label] = waited
+                    attempts.append((p.label, "switched_off", 0.0))
+                    continue
+                self.questions_off[p.label] = 0  # try it once more on this question
             timeout = p.timeout_s
             if deadline is not None:
                 left = deadline - time.perf_counter()
@@ -225,12 +233,14 @@ class LLMChain:
                 attempts.append((p.label, err.kind, time.perf_counter() - start))
                 if isinstance(err, LLMDailyLimit):
                     self.switched_off.add(p.label)
+                    self.daily_limit.add(p.label)
                 else:  # timeout, 503/504, per-minute limit, or any other error (e.g. a bad setting)
                     self.failures_in_a_row[p.label] = self.failures_in_a_row.get(p.label, 0) + 1
                     if self.failures_in_a_row[p.label] >= config.MAX_FAILURES_IN_A_ROW:
                         self.switched_off.add(p.label)
                 continue
             self.failures_in_a_row[p.label] = 0
+            self.switched_off.discard(p.label)  # answered again: use it again
             attempts.append((p.label, "ok", time.perf_counter() - start))
             if self.cache is not None:
                 self.cache.put(key, {"provider": p.label, "reply": reply})

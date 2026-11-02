@@ -3,7 +3,8 @@
 Run:  .venv\\Scripts\\python scripts\\find_accepted_sources.py [eval/explain_questions.csv]
 For every row, the row's quote text (leading paragraph marker removed) is searched on
 every page of every document named in the eval set; each page with the same text is an
-accepted source. scripts/check_eval.py verifies the column afterwards.
+accepted source; if the question names a rule set, only pages of that rule set (same rule
+as the app). scripts/check_eval.py verifies the column afterwards.
 """
 
 import csv
@@ -30,8 +31,9 @@ def main():
     if missing:
         print(f"SKIPPED: PDF(s) not in data/raw: {', '.join(missing)}; {path} not changed")
         return 0
+    rule_sets = docs.rule_sets(doc_names)
     for row in rows:
-        sources = find_accepted_sources(row, docs, doc_names)
+        sources = find_accepted_sources(row, docs, doc_names, rule_sets)
         row["accepted_sources"] = format_sources(sources)
         extra = [f"{d}:{p}" for d, p in sources if not (d == row["doc"] and str(p) in row["page"].split("|"))]
         print(f"{row['id']}: {row['accepted_sources']}" + (f"   (extra: {', '.join(extra)})" if extra else ""))

@@ -16,8 +16,13 @@ from learnbot.pdf_text import read_page_text
 DATA_DIR = Path("data/raw")
 EXPLAIN_COLUMNS = [
     "doc", "id", "question", "type", "expected_answer",
-    "rule", "rule_set", "page", "source_quote", "accepted_sources",
+    "rule", "rule_set", "page", "source_quote", "accepted_sources", "other_answers",
 ]
+# other_answers (optional): another exact answer the document gives, as
+# "doc.pdf:N=exact text from that page" (several: separated by ";"). The text is both the
+# answer and its quote; the checker verifies it on that page. Example: a table page with
+# "nautical mile - 1,852 meters / 6,076.12 feet" for "How long is a nautical mile?".
+OPTIONAL_COLUMNS = {"other_answers"}
 # accepted_sources: every "doc.pdf:page" where the row's quote text appears (filled by
 # scripts/find_accepted_sources.py, verified by the checker). An answer from any of them
 # counts as the right source.
@@ -114,11 +119,14 @@ def row_pages(row):
 
 def check_explain_row(row):
     """Problems in one explain row that can be found without the PDF."""
-    problems = [f"empty column: {c}" for c in empty_columns(row, EXPLAIN_COLUMNS)]
+    required = [c for c in EXPLAIN_COLUMNS if c not in OPTIONAL_COLUMNS]
+    problems = [f"empty column: {c}" for c in empty_columns(row, required)]
     if problems:
         return problems
     if not is_plain_filename(row["doc"]):
         problems.append(f"doc must be a PDF file name in data/raw: {row['doc']}")
+    if parse_other_answers(row.get("other_answers", "")) is None:
+        problems.append(f"other_answers must be 'doc.pdf:N=exact text': {row['other_answers']}")
     if row["type"] not in EXPLAIN_TYPES:
         problems.append(f"unknown type: {row['type']}")
     if row["rule_set"] not in RULE_SETS:
@@ -158,6 +166,20 @@ def parse_sources(value):
             return None
         sources.append((doc, int(page)))
     return sources
+
+
+def parse_other_answers(value):
+    """[(doc, page, text)] from 'a.pdf:34=text;b.pdf:2=text' ([] if empty), or None if not valid."""
+    answers = []
+    for part in (value or "").split(SOURCE_SEPARATOR):
+        if not part.strip():
+            continue
+        where, sep, text = part.partition("=")
+        doc, _, page = where.strip().rpartition(":")
+        if not sep or not text.strip() or not is_plain_filename(doc) or not page.isdigit():
+            return None
+        answers.append((doc, int(page), text.strip()))
+    return answers
 
 
 def format_sources(sources):
@@ -218,6 +240,15 @@ class DocumentPages:
                     cache[n] = read_page_text(pdf.pages[n - 1]) if 1 <= n <= len(pdf.pages) else None
         return {n: cache[n] for n in numbers}
 
+    def rule_sets(self, doc_names):
+        """RuleSets (page labels from headings) of the given documents, as the app makes them."""
+        from learnbot.chunking import chunk_pages
+        from learnbot.rule_sets import RuleSets
+
+        chunks = [c for doc in doc_names
+                  for c in chunk_pages(doc, self.pages(doc, range(1, self.page_count(doc) + 1)))]
+        return RuleSets(chunks)
+
     def full_text(self, doc):
         numbers = range(1, self.page_count(doc) + 1)
         return "\n".join(t or "" for t in self.pages(doc, numbers).values())
@@ -241,9 +272,10 @@ def quote_core(quote):
     return LEADING_MARKER.sub("", quote)
 
 
-def find_accepted_sources(row, docs, doc_names):
+def find_accepted_sources(row, docs, doc_names, rule_sets=None):
     """Every (doc, page) where the row's quote text appears: the row's own page(s), plus
-    any page of the given documents with the same text (leading marker removed)."""
+    any page of the given documents with the same text (leading marker removed). If the
+    question names a rule set, only pages of that rule set (same rule as the app)."""
     found = {(row["doc"], p) for p in row_pages(row) or []}
     for quote in split_pair(row["source_quote"]):
         core = normalize(quote_core(quote))
@@ -251,14 +283,27 @@ def find_accepted_sources(row, docs, doc_names):
             continue
         for doc in doc_names:
             texts = docs.pages(doc, range(1, docs.page_count(doc) + 1))
-            found |= {(doc, n) for n, text in texts.items() if text and core in normalize(text)}
+            found |= {(doc, n) for n, text in texts.items() if text and core in normalize(text)
+                      and (rule_sets is None or rule_sets.allowed(row["question"], doc, n))}
     return sorted(found)
 
 
-def verify_accepted_sources(row, docs, doc_names):
+def verify_other_answers(row, docs):
+    """Problems if an other answer's text is not on its page."""
+    problems = []
+    for doc, page, text in parse_other_answers(row.get("other_answers", "")) or []:
+        if not docs.exists(doc):
+            continue
+        page_text = docs.pages(doc, [page])[page]
+        if page_text is None or not quote_on_page(text, page_text):
+            problems.append(f"other answer not found on {doc}:{page}: {text[:60]}")
+    return problems
+
+
+def verify_accepted_sources(row, docs, doc_names, rule_sets=None):
     """Problems if accepted_sources is not exactly the pages that have the quote text."""
     listed = set(parse_sources(row["accepted_sources"]) or [])
-    found = set(find_accepted_sources(row, docs, doc_names))
+    found = set(find_accepted_sources(row, docs, doc_names, rule_sets))
     problems = [f"accepted source has no matching text: {d}:{p}" for d, p in sorted(listed - found)]
     problems += [f"page has the same text but is not listed: {d}:{p}" for d, p in sorted(found - listed)]
     return problems

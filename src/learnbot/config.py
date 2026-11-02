@@ -50,9 +50,12 @@ FALLBACK_LLM_TIMEOUT_S = 15  # fallback AI(s), but never more than the time left
 # MIN_AI_TIME_S left is skipped (the user gets "AI busy" instead of a long wait).
 QUESTION_TIME_BUDGET_S = 9
 MIN_AI_TIME_S = 1
-# After this many failures in a row (timeout, 503, 504) an AI is skipped for the rest
-# of the run, so users do not wait for the timeout on every question.
+# After this many failures in a row (timeout, 503, 504, ...) an AI is skipped, so users
+# do not wait for the timeout on every question.
 MAX_FAILURES_IN_A_ROW = 2
+# A switched-off AI (not a daily limit) is tried again once every this many questions;
+# if it answers, it is used again.
+RETRY_SWITCHED_OFF_EVERY = 5
 PROMPT_VERSION = 4  # raise when the prompt changes, so cached answers are not reused
 # A quote must have at least this many words (a 2-word quote proves nothing).
 MIN_QUOTE_WORDS = 4

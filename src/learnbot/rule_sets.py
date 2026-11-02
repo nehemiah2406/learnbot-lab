@@ -3,8 +3,10 @@
 - A page's label is the one rule-set word found in the headings (piece titles) of
   that page. A page with none or with more than one has no label.
 - A document "has rule sets" if it has labelled pages for at least two different words.
-- If a question names exactly one rule-set word, an answer from a document with rule
-  sets must come from a page labelled with that word. Other documents are not affected.
+- If a question names exactly one rule-set word and any loaded document has rule sets,
+  the answer must come from a page labelled with that word, in any document. A page
+  without that label (for example a guide that only repeats the rule) may not answer.
+  If no loaded document has rule sets, nothing is filtered.
 """
 
 import re
@@ -38,8 +40,8 @@ class RuleSets:
         return self.labels.get((doc, page))
 
     def allowed(self, question, doc, page):
-        """False only if the question names a rule set the page does not belong to."""
+        """False if the question names a rule set and the page does not belong to it."""
         asked = self.asked(question)
-        if asked is None or doc not in self.docs_with_sets:
+        if asked is None or not self.docs_with_sets:
             return True
         return self.label(doc, page) == asked

@@ -22,6 +22,7 @@ from learnbot.eval_check import (  # noqa: E402
     load_rows,
     overall_result,
     verify_accepted_sources,
+    verify_other_answers,
     verify_quotes,
     verify_trap,
 )
@@ -40,6 +41,7 @@ def check_all(explain, traps, docs):
 
     doc_names = sorted({r["doc"] for r in explain + traps})
     all_docs_here = all(docs.exists(d) for d in doc_names)
+    rule_sets = docs.rule_sets(doc_names) if all_docs_here else None
     for row in explain:
         row_problems = check_explain_row(row)
         if not row_problems:
@@ -47,9 +49,9 @@ def check_all(explain, traps, docs):
                 missing_docs.add(row["doc"])
                 continue
             checked += 1
-            row_problems = verify_quotes(row, docs)
+            row_problems = verify_quotes(row, docs) + verify_other_answers(row, docs)
             if all_docs_here:  # accepted sources can only be checked with every PDF present
-                row_problems += verify_accepted_sources(row, docs, doc_names)
+                row_problems += verify_accepted_sources(row, docs, doc_names, rule_sets)
             verified += not row_problems
         if row_problems:
             problems.setdefault(row.get("id", "?"), []).extend(row_problems)
