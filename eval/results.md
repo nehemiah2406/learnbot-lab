@@ -1,10 +1,11 @@
 # Results
 
+<!-- BEGIN phase3-baseline -->
 ## Phase 3 baseline: keyword search (BM25), no AI
 
 - Documents in one index: boaters_guide.pdf, coast_pilot4_ch1.pdf, nav_rules.pdf (2149 pieces)
 - Threshold `BASELINE_MIN_SCORE` = **11.5** (sweep recommends 11.5; rule below)
-- Reading + chunking the PDFs: 29.4 s (once, at upload). Average search time per question: **3.4 ms**
+- Reading + chunking the PDFs: 17.7 s (once, at upload). Average search time per question: **1.7 ms**
 
 | Measure | Result |
 |---|---|
@@ -19,7 +20,7 @@
 
 Compare rows count as right page if the top piece is on either of their two pages. "Exact answer" is strict: a compare answer needs both pages, so it cannot be in one piece. "Right doc + page" stays strict; an answer from another doc or page counts as "correct, other source" only if its top-1 piece contains the row's source quote (normalised; compare rows: either quote). Every other answer from a wrong page is "wrong".
 
-### Per document
+#### Per document
 
 | Document | Questions | Right page top 1 | Right page top 3 | Exact answer top 1 | Correct, other source | Wrong | Missed |
 |---|---|---|---|---|---|---|---|
@@ -27,7 +28,7 @@ Compare rows count as right page if the top piece is on either of their two page
 | coast_pilot4_ch1.pdf | 8 | 5/8 (62%) | 7/8 (88%) | 5/8 (62%) | 0 | 0 | 3 |
 | nav_rules.pdf | 13 | 7/13 (54%) | 9/13 (69%) | 5/13 (38%) | 1 | 5 | 0 |
 
-### Per type
+#### Per type
 
 | Type | Questions | Right page top 1 | Right page top 3 | Exact answer top 1 | Correct, other source | Wrong | Missed |
 |---|---|---|---|---|---|---|---|
@@ -37,7 +38,7 @@ Compare rows count as right page if the top piece is on either of their two page
 | number | 9 | 6/9 (67%) | 7/9 (78%) | 5/9 (56%) | 0 | 2 | 1 |
 | paraphrase | 6 | 2/6 (33%) | 3/6 (50%) | 2/6 (33%) | 0 | 2 | 2 |
 
-## Threshold
+### Threshold
 
 If the best BM25 score is below the threshold, the answer is "Not in this document".
 
@@ -90,12 +91,12 @@ Rule, fixed before looking at single questions: pick the threshold with the most
 | 19.5 | 11 | 1 | 2 | 15 | 8 | 0 | 20 |
 | 20.0 | 10 | 1 | 2 | 16 | 8 | 0 | 19 |
 
-## Correct, other source
+### Correct, other source
 
 - **NAV-03** expected nav_rules.pdf p.109: Under the International Rules, what signal must a vessel give when it is in doubt about the intentions or actions of an approaching vessel?  
   Returned: answered; top 1: coast_pilot4_ch1.pdf p.22, score 26.8: "(313) Navigation Rules, International-Inland, Rule 34(d), states that when vessels in sight of one another are approachi..."; also: nav_rules.pdf p.109 (26.5), nav_rules.pdf p.110 (25.3)
 
-## Failed questions
+### Failed questions
 
 - **NAV-05** (wrong) expected nav_rules.pdf p.106: How long is a prolonged blast under the Inland Rules?  
   Returned: answered; top 1: nav_rules.pdf p.110, score 14.5: "(e) A vessel nearing a bend or an area of a channel or fairway where other vessels may be obscured by an intervening obs..."; also: nav_rules.pdf p.105 (13.8), nav_rules.pdf p.110 (13.6)
@@ -122,7 +123,7 @@ Rule, fixed before looking at single questions: pick the threshold with the most
 - **TRAP-NAV-02** (trap_answered) expected "Not in this document": How many hours of rest must a watchkeeper have in any 24-hour period under STCW?  
   Returned: answered; top 1: coast_pilot4_ch1.pdf p.31, score 15.9: "(424) 2. Has diarrhea, defined as the occurrence in a 24 hour period of three or more loose stools or of a greater than ..."; also: coast_pilot4_ch1.pdf p.31 (13.0), coast_pilot4_ch1.pdf p.20 (9.9)
 
-## Right page, but exact answer not in the top-1 piece
+### Right page, but exact answer not in the top-1 piece
 
 - **NAV-04** expected "6 miles"  
   Top-1 piece: "(b) In vessels of 12 meters or more in length but less than 50 meters in length: − a masthead light, 5 miles; except that where the length of the vessel is less..."
@@ -132,3 +133,28 @@ Rule, fixed before looking at single questions: pick the threshold with the most
   Top-1 piece: "(b) A vessel may supplement the whistle signals prescribed in paragraph (a) of this Rule by light signals:"
 - **NAV-12** expected "Between 70-200 Hz."  
   Top-1 piece: "(a) Frequencies and range of audibility The fundamental frequency of the signal shall lie within the range 70-700 Hz. The range of audibility of the signal from..."
+<!-- END phase3-baseline -->
+
+<!-- BEGIN phase4-search -->
+## Phase 4 search choice (no AI)
+
+All 3 PDFs in one index (2149 pieces). The AI gets the top **5** pieces, so the main number is "right doc + page among the 5 pieces sent".
+Choice rule, fixed before looking at single questions: most right in the pieces sent; tie -> more right in top 1; tie -> the simpler option. The first run ended in an exact tie on all three, so one tie-break was added before "simpler": more compare questions with both pages sent (a compare answer needs both pages).
+
+| Search | Right page in top 5 | Right page top 1 | Compare: both pages sent | Avg search time |
+|---|---|---|---|---|
+| BM25 | 26/29 | 18/29 | 2/3 | 2 ms |
+| BM25 + rule set | 27/29 | 18/29 | 2/3 | 4 ms |
+| Embeddings all-MiniLM-L6-v2 | 26/29 | 17/29 | 2/3 | 1897 ms |
+| Embeddings all-MiniLM-L6-v2 + rule set | 27/29 | 19/29 | 2/3 | 23 ms |
+| Hybrid RRF (all-MiniLM-L6-v2) | 28/29 | 21/29 | 2/3 | 32 ms |
+| Hybrid RRF (all-MiniLM-L6-v2) + rule set | 28/29 | 23/29 | 2/3 | 27 ms |
+| Hybrid RRF (all-MiniLM-L6-v2) + rule set + re-ranker | 29/29 | 25/29 | 1/3 | 852 ms |
+| Embeddings bge-small-en-v1.5 | 28/29 | 21/29 | 2/3 | 119 ms |
+| Embeddings bge-small-en-v1.5 + rule set | 28/29 | 22/29 | 2/3 | 34 ms |
+| Hybrid RRF (bge-small-en-v1.5) | 29/29 | 21/29 | 2/3 | 44 ms |
+| Hybrid RRF (bge-small-en-v1.5) + rule set | 29/29 | 21/29 | 2/3 | 49 ms |
+| Hybrid RRF (bge-small-en-v1.5) + rule set + re-ranker **← chosen** | 29/29 | 25/29 | 2/3 | 757 ms |
+
+Rule-set check: 10 questions name one rule set; their expected page has that rule set's label in 10/10 cases (labels come from page headings).
+<!-- END phase4-search -->

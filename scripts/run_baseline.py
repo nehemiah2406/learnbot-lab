@@ -16,6 +16,7 @@ from learnbot import config  # noqa: E402
 from learnbot.baseline import NOT_FOUND, BM25Index, answer  # noqa: E402
 from learnbot.chunking import chunk_pdf  # noqa: E402
 from learnbot.eval_check import load_rows  # noqa: E402
+from learnbot.report import replace_section  # noqa: E402
 from learnbot.evaluate import (  # noqa: E402
     CORRECT_OTHER, MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
     choose_threshold, exact_answer_in, on_right_page, outcome, sweep,
@@ -89,8 +90,6 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
     n, t = len(explain), len(traps)
     count = lambda rs, o: sum(r["outcome"] == o for r in rs)  # noqa: E731
     lines = [
-        "# Results",
-        "",
         "## Phase 3 baseline: keyword search (BM25), no AI",
         "",
         f"- Documents in one index: {', '.join(docs)} ({n_chunks} pieces)",
@@ -117,15 +116,15 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
         "\"correct, other source\" only if its top-1 piece contains the row's source quote "
         "(normalised; compare rows: either quote). Every other answer from a wrong page is \"wrong\".",
         "",
-        "### Per document",
+        "#### Per document",
         "",
         *group_table(explain, lambda r: r["row"]["doc"], "Document"),
         "",
-        "### Per type",
+        "#### Per type",
         "",
         *group_table(explain, lambda r: r["row"]["type"], "Type"),
         "",
-        "## Threshold",
+        "### Threshold",
         "",
         "If the best BM25 score is below the threshold, the answer is \"Not in this document\".",
         "",
@@ -143,7 +142,7 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
         mark = " ← chosen" if thr == config.BASELINE_MIN_SCORE else ""
         lines.append(f"| {thr} | {c[RIGHT]} | {c[CORRECT_OTHER]} | {c[WRONG]} | {c[MISSED]} "
                      f"| {c[REFUSED]} | {c[TRAP_ANSWERED]} | {correct}{mark} |")
-    lines += ["", "## Correct, other source", ""]
+    lines += ["", "### Correct, other source", ""]
     other = [r for r in explain if r["outcome"] == CORRECT_OTHER]
     for r in other:
         row = r["row"]
@@ -151,7 +150,7 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
                      f"  Returned: {returned(r)}")
     if not other:
         lines.append("None.")
-    lines += ["", "## Failed questions", ""]
+    lines += ["", "### Failed questions", ""]
     failed = [r for r in records if r["outcome"] in (WRONG, MISSED, TRAP_ANSWERED)]
     for r in failed:
         row = r["row"]
@@ -161,7 +160,7 @@ def build_report(records, times, table, recommended, n_chunks, index_seconds, do
     if not failed:
         lines.append("None.")
     not_exact = [r for r in explain if r["outcome"] == RIGHT and not r["exact"]]
-    lines += ["", "## Right page, but exact answer not in the top-1 piece", ""]
+    lines += ["", "### Right page, but exact answer not in the top-1 piece", ""]
     for r in not_exact:
         row = r["row"]
         lines.append(f"- **{row['id']}** expected \"{row['expected_answer']}\"  \n  Top-1 piece: \"{short(r['hits'][0].chunk.text, 160)}\"")
@@ -189,7 +188,7 @@ def main():
     table = sweep([(r["row"], r["trap"], r["hits"]) for r in records], SWEEP_STEPS)
     recommended = choose_threshold(table)
     report = build_report(records, times, table, recommended, len(chunks), index_seconds, [p.name for p in pdfs])
-    RESULTS.write_text(report, encoding="utf-8")
+    replace_section(RESULTS, "phase3-baseline", report)
 
     explain_r = [r for r in records if not r["trap"]]
     trap_r = [r for r in records if r["trap"]]

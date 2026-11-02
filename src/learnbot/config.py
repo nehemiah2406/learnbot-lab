@@ -20,3 +20,31 @@ SAMPLE_CHARS = 300
 # Baseline keyword search (Phase 3): best BM25 score below this -> "Not in this document".
 # Chosen from the threshold sweep in eval/results.md.
 BASELINE_MIN_SCORE = 11.5
+
+# --- Phase 4: search + AI answers ---------------------------------------------------
+STORAGE_DIR = "storage"  # pieces + ChromaDB vectors, cached by file hash (gitignored)
+CACHE_DIR = "cache"  # saved AI answers (gitignored)
+PIECES_VERSION = 1  # raise when chunking changes, so cached pieces are rebuilt
+
+# Local embedding model (sentence-transformers). Chosen by eval, see eval/results.md.
+EMBED_MODEL = "BAAI/bge-small-en-v1.5"
+# Optional local re-ranker (cross-encoder); None = off. Chosen by eval.
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L6-v2"
+SEARCH_METHOD = "hybrid"  # "bm25", "embed" or "hybrid" (reciprocal rank fusion)
+RRF_K = 60  # standard reciprocal rank fusion constant
+SEARCH_CANDIDATES = 50  # pieces taken from each search before fusing
+PIECES_TO_LLM = 5  # only this many pieces are sent to the AI
+# Rule-set words: if a question names one and a document has pages headed with each of
+# them, the answer must come from a page headed with the named one.
+RULE_SET_WORDS = ("International", "Inland")
+
+# AI models (names can be changed in .env: GEMINI_MODEL, GROQ_MODEL).
+# Checked with scripts/list_models.py on 2 Nov 2026.
+GEMINI_MODEL = "gemini-3.8-flash"
+GROQ_MODEL = "openai/gpt-oss-120b"  # no Llama 70B model is offered on this Groq account
+LLM_TIMEOUT_S = 15
+PROMPT_VERSION = 1  # raise when the prompt changes, so cached answers are not reused
+# A quote must have at least this many words (a 2-word quote proves nothing).
+MIN_QUOTE_WORDS = 4
+# Ask before an eval run that needs more AI calls than this.
+MAX_LLM_CALLS_WITHOUT_ASKING = 50

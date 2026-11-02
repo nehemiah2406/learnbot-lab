@@ -2,7 +2,7 @@
 (baseline now, RAG in Phase 4): it only needs doc, page and text of the top hits.
 """
 
-from learnbot.baseline import NOT_FOUND, tokenize
+from learnbot.baseline import NOT_FOUND, Hit, tokenize
 from learnbot.eval_check import normalize, numbers_in, row_pages, split_pair
 
 # Outcomes
@@ -65,6 +65,55 @@ def sweep(results, thresholds):
         counts = {o: outcomes.count(o) for o in (RIGHT, CORRECT_OTHER, WRONG, MISSED, REFUSED, TRAP_ANSWERED)}
         table.append((t, counts, correct_count(outcomes)))
     return table
+
+
+# --- Phase 4: scoring an AI answer (learnbot.answer.Answer) --------------------------
+WORD_NUMBERS = {
+    w: str(i) for i, w in enumerate(
+        "zero one two three four five six seven eight nine ten eleven twelve thirteen "
+        "fourteen fifteen sixteen seventeen eighteen nineteen twenty".split())
+}
+WORD_NUMBERS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
+                     "seventy": "70", "eighty": "80", "ninety": "90"})
+
+
+def same_numbers(text):
+    """Numbers in the text, with number words as digits ("four" -> "4")."""
+    return {WORD_NUMBERS.get(n, n) for n in numbers_in(text)}
+
+
+def numbers_differ(expected_answer, shown_answer, question):
+    """True if a number of the expected answer is missing from the shown answer, or the
+    shown answer has a number that is neither expected nor in the question."""
+    expected, shown = same_numbers(expected_answer), same_numbers(shown_answer)
+    return not expected <= shown or not shown <= expected | same_numbers(question)
+
+
+def score_answer(row, is_trap, ans):
+    """(outcome, reason) for one Answer. Outcomes as in Phase 3; reason explains failures."""
+    if is_trap:
+        if ans.status != "answered":
+            return REFUSED, ""
+        where = ", ".join(f"{s['doc']} p.{s['page']}" for s in ans.sources)
+        return TRAP_ANSWERED, f"answered from {where}"
+    right_sent = any(on_right_page(row, Hit(0, c)) for c in ans.pieces)
+    if ans.status != "answered":
+        reason = ans.reason + (f" ({ans.detail})" if ans.detail else "")
+        return MISSED, reason if right_sent else f"search miss (right page not sent); {reason}"
+    if numbers_differ(row["expected_answer"], ans.text, row["question"]):
+        expected, shown = sorted(same_numbers(row["expected_answer"])), sorted(same_numbers(ans.text))
+        return WRONG, f"numbers differ: expected {expected}, shown {shown}"
+    if any(hit_on_right_page(row, s) for s in ans.sources):
+        return RIGHT, ""
+    for s in ans.sources:
+        page_pieces = [c for c in ans.pieces if (c.doc, c.page) == (s["doc"], s["page"])]
+        if any(has_source_quote(row, Hit(0, c)) for c in page_pieces):
+            return CORRECT_OTHER, f"from {s['doc']} p.{s['page']}"
+    return WRONG, "answer shown is not supported by the expected source"
+
+
+def hit_on_right_page(row, source):
+    return source["doc"] == row["doc"] and source["page"] in (row_pages(row) or [])
 
 
 def choose_threshold(table):

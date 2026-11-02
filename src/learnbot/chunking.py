@@ -15,6 +15,7 @@ Rules (general, no file-specific code):
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 import pdfplumber
 
@@ -122,10 +123,18 @@ def chunk_page(doc, page, page_text):
     ]
 
 
-def chunk_pdf(path):
-    """All chunks of one PDF, using the column-aware page reading."""
-    chunks = []
+def read_pdf_pages(path):
+    """{page number: text} for one PDF, using the column-aware page reading."""
     with pdfplumber.open(path) as pdf:
-        for page_no, page in enumerate(pdf.pages, start=1):
-            chunks += chunk_page(path.name, page_no, read_page_text(page))
-    return chunks
+        return {n: read_page_text(page) for n, page in enumerate(pdf.pages, start=1)}
+
+
+def chunk_pages(doc, pages):
+    """All chunks of one document from its {page number: text}."""
+    return [c for n, text in sorted(pages.items()) for c in chunk_page(doc, n, text)]
+
+
+def chunk_pdf(path):
+    """All chunks of one PDF (path may be a str or a Path)."""
+    path = Path(path)
+    return chunk_pages(path.name, read_pdf_pages(path))
