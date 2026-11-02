@@ -4,6 +4,7 @@
 
 from learnbot.baseline import NOT_FOUND, Hit, tokenize
 from learnbot.eval_check import normalize, numbers_in, parse_sources, row_pages, split_pair
+from learnbot.units import WORD_NUMBERS
 
 # Outcomes
 RIGHT = "right"  # answered, top-1 piece is from the right doc + page
@@ -75,15 +76,6 @@ def sweep(results, thresholds):
 
 
 # --- Phase 4: scoring an AI answer (learnbot.answer.Answer) --------------------------
-WORD_NUMBERS = {
-    w: str(i) for i, w in enumerate(
-        "zero one two three four five six seven eight nine ten eleven twelve thirteen "
-        "fourteen fifteen sixteen seventeen eighteen nineteen twenty".split())
-}
-WORD_NUMBERS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
-                     "seventy": "70", "eighty": "80", "ninety": "90"})
-
-
 def same_numbers(text):
     """Numbers in the text, with number words as digits ("four" -> "4")."""
     return {WORD_NUMBERS.get(n, n) for n in numbers_in(text)}

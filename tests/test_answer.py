@@ -40,8 +40,9 @@ class FakeChain:
     def __init__(self, reply=None, fail=False):
         self.reply, self.fail, self.prompts = reply, fail, []
 
-    def ask(self, prompt):
+    def ask(self, prompt, budget_s=None):
         self.prompts.append(prompt)
+        self.budget_s = budget_s
         if self.fail:
             raise AllProvidersFailed([("gemini:x", "rate_limit", 0.3), ("groq:y", "timeout", 15.0)])
         return self.reply, "gemini:x", False
@@ -137,3 +138,27 @@ def test_numbers_differ():
     assert numbers_differ("6 miles", "5 miles", "How far?")
     assert numbers_differ("6 miles; about 1.15 statute miles", "6 miles", "How far?")  # missing number
     assert not numbers_differ("6 miles", "On a 50 m vessel: 6 miles", "Vessel of 50 m, how far?")
+
+
+# --- Reserved rules and the time budget --------------------------------------------------
+def test_reserved_rule_is_answered_without_the_ai():
+    piece = Chunk("rules.pdf", 87, "—INLAND— Lights and Shapes Rule 28", "[Reserved]")
+
+    class Lib:
+        def page_text(self, doc, page):
+            return "—INLAND—\nLights and Shapes\nRule 28\n[Reserved]\n87"
+
+    searcher = FakeSearcher([piece])
+    searcher.library = Lib()
+    chain = FakeChain(found())
+    ans = answer_question("What does Rule 28 of the Inland Rules say?", searcher, chain)
+    assert ans.status == ANSWERED and "reserved" in ans.text.lower() and chain.prompts == []
+    assert ans.sources[0]["page"] == 87 and ans.sources[0]["quote"] == "Rule 28 [Reserved]"
+    assert ans.provider == "code:reserved"
+
+
+def test_ai_gets_the_time_left_of_the_question_budget():
+    chain = FakeChain(found())
+    answer_question(QUESTION, FakeSearcher([PIECE]), chain)
+    from learnbot import config
+    assert 0 < chain.budget_s <= config.QUESTION_TIME_BUDGET_S

@@ -314,3 +314,65 @@ Which AI answered: gemini:gemini-3.1-flash-lite 35, groq:openai/gpt-oss-120b 2
 - **CP-08** (right): Squat is a change in the trim of a moving ship compared to when it is stopped, which usually causes the stern to sit deeper in the water, although it ...  
   Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
 <!-- END phase4-answers -->
+
+<!-- BEGIN phase4-topic-threshold -->
+## Phase 4: topic threshold for paraphrased questions
+
+Re-ranker `cross-encoder/ms-marco-MiniLM-L6-v2` score of (question, quote). Used only when the quote shares no word with the question. Chosen by `scripts/choose_topic_threshold.py` (no AI calls).
+
+- Highest bad-quote score (trap quotes + wrong-number quotes): **8.07** (CP-07)
+- Lowest safe threshold: **8.07**
+- Right quotes at or above it: 6/32; of the right quotes that share no word with their question: 0/3
+
+Decision: **no safe threshold**. Every right quote that shares no word with its question scores below the bad quotes, so any threshold that lets it pass would also let bad quotes pass. `TOPIC_MIN_SCORE` stays `None` (off): such answers stay "Not in this document".
+
+| Right quote (question) | Score | Shares a word | Passes threshold |
+|---|---|---|---|
+| NAV-01 | 5.02 | yes | no |
+| NAV-02 | 6.04 | yes | no |
+| NAV-03 | 1.73 | yes | no |
+| NAV-04 | 3.99 | yes | no |
+| NAV-05 | 4.68 | yes | no |
+| NAV-06 | 6.06 | yes | no |
+| NAV-07 | -1.94 | yes | no |
+| NAV-07 | -1.55 | yes | no |
+| NAV-08 | -0.76 | yes | no |
+| NAV-08 | -0.63 | yes | no |
+| NAV-09 | 4.20 | yes | no |
+| NAV-09 | -10.72 | no | no |
+| NAV-10 | -1.87 | yes | no |
+| NAV-11 | -8.79 | no | no |
+| NAV-12 | 4.06 | yes | no |
+| NAV-13 | -3.28 | yes | no |
+| BG-01 | 8.70 | yes | yes |
+| BG-02 | -0.93 | yes | no |
+| BG-03 | 5.87 | yes | no |
+| BG-04 | -5.01 | yes | no |
+| BG-05 | -4.31 | yes | no |
+| BG-06 | 8.11 | yes | yes |
+| BG-07 | -2.79 | yes | no |
+| BG-08 | -7.82 | no | no |
+| CP-01 | 9.70 | yes | yes |
+| CP-02 | 7.90 | yes | no |
+| CP-03 | 6.81 | yes | no |
+| CP-04 | 8.99 | yes | yes |
+| CP-05 | 8.48 | yes | yes |
+| CP-06 | 9.85 | yes | yes |
+| CP-07 | 8.07 | yes | no |
+| CP-08 | 4.95 | yes | no |
+
+| Highest bad quote per question | Score | Quote |
+|---|---|---|
+| CP-07 | 8.07 | A nautical mile is one minute of latitude, or approximately 2,000 yards, and is  |
+| NAV-12 | 6.98 | The range of audibility of the signal from a whistle shall be determined by thos |
+| CP-04 | 6.58 | A statute mile is 5,280 feet or about 0.87 nautical mile. |
+| NAV-07 | 5.80 | (313) Navigation Rules, International-Inland, Rule 34(d), states that when vesse |
+| NAV-04 | 5.75 | (c) The masthead light of a power-driven vessel of 12 meters but less than 20 me |
+| BG-02 | 4.84 | Recreational vessels are eligible to be documented if they are wholly owned by a |
+| NAV-09 | 4.58 | A vessel constrained by her draft may, in addition to the lights prescribed for  |
+| CP-03 | 3.71 | See charts for the horizontal clearance of bridges, as these are generally given |
+| NAV-06 | 3.71 | (a) A power-driven vessel making way through the water shall sound at intervals  |
+| NAV-05 | 2.43 | (a) A power-driven vessel making way through the water shall sound at intervals  |
+| NAV-10 | 2.05 | (iii) the light used for this signal shall, if fitted, be an all-round white lig |
+| BG-06 | 2.01 | includes synthetic ropes, Prohibited in all areas fishing nets, and plastic bags |
+<!-- END phase4-topic-threshold -->

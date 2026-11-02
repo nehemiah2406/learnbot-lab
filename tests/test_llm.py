@@ -192,3 +192,31 @@ def test_default_chain_skips_providers_without_key(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     assert llm.default_chain(cache=False).providers == []
+
+
+# --- Fix 4: one time budget per question, shared by the AIs ---------------------------
+def test_fallback_gets_only_the_time_left_in_the_budget(monkeypatch):
+    monkeypatch.setattr(llm.config, "MIN_AI_TIME_S", 0.05)
+    slow = Fake("gemini", "sleep", timeout_s=0.2)
+    slow_too = Fake("groq", "sleep", timeout_s=15)
+    chain = LLMChain([slow, slow_too])
+    start = time.perf_counter()
+    with pytest.raises(AllProvidersFailed):
+        chain.ask("q", budget_s=0.35)
+    # 0.2 s main + at most the 0.15 s left for the fallback, not the fallback's own 15 s.
+    assert time.perf_counter() - start < 0.45
+    assert [kind for _, kind, _ in chain.last_attempts] == ["timeout", "timeout"]
+
+
+def test_fallback_is_skipped_when_too_little_time_is_left(monkeypatch):
+    monkeypatch.setattr(llm.config, "MIN_AI_TIME_S", 0.5)
+    slow, groq = Fake("gemini", "sleep", timeout_s=0.2), Fake("groq", '{"found": false}')
+    chain = LLMChain([slow, groq])
+    with pytest.raises(AllProvidersFailed) as failed:
+        chain.ask("q", budget_s=0.6)
+    assert failed.value.attempts[1][:2] == ("groq:fake-model", "no_time_left") and groq.calls == 0
+
+
+def test_no_budget_keeps_each_providers_timeout():
+    slow, groq = Fake("gemini", "sleep", timeout_s=0.05), Fake("groq", '{"found": false}')
+    assert LLMChain([slow, groq]).ask("q")[1] == "groq:fake-model"

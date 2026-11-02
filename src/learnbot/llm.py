@@ -2,6 +2,8 @@
 
 - Every call has a timeout (main AI config.MAIN_LLM_TIMEOUT_S, fallback
   config.FALLBACK_LLM_TIMEOUT_S), set in the SDK and checked again here.
+- The AIs of one question share a time budget (ask(..., budget_s=...)): a fallback only
+  gets the time that is left, and is skipped if less than config.MIN_AI_TIME_S is left.
 - Nothing is retried. A daily limit (HTTP 429, or a 429 that does not say "per minute")
   switches that provider off for the rest of the run, so quota is never spent on
   retries. So do config.MAX_FAILURES_IN_A_ROW failures in a row of any other kind
@@ -58,7 +60,9 @@ class AllProvidersFailed(Exception):
         self.attempts = attempts  # [(provider label, error kind, seconds)]
 
 
-_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+# Room for calls that timed out on our clock but still run in the background, so a new
+# call never waits in the queue.
+_executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 
 
 def with_timeout(fn, timeout_s):
@@ -106,9 +110,9 @@ class Provider:
     def label(self):
         return f"{self.name}:{self.model}"
 
-    def ask(self, prompt):
+    def ask(self, prompt, timeout_s=None):
         try:
-            return with_timeout(lambda: self._call(prompt), self.timeout_s)
+            return with_timeout(lambda: self._call(prompt), timeout_s or self.timeout_s)
         except Exception as exc:  # noqa: BLE001 - every failure becomes a key-free LLMError
             raise classify(exc) from None
 
@@ -192,9 +196,11 @@ class LLMChain:
     def is_cached(self, prompt):
         return self.cache is not None and self.cache.get(self.cache_key(prompt)) is not None
 
-    def ask(self, prompt):
-        """(reply text, provider label, from cache?) or raises AllProvidersFailed."""
+    def ask(self, prompt, budget_s=None):
+        """(reply text, provider label, from cache?) or raises AllProvidersFailed.
+        budget_s: seconds all providers together may use for this prompt (None = no limit)."""
         key = self.cache_key(prompt)
+        deadline = None if budget_s is None else time.perf_counter() + budget_s
         attempts = self.last_attempts = []
         if self.cache is not None:
             hit = self.cache.get(key)
@@ -204,10 +210,17 @@ class LLMChain:
             if p.label in self.switched_off:
                 attempts.append((p.label, "switched_off", 0.0))
                 continue
+            timeout = p.timeout_s
+            if deadline is not None:
+                left = deadline - time.perf_counter()
+                if left < config.MIN_AI_TIME_S:
+                    attempts.append((p.label, "no_time_left", 0.0))
+                    continue
+                timeout = min(timeout, left)
             self.calls += 1
             start = time.perf_counter()
             try:
-                reply = p.ask(prompt)
+                reply = p.ask(prompt, timeout)
             except LLMError as err:
                 attempts.append((p.label, err.kind, time.perf_counter() - start))
                 if isinstance(err, LLMDailyLimit):

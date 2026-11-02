@@ -29,6 +29,7 @@ from learnbot.evaluate import (  # noqa: E402
 )
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
+from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.report import replace_section  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
 
@@ -83,10 +84,11 @@ def build_report(records, base, chain, k, title):
         f"- Search: `{config.SEARCH_METHOD}` (BM25 + `{config.EMBED_MODEL}`, RRF), rule-set filter on, "
         f"re-ranker `{config.RERANK_MODEL}`; top {k} pieces sent to the AI",
         f"- AI: {', '.join(p.label for p in chain.providers)} (in this order), timeout "
-        f"{config.MAIN_LLM_TIMEOUT_S} s (main) / {config.FALLBACK_LLM_TIMEOUT_S} s (fallback), no retries; "
-        f"prompt version {config.PROMPT_VERSION}",
+        f"{config.MAIN_LLM_TIMEOUT_S} s (main) / {config.FALLBACK_LLM_TIMEOUT_S} s (fallback), all within "
+        f"{config.QUESTION_TIME_BUDGET_S} s per question, no retries; prompt version {config.PROMPT_VERSION}",
         "- Every answer passed the proof check (quote on its page, numbers + units in the quote, "
-        "page was sent, rule set, topic) or was replaced by \"Not in this document\"",
+        "page was sent, rule set, topic, one source unless comparing, every number of the quote "
+        "in the answer) or was replaced by \"Not in this document\"",
         "- **Wrong** = answer shown is not supported by the expected source, OR its numbers differ "
         "from the expected answer's numbers",
         "",
@@ -141,7 +143,7 @@ def build_report(records, base, chain, k, title):
     for r in records:
         ans = r["ans"]
         if ans.status == ANSWERED:
-            quotes = " | ".join(f"\"{short(s['quote'], 120)}\"" for s in ans.sources)
+            quotes = " | ".join(f"\"{short(shown_quote(s), 160)}\"" for s in ans.sources)
             lines.append(f"- **{r['row']['id']}** ({r['outcome']}): {short(ans.text)}  \n"
                          f"  Source: {where(ans.sources)}; quote: {quotes}")
     return "\n".join(lines)
@@ -199,7 +201,7 @@ def main():
             ans = answer_question(row["question"], searcher, chain)
         result, reason = score_answer(row, trap, ans)
         exact = (not trap and ans.status == ANSWERED and exact_answer_in(
-            row["expected_answer"], ans.text + " " + " ".join(s["quote"] for s in ans.sources)))
+            row["expected_answer"], ans.text + " " + " ".join(shown_quote(s) for s in ans.sources)))
         records.append({"row": row, "trap": trap, "ans": ans, "outcome": result, "reason": reason, "exact": exact})
         tag = "cache" if ans.cached else (ans.attempts or ans.detail or "-")
         print(f"{row['id']}: {result} [{ans.seconds:.1f} s; {tag}] {reason}")

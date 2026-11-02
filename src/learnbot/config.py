@@ -43,13 +43,24 @@ RULE_SET_WORDS = ("International", "Inland")
 # gemini-3.1-flash-lite 1.5 s, gemini-3.5-flash 2.7 s, gemini-3.8-flash 504 after 13.6 s.
 GEMINI_MODEL = "gemini-3.1-flash-lite"
 GROQ_MODEL = "openai/gpt-oss-120b"  # no Llama 70B model is offered on this Groq account
-MAIN_LLM_TIMEOUT_S = 7  # main AI (flash-lite normally answers in 1-5 s)
-FALLBACK_LLM_TIMEOUT_S = 15  # fallback AI(s)
+MAIN_LLM_TIMEOUT_S = 5  # main AI (flash-lite answered in 1-5 s in the eval)
+FALLBACK_LLM_TIMEOUT_S = 15  # fallback AI(s), but never more than the time left (below)
+# One question (search + all AIs + proof check) must answer in under 10 s: the AIs share
+# what is left of this budget after the search. A fallback with less than
+# MIN_AI_TIME_S left is skipped (the user gets "AI busy" instead of a long wait).
+QUESTION_TIME_BUDGET_S = 9
+MIN_AI_TIME_S = 1
 # After this many failures in a row (timeout, 503, 504) an AI is skipped for the rest
 # of the run, so users do not wait for the timeout on every question.
 MAX_FAILURES_IN_A_ROW = 2
-PROMPT_VERSION = 3  # raise when the prompt changes, so cached answers are not reused
+PROMPT_VERSION = 4  # raise when the prompt changes, so cached answers are not reused
 # A quote must have at least this many words (a 2-word quote proves nothing).
 MIN_QUOTE_WORDS = 4
+# A paraphrased question that shares no word with the quote passes the topic check only if
+# the re-ranker (RERANK_MODEL) scores (question, quote) at least this. Chosen on the eval
+# set by scripts/choose_topic_threshold.py: above every trap and wrong-item quote.
+# None = off: on 2 Nov 2026 no safe threshold existed (paraphrased right quotes scored
+# -11 to -8, bad quotes up to 8; see eval/results.md).
+TOPIC_MIN_SCORE = None
 # Ask before an eval run that needs more AI calls than this.
 MAX_LLM_CALLS_WITHOUT_ASKING = 50

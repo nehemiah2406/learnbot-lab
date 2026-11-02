@@ -2,7 +2,8 @@
 
 Only an answer that passes the proof check (learnbot.proof) is shown. Anything else is
 "Not in this document". If no AI is reachable, the best pieces are shown with an
-"AI busy" note, never as an answer.
+"AI busy" note, never as an answer. A question about a rule the document marks
+"[Reserved]" is answered by code (learnbot.reserved), without the AI.
 """
 
 import json
@@ -10,9 +11,10 @@ import re
 import time
 from dataclasses import dataclass, field
 
-from learnbot import proof
+from learnbot import config, proof
 from learnbot.baseline import NOT_FOUND
 from learnbot.llm import AI_BUSY, AllProvidersFailed
+from learnbot.reserved import RESERVED_ANSWER, reserved_source
 
 ANSWERED, REFUSED, AI_BUSY_STATUS = "answered", "not_found", "ai_busy"
 
@@ -28,7 +30,7 @@ Rules:
 7. Answer only what the question asks. Do not add other facts, sentences or numbers from the pieces, even if they are true. Keep "answer" short and in simple English, and include every number that answers the question.
 8. In "answer", write numbers and number words exactly as they are written in your quote (if the quote says "one", write "one"; if it says "4", write "4"). Do not add rule or section numbers to the answer.
 9. If a piece shows that a rule or paragraph is "[Reserved]", that is what the document says about it: answer that it is reserved, and quote it.
-10. If the question compares two things, give one source for each.
+10. If the question compares two things, give one source for each. Otherwise give exactly one source.
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "answer": "...", "sources": [{{"doc": "file.pdf", "page": 12, "quote": "..."}}]}}
@@ -66,7 +68,7 @@ class Answer:
     status: str  # ANSWERED, REFUSED or AI_BUSY_STATUS
     text: str  # the answer, NOT_FOUND, or the AI busy note
     pieces: list  # pieces sent to the AI (shown with the AI busy note)
-    sources: list = field(default_factory=list)  # [{doc, page, quote, title}] when answered
+    sources: list = field(default_factory=list)  # [{doc, page, quote, title, lead?}] when answered
     reason: str = ""  # why not answered: no_pieces, llm_not_found, bad_json, proof:<check>, ai_busy
     detail: str = ""
     provider: str = ""
@@ -89,8 +91,13 @@ def answer_question(question, searcher, chain):
 
     if not pieces:
         return done(REFUSED, NOT_FOUND, reason="no_pieces")
+    if not proof.compares(question, searcher.rule_sets):
+        reserved = reserved_source(question, pieces, searcher.library.page_text, searcher.rule_sets)
+        if reserved:
+            return done(ANSWERED, RESERVED_ANSWER, sources=[reserved], provider="code:reserved")
+    budget = config.QUESTION_TIME_BUDGET_S - (time.perf_counter() - start)
     try:
-        text, provider, cached = chain.ask(build_prompt(question, pieces))
+        text, provider, cached = chain.ask(build_prompt(question, pieces), budget_s=budget)
     except AllProvidersFailed as failed:
         return done(AI_BUSY_STATUS, AI_BUSY, reason="ai_busy", detail=attempts_text(failed.attempts))
     info = {"provider": provider, "cached": cached, "attempts": attempts_text(getattr(chain, "last_attempts", []))}
@@ -100,9 +107,12 @@ def answer_question(question, searcher, chain):
         return done(REFUSED, NOT_FOUND, reason="bad_json", **info)
     if not reply["found"]:
         return done(REFUSED, NOT_FOUND, reason="llm_not_found", **info)
-    result = proof.check(question, reply, pieces, searcher.library.page_text, searcher.rule_sets)
+    reranker = getattr(searcher, "reranker", None)
+    topic_score = (lambda q, t: float(reranker.scores(q, [t])[0])) if reranker else None
+    result = proof.check(question, reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
     if not result.ok:
         return done(REFUSED, NOT_FOUND, reason=f"proof:{result.reason}", detail=result.detail, **info)
-    # The source title (rule / section) comes from our piece, not from the AI.
-    sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in reply["sources"]]
+    # The source title (rule / section) comes from our piece, not from the AI. A list quote
+    # may have been narrowed to its one answering item (proof.shown_quote shows it).
+    sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in result.sources]
     return done(ANSWERED, reply["answer"], sources=sources, **info)

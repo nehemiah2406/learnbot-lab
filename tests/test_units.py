@@ -74,3 +74,31 @@ def test_units_in_answer_text():
     assert "yard" in units_in("Approximately 2,000 yards.")
     assert "yard" in units_in("It is given in yards")
     assert "kilometer" not in units_in("6 miles")
+
+
+# --- Counts: numbers that count something (proof check, every number of the quote) ---
+from learnbot.units import counts, number_values  # noqa: E402
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("be one all-round white or yellow light", {"1"}),
+    ("sound two short blasts", {"2"}),
+    ("three blasts in succession, namely, one prolonged followed by two short blasts", {"3", "1", "2"}),
+    ("5 crew members on watch", {"5"}),
+    ("approximately 2,000 yards", {"2000"}),
+    ("no one shall", set()),
+    ("one of the vessels", set()),
+    ("one or more lights", set()),
+    ("someone else", set()),
+    ("33 CFR 83.34 (iii) The light", set()),
+    ("as in Rule 22 visibility", set()),
+    ("(26) Distances", set()),
+    ("in 2024 the rule", set()),
+    ("see page 4 below", set()),
+])
+def test_counts(text, expected):
+    assert counts(text) == expected
+
+
+def test_number_values_maps_words_to_digits():
+    assert number_values("approximately 2,000 yards, about 1.15 miles. One light") == {"2000", "1.15", "1"}

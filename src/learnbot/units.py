@@ -107,3 +107,58 @@ def units_in(text):
             if unit:
                 found.add(unit)
     return found
+
+
+# --- Counts: a number used to count something ("one all-round light", "two short blasts") ---
+WORD_NUMBERS = {
+    w: str(i) for i, w in enumerate(
+        "zero one two three four five six seven eight nine ten eleven twelve thirteen "
+        "fourteen fifteen sixteen seventeen eighteen nineteen twenty".split())
+}
+WORD_NUMBERS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
+                     "seventy": "70", "eighty": "80", "ninety": "90"})
+# A number after one of these words is a reference, not a count: "Rule 22 lights", "page 4".
+_REFERENCE_WORDS = {
+    "rule", "rules", "annex", "section", "sections", "paragraph", "paragraphs", "para", "chapter",
+    "part", "parts", "subpart", "page", "pages", "article", "regulation", "cfr", "usc", "u.s.c.",
+    "figure", "fig", "table", "item", "no", "no.", "number", "appendix", "title", "volume", "§",
+    "chart", "edition", "step", "phase", "class", "category", "type", "level", "tier", "group",
+    "zone", "district", "region", "route", "version",
+}
+# "one" after these words is not a count: "no one", "the one", "each one".
+_NOT_A_COUNT_AFTER = {"no", "any", "each", "every", "the", "this", "that", "which", "some"}
+# A count is followed by a noun (or an adjective of one): "two short blasts", "one all-round
+# light". Not by these words: "one of the", "one or more", "one another", "in 2024 the".
+_NOT_A_NOUN = {
+    "of", "or", "and", "to", "the", "a", "an", "in", "on", "at", "for", "by", "with", "from",
+    "is", "are", "was", "were", "be", "shall", "may", "must", "as", "than", "another", "other",
+    "more", "less", "nor", "but", "which", "that", "who", "it", "if", "when",
+}
+_COUNT = re.compile(rf"(?<![\w(§.,/-])({NUMBER}|{'|'.join(WORD_NUMBERS)})\s+([A-Za-z][\w-]*)", re.IGNORECASE)
+
+
+def counts(text):
+    """{number as digits} for numbers that count something ("one all-round light" -> "1").
+    Not counted: references ("Rule 22", "33 CFR", "(26)"), "no one", "one of the", and a
+    number before a capitalised word (a title or reference)."""
+    text = text.replace("’", "'")
+    found = set()
+    for match in _COUNT.finditer(text):
+        number, word = match.group(1), match.group(2)
+        before = text[:match.start()].split()
+        prev = before[-1].lower() if before else ""
+        is_word = number.lower() in WORD_NUMBERS
+        if prev in _REFERENCE_WORDS or word[0].isupper() or word.lower() in _NOT_A_NOUN:
+            continue
+        if is_word and prev in _NOT_A_COUNT_AFTER:
+            continue
+        found.add(WORD_NUMBERS[number.lower()] if is_word else number.replace(",", ""))
+    return found
+
+
+def number_values(text):
+    """Every number in the text as digits, number words included ("four" -> "4", "2,000" -> "2000")."""
+    text = text.lower()
+    digits = {n.replace(",", "") for n in re.findall(NUMBER, text)}
+    words = {WORD_NUMBERS[w] for w in re.findall(r"[a-z]+", text) if w in WORD_NUMBERS}
+    return digits | words
