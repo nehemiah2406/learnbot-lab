@@ -39,10 +39,14 @@ PIECES_TO_LLM = 5  # only this many pieces are sent to the AI
 RULE_SET_WORDS = ("International", "Inland")
 
 # AI models (names can be changed in .env: GEMINI_MODEL, GROQ_MODEL).
-# Checked with scripts/list_models.py on 2 Nov 2026.
-GEMINI_MODEL = "gemini-3.8-flash"
+# Checked with scripts/list_models.py on 2 Nov 2026. Timed with one tiny call each:
+# gemini-3.1-flash-lite 1.5 s, gemini-3.5-flash 2.7 s, gemini-3.8-flash 504 after 13.6 s.
+GEMINI_MODEL = "gemini-3.1-flash-lite"
 GROQ_MODEL = "openai/gpt-oss-120b"  # no Llama 70B model is offered on this Groq account
 LLM_TIMEOUT_S = 15
+# After this many failures in a row (timeout, 503, 504) an AI is skipped for the rest
+# of the run, so users do not wait LLM_TIMEOUT_S on every question.
+MAX_FAILURES_IN_A_ROW = 2
 PROMPT_VERSION = 1  # raise when the prompt changes, so cached answers are not reused
 # A quote must have at least this many words (a 2-word quote proves nothing).
 MIN_QUOTE_WORDS = 4

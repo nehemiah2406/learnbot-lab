@@ -13,6 +13,7 @@ Only a full run (no --ids) writes eval/results.md.
 
 import argparse
 import sys
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -23,7 +24,7 @@ from learnbot.answer import ANSWERED, Answer, answer_question, build_prompt  # n
 from learnbot.baseline import NOT_FOUND, BM25Index, answer as baseline_answer  # noqa: E402
 from learnbot.eval_check import load_rows  # noqa: E402
 from learnbot.evaluate import (  # noqa: E402
-    CORRECT_OTHER, MISSED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
+    CORRECT_OTHER, MISSED, NOT_TESTED, REFUSED, RIGHT, TRAP_ANSWERED, WRONG,
     exact_answer_in, outcome, score_answer,
 )
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
@@ -63,6 +64,7 @@ def summary(records):
         "right": pct(c[RIGHT], len(explain)), "exact": pct(sum(r["exact"] for r in explain), len(explain)),
         "other": str(c[CORRECT_OTHER]), "refused": pct(c[REFUSED], len(traps)),
         "wrong": str(c[WRONG]), "trap_answered": str(c[TRAP_ANSWERED]), "missed": str(c[MISSED]),
+        "not_tested": str(c[NOT_TESTED]),
     }
 
 
@@ -96,6 +98,7 @@ def build_report(records, base, chain, k):
         f"| **Wrong** | {s3['wrong']} | **{s4['wrong']}** | **0** |",
         f"| **Traps answered** | {s3['trap_answered']} | **{s4['trap_answered']}** | **0** |",
         f"| Missed (real question, said \"{NOT_FOUND}\") | {s3['missed']} | {s4['missed']} | |",
+        f"| Not tested (AI busy; the run is incomplete if > 0) | n/a | {s4['not_tested']} | 0 |",
     ]
     if fresh:
         lines.append(f"| Answer time (search + AI + check), new answers | ~2 ms (search only) "
@@ -114,8 +117,15 @@ def build_report(records, base, chain, k):
         c = Counter(r["outcome"] for r in g)
         lines.append(f"| {doc} | {len(g)} | {pct(c[RIGHT], len(g))} | {c[CORRECT_OTHER]} | {c[WRONG]} | {c[MISSED]} |")
 
+    lines += ["", "### Per question: outcome and which AI answered", "",
+              "| Question | Outcome | AI that answered | Time (new answers) |", "|---|---|---|---|"]
+    for r in records:
+        ans = r["ans"]
+        ai = ans.provider or "none (AI busy)"
+        took = "from cache" if ans.cached else f"{ans.seconds:.1f} s"
+        lines.append(f"| {r['row']['id']} | {r['outcome']} | {ai} | {took} |")
     lines += ["", "### Failed questions", ""]
-    failed = [r for r in records if r["outcome"] in (WRONG, MISSED, TRAP_ANSWERED)]
+    failed = [r for r in records if r["outcome"] in (WRONG, MISSED, TRAP_ANSWERED, NOT_TESTED)]
     for r in failed:
         row, ans = r["row"], r["ans"]
         expected = f"\"{NOT_FOUND}\"" if r["trap"] else f"{row['doc']} p.{row['page']}"
@@ -142,6 +152,7 @@ def main():
     parser.add_argument("--ids", help="comma-separated question ids (smoke test; results.md is not written)")
     parser.add_argument("--max-calls", type=int, default=config.MAX_LLM_CALLS_WITHOUT_ASKING)
     parser.add_argument("--dry-run", action="store_true", help="only count the AI calls needed")
+    parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each new AI call")
     args = parser.parse_args()
 
     explain, traps = load_rows("eval/explain_questions.csv"), load_rows("eval/trap_questions.csv")
@@ -174,9 +185,12 @@ def main():
 
     records = []
     for row, trap in rows:
-        if chain.calls >= args.max_calls and not chain.is_cached(build_prompt(row["question"], searcher.search(row["question"]))):
+        cached = chain.is_cached(build_prompt(row["question"], searcher.search(row["question"])))
+        if chain.calls >= args.max_calls and not cached:
             ans = Answer("ai_busy", "skipped: call limit reached", [], reason="call_limit")
         else:
+            if not cached and chain.calls and args.pause:
+                time.sleep(args.pause)  # stay under the free per-minute limits
             ans = answer_question(row["question"], searcher, chain)
         result, reason = score_answer(row, trap, ans)
         exact = (not trap and ans.status == ANSWERED and exact_answer_in(
@@ -189,7 +203,9 @@ def main():
     s = summary(records)
     print(f"Right page: {s['right']}  Exact: {s['exact']}  Correct other source: {s['other']}  "
           f"Traps refused: {s['refused']}  Wrong: {s['wrong']}  Traps answered: {s['trap_answered']}  "
-          f"Missed: {s['missed']}")
+          f"Missed: {s['missed']}  Not tested (AI busy): {s['not_tested']}")
+    if s["not_tested"] != "0":
+        print("INCOMPLETE: some questions were not tested (AI busy). These numbers are not a valid result.")
     if not args.ids:
         base = baseline_records(library, explain, traps)
         replace_section(RESULTS, "phase4-answers", build_report(records, base, chain, config.PIECES_TO_LLM))

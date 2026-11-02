@@ -6,7 +6,8 @@ import pytest
 
 from learnbot import llm
 from learnbot.llm import (
-    AllProvidersFailed, LLMChain, LLMError, LLMRateLimit, LLMTimeout, Provider, ReplyCache, classify,
+    AllProvidersFailed, LLMChain, LLMDailyLimit, LLMError, LLMRateLimit, LLMTimeout, LLMUnavailable, Provider,
+    ReplyCache, classify,
 )
 
 
@@ -51,6 +52,58 @@ def test_daily_limit_is_not_retried_and_switches_provider_off():
     assert chain.calls == 3
 
 
+def test_two_slow_or_down_failures_in_a_row_skip_main_ai():
+    for failure in ["sleep", HttpError(503), HttpError(504)]:
+        gemini = Fake("gemini", failure, timeout_s=0.05)
+        groq = Fake("groq", "ok")
+        chain = LLMChain([gemini, groq])
+        for question in ["q1", "q2", "q3", "q4"]:
+            assert chain.ask(question)[1] == "groq:fake-model"
+        assert gemini.calls == 2 and groq.calls == 4  # q3 and q4 go straight to the fallback
+        assert chain.last_attempts[0][:2] == ("gemini:fake-model", "switched_off")
+
+
+def test_success_resets_the_failure_count():
+    class Flaky(Fake):
+        def _call(self, prompt):
+            self.calls += 1
+            if self.calls % 2:  # fails, works, fails, works ...
+                raise HttpError(503)
+            return "ok"
+
+    gemini, groq = Flaky("gemini", None), Fake("groq", "ok")
+    chain = LLMChain([gemini, groq])
+    for question in ["q1", "q2", "q3", "q4", "q5", "q6"]:
+        chain.ask(question)
+    assert gemini.calls == 6 and "gemini:fake-model" not in chain.switched_off
+
+
+def test_one_ordinary_error_does_not_skip_main_ai():
+    gemini, groq = Fake("gemini", HttpError(400)), Fake("groq", "ok")
+    chain = LLMChain([gemini, groq])
+    for question in ["q1", "q2", "q3"]:
+        chain.ask(question)
+    assert gemini.calls == 3  # a 400 is not "slow or down"
+
+
+def test_minute_limit_sends_only_this_question_to_the_fallback():
+    gemini = Fake("gemini", HttpError(429, "quotaId: GenerateRequestsPerMinutePerProjectPerModel"))
+    chain = LLMChain([gemini, Fake("groq", "ok")])
+    chain.ask("q1")
+    assert "gemini:fake-model" not in chain.switched_off  # tried again on the next question
+    chain.ask("q2")
+    assert "gemini:fake-model" in chain.switched_off  # 2 in a row -> skipped
+    assert gemini.calls == 2
+
+
+def test_daily_or_unknown_limit_switches_off_at_once():
+    assert isinstance(classify(HttpError(429, "GenerateRequestsPerDayPerProjectPerModel")), LLMDailyLimit)
+    assert isinstance(classify(HttpError(429, "Rate limit reached on tokens per day (TPD)")), LLMDailyLimit)
+    assert isinstance(classify(HttpError(429, "Too many requests")), LLMDailyLimit)
+    minute = classify(HttpError(429, "Rate limit reached on tokens per minute (TPM)"))
+    assert isinstance(minute, LLMRateLimit) and not isinstance(minute, LLMDailyLimit)
+
+
 def test_other_error_is_not_retried():
     gemini, groq = Fake("gemini", RuntimeError("server error")), Fake("groq", "ok")
     LLMChain([gemini, groq]).ask("q")
@@ -62,12 +115,14 @@ def test_all_failed_reports_kinds_without_message_text():
     groq = Fake("groq", HttpError(500, "key gsk_SECRET456 broken"))
     with pytest.raises(AllProvidersFailed) as info:
         LLMChain([gemini, groq]).ask("q")
-    assert [a[:2] for a in info.value.attempts] == [("gemini:fake-model", "rate_limit"), ("groq:fake-model", "error")]
+    assert [a[:2] for a in info.value.attempts] == [("gemini:fake-model", "daily_limit"), ("groq:fake-model", "error")]
     assert "SECRET" not in str(info.value) and "SECRET" not in repr(info.value.attempts)
 
 
 def test_classify_errors():
     assert isinstance(classify(HttpError(429)), LLMRateLimit)
+    assert isinstance(classify(HttpError(503)), LLMUnavailable)
+    assert isinstance(classify(HttpError(504)), LLMUnavailable)
 
     class RateLimitError(Exception):
         pass

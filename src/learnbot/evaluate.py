@@ -12,6 +12,7 @@ WRONG = "wrong"  # answered, top-1 piece does not support the answer (must becom
 MISSED = "missed"  # eval question, but said "Not in this document"
 REFUSED = "refused"  # trap, correctly said "Not in this document"
 TRAP_ANSWERED = "trap_answered"  # trap, but gave an answer (also wrong)
+NOT_TESTED = "not_tested"  # Phase 4: no AI could be reached ("AI busy"); the run is incomplete
 
 
 def on_right_page(row, hit):
@@ -90,7 +91,10 @@ def numbers_differ(expected_answer, shown_answer, question):
 
 
 def score_answer(row, is_trap, ans):
-    """(outcome, reason) for one Answer. Outcomes as in Phase 3; reason explains failures."""
+    """(outcome, reason) for one Answer. Outcomes as in Phase 3; reason explains failures.
+    "AI busy" is NOT_TESTED, never a pass: no AI looked at the question."""
+    if ans.status == "ai_busy":
+        return NOT_TESTED, ans.reason + (f" ({ans.detail})" if ans.detail else "")
     if is_trap:
         if ans.status != "answered":
             return REFUSED, ""

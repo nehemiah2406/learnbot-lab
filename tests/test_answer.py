@@ -7,7 +7,9 @@ import pytest
 from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED, answer_question, build_prompt, parse_reply
 from learnbot.baseline import NOT_FOUND
 from learnbot.chunking import Chunk
-from learnbot.evaluate import CORRECT_OTHER, MISSED, RIGHT, TRAP_ANSWERED, WRONG, numbers_differ, score_answer
+from learnbot.evaluate import (
+    CORRECT_OTHER, MISSED, NOT_TESTED, RIGHT, TRAP_ANSWERED, WRONG, numbers_differ, score_answer,
+)
 from learnbot.evaluate import REFUSED as TRAP_REFUSED
 from learnbot.llm import AI_BUSY, AllProvidersFailed
 from learnbot.rule_sets import RuleSets
@@ -122,6 +124,12 @@ def test_score_missed_names_the_reason():
 def test_score_traps():
     assert score_answer(ROW, True, ask('{"found": false}'))[0] == TRAP_REFUSED
     assert score_answer(ROW, True, ask(found()))[0] == TRAP_ANSWERED
+
+
+def test_ai_busy_is_not_tested_never_a_pass():
+    busy = ask(fail=True)
+    assert score_answer(ROW, True, busy)[0] == NOT_TESTED  # not "refused"
+    assert score_answer(ROW, False, busy)[0] == NOT_TESTED
 
 
 def test_numbers_differ():

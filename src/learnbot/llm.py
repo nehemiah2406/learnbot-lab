@@ -1,8 +1,10 @@
 """AI calls: Gemini (main) and Groq (fallback), with timeouts, no retries and a cache.
 
 - Every call has a timeout (config.LLM_TIMEOUT_S), set in the SDK and checked again here.
-- Nothing is retried. A rate or daily limit (HTTP 429) switches that provider off for
-  the rest of the run, so quota is never spent on retries.
+- Nothing is retried. A daily limit (HTTP 429, or a 429 that does not say "per minute")
+  switches that provider off for the rest of the run, so quota is never spent on
+  retries. So do config.MAX_FAILURES_IN_A_ROW slow/busy failures in a row (timeout,
+  503, 504, per-minute limit); one such failure only sends that question to the fallback.
 - If every provider fails, the caller shows a friendly "AI busy" note instead.
 - Error messages never contain keys: only the error kind is kept.
 - Replies are cached in config.CACHE_DIR by prompt + model names, so the same question
@@ -13,6 +15,7 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -31,6 +34,21 @@ class LLMTimeout(LLMError):
 
 class LLMRateLimit(LLMError):
     kind = "rate_limit"
+
+
+class LLMDailyLimit(LLMRateLimit):
+    kind = "daily_limit"
+
+
+class LLMUnavailable(LLMError):
+    kind = "unavailable"  # HTTP 503 (overloaded) or 504 (deadline exceeded)
+
+
+# Failures that mean "this AI is slow, busy or down right now" (a per-minute limit too).
+SLOW_OR_DOWN = (LLMTimeout, LLMUnavailable, LLMRateLimit)
+# Words in a 429 message that mean a daily limit (the message itself is never kept).
+DAILY_LIMIT = re.compile(r"per ?day|\bRPD\b|\bTPD\b", re.IGNORECASE)
+MINUTE_LIMIT = re.compile(r"per ?minute|\bRPM\b|\bTPM\b", re.IGNORECASE)
 
 
 class AllProvidersFailed(Exception):
@@ -58,9 +76,16 @@ def classify(exc):
     status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     names = [cls.__name__ for cls in type(exc).__mro__]
     if status == 429 or "RateLimitError" in names:
-        return LLMRateLimit()
+        # A per-minute limit passes soon; anything else (daily or unknown) is a daily limit,
+        # so quota is never spent on it again in this run.
+        message = str(exc)
+        if MINUTE_LIMIT.search(message) and not DAILY_LIMIT.search(message):
+            return LLMRateLimit()
+        return LLMDailyLimit()
     if any("Timeout" in name for name in names):
         return LLMTimeout()
+    if status in (503, 504):
+        return LLMUnavailable()
     return LLMError()
 
 
@@ -148,7 +173,8 @@ class LLMChain:
     def __init__(self, providers, cache=None):
         self.providers = list(providers)
         self.cache = cache
-        self.switched_off = set()  # providers that hit a rate/daily limit in this run
+        self.switched_off = set()  # providers skipped for the rest of the run
+        self.failures_in_a_row = {}  # provider label -> slow/down failures since its last success
         self.calls = 0
         self.last_attempts = []  # [(provider label, "ok" or error kind, seconds)] of the last ask()
 
@@ -176,9 +202,14 @@ class LLMChain:
                 reply = p.ask(prompt)
             except LLMError as err:
                 attempts.append((p.label, err.kind, time.perf_counter() - start))
-                if isinstance(err, LLMRateLimit):
+                if isinstance(err, LLMDailyLimit):
                     self.switched_off.add(p.label)
+                elif isinstance(err, SLOW_OR_DOWN):
+                    self.failures_in_a_row[p.label] = self.failures_in_a_row.get(p.label, 0) + 1
+                    if self.failures_in_a_row[p.label] >= config.MAX_FAILURES_IN_A_ROW:
+                        self.switched_off.add(p.label)
                 continue
+            self.failures_in_a_row[p.label] = 0
             attempts.append((p.label, "ok", time.perf_counter() - start))
             if self.cache is not None:
                 self.cache.put(key, {"provider": p.label, "reply": reply})
