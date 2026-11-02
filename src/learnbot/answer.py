@@ -22,11 +22,13 @@ Rules:
 1. Use only the pieces. Do not use your own knowledge.
 2. If the pieces do not clearly answer the question, reply {{"found": false}}.
 3. Copy numbers, units, lights and signals exactly as written. Never round, convert or spell out numbers.
-4. "quote" must be copied word for word from ONE piece: one continuous passage that contains the answer and the conditions named in the question (for example a vessel length). Do not change any word or punctuation inside it.
+4. "quote" must be copied word for word from ONE piece: one continuous passage that contains the answer and the conditions named in the question (for example a vessel length). Quote only the sentence or list item that answers the question, never a whole list. Do not change any word or punctuation inside it.
 5. "doc" and "page" must be those of the piece you quote.
 6. If the question names a specific set or version of rules, quote only from a piece of that set (the piece title shows it).
-7. Keep "answer" short and in simple English. Use only facts that are in your quotes, including every number that answers the question. Do not add rule or section numbers to the answer.
-8. If the question compares two things, give one source for each.
+7. Answer only what the question asks. Do not add other facts, sentences or numbers from the pieces, even if they are true. Keep "answer" short and in simple English, and include every number that answers the question.
+8. In "answer", write numbers and number words exactly as they are written in your quote (if the quote says "one", write "one"; if it says "4", write "4"). Do not add rule or section numbers to the answer.
+9. If a piece shows that a rule or paragraph is "[Reserved]", that is what the document says about it: answer that it is reserved, and quote it.
+10. If the question compares two things, give one source for each.
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "answer": "...", "sources": [{{"doc": "file.pdf", "page": 12, "quote": "..."}}]}}

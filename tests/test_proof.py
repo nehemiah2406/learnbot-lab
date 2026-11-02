@@ -1,7 +1,7 @@
 """Proof check cases with made-up pieces (no AI, no PDF)."""
 
 from learnbot.chunking import Chunk
-from learnbot.proof import check, number_units, same_text
+from learnbot.proof import asked_unit, check, number_units, same_text
 from learnbot.rule_sets import RuleSets
 
 P45 = Chunk("rules.pdf", 45, "—INTERNATIONAL— Rule 22 Visibility of Lights",
@@ -78,6 +78,51 @@ def test_off_topic_quote_is_rejected():
     r = reply(answer="3 miles", quote="a sidelight, 3 miles; − a sternlight, 3 miles;")
     result = run(r, question="Under the International Rules, what is the range of a masthead light?")
     assert result.reason == "off_topic"
+
+
+def test_answer_must_have_the_unit_the_question_asks_for():
+    r = reply(answer="6", quote=GOOD_QUOTE)
+    question = "Under the International Rules, how many miles must a masthead light on a 50 meters vessel be seen?"
+    assert run(r, question=question).reason == "unit_missing"
+    assert run(reply(answer="6 miles"), question=question).ok
+    assert run(reply(answer="6 miles"), question=question.replace("how many miles", "how many mile")).ok
+    km = question.replace("how many miles", "how many kilometers")
+    assert run(reply(answer="6 miles"), question=km).reason == "unit_missing"
+
+
+def test_asked_unit():
+    assert asked_unit("Roughly how many yards are in one nautical mile?") == "yards"
+    assert asked_unit("How many seconds does a prolonged blast last?") == "seconds"
+    assert asked_unit("How long is a nautical mile?") is None
+    assert asked_unit("How many of the lights?") is None  # "of" is not a unit
+
+
+LONG_QUOTE = ("In vessels of 50 meters or more in length: − a masthead light, 6 miles; − a sidelight, 3 miles; "
+              "− a sternlight, 3 miles;")
+
+
+def test_quote_with_other_measurements_is_rejected():
+    # Real case (NAV-10): the AI quoted the whole list and answered with another item's range.
+    question = "Under the International Rules, how far away must the top white light of a big ship (50 m or longer) be visible?"
+    assert run(reply(answer="3 miles", quote=LONG_QUOTE), question=question).reason == "quote_not_focused"
+    assert run(reply(answer="6 miles", quote=LONG_QUOTE), question=question).reason == "quote_not_focused"
+    # The focused quote of the right item passes; "50 meters" is the question's condition.
+    assert run(reply(answer="6 miles", quote=GOOD_QUOTE), question=question.replace("50 m ", "50 meters ")).ok
+
+
+def test_answer_with_all_measurements_of_its_quote_passes():
+    r = reply(answer="6 miles for the masthead light, 3 miles for the sidelight",
+              quote="a masthead light, 6 miles; − a sidelight, 3 miles;")
+    assert run(r, question="Under the International Rules, what are the ranges of the masthead light "
+                           "and the sidelight on a 50 meters vessel?").reason != "quote_not_focused"
+
+
+def test_broad_title_word_does_not_make_off_topic_quote_pass():
+    # P45's title "Visibility of Lights" shares "light" with the question; the quote is
+    # about the sidelight, not the masthead light. Must stay rejected (wrong number risk).
+    r = reply(answer="3 miles", quote="a sidelight, 3 miles; − a sternlight, 3 miles;")
+    question = "Under the International Rules, what is the range of a masthead light?"
+    assert "Lights" in P45.title and run(r, question=question).reason == "off_topic"
 
 
 def test_question_number_must_be_in_quote():

@@ -1,9 +1,11 @@
 """Check the eval set against the real PDFs and print a summary.
 
 Run:  .venv\\Scripts\\python scripts\\check_eval.py
+      .venv\\Scripts\\python scripts\\check_eval.py --explain eval/holdout_questions.csv --traps eval/holdout_traps.csv
 Exit code 0 only if every row passes. No LLM calls.
 """
 
+import argparse
 import sys
 from collections import Counter
 from pathlib import Path
@@ -19,6 +21,7 @@ from learnbot.eval_check import (  # noqa: E402
     duplicate_ids,
     load_rows,
     overall_result,
+    verify_accepted_sources,
     verify_quotes,
     verify_trap,
 )
@@ -35,6 +38,8 @@ def check_all(explain, traps, docs):
     for dup in duplicate_ids(explain + traps):
         problems.setdefault(dup, []).append("duplicate id")
 
+    doc_names = sorted({r["doc"] for r in explain + traps})
+    all_docs_here = all(docs.exists(d) for d in doc_names)
     for row in explain:
         row_problems = check_explain_row(row)
         if not row_problems:
@@ -43,6 +48,8 @@ def check_all(explain, traps, docs):
                 continue
             checked += 1
             row_problems = verify_quotes(row, docs)
+            if all_docs_here:  # accepted sources can only be checked with every PDF present
+                row_problems += verify_accepted_sources(row, docs, doc_names)
             verified += not row_problems
         if row_problems:
             problems.setdefault(row.get("id", "?"), []).extend(row_problems)
@@ -77,11 +84,15 @@ def print_counts(explain, traps):
 
 def main():
     sys.stdout.reconfigure(errors="replace")
-    explain, traps = load_rows(EXPLAIN_CSV), load_rows(TRAP_CSV)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--explain", default=str(EXPLAIN_CSV))
+    parser.add_argument("--traps", default=str(TRAP_CSV))
+    args = parser.parse_args()
+    explain, traps = load_rows(args.explain), load_rows(args.traps)
     print_counts(explain, traps)
     problems, verified, checked, traps_ok, missing_docs = check_all(explain, traps, DocumentPages())
     print()
-    print(f"Quotes verified on their page: {verified}/{len(explain)}")
+    print(f"Quotes verified on their page (and accepted sources complete): {verified}/{len(explain)}")
     print(f"Trap keywords absent from their document: {traps_ok}/{len(traps)}")
     for doc in sorted(missing_docs):
         print(f"SKIPPED: {doc} not found in data/raw (see PLAN.md Data section)")

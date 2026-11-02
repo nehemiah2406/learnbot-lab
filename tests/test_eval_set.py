@@ -23,6 +23,11 @@ from learnbot.eval_check import (
     normalize,
     numbers_in,
     quote_on_page,
+    find_accepted_sources,
+    format_sources,
+    parse_sources,
+    quote_core,
+    verify_accepted_sources,
     verify_quotes,
     verify_trap,
 )
@@ -34,7 +39,7 @@ def explain_row(**changes):
     row = {
         "doc": "book.pdf", "id": "X-01", "question": "How far under the International Rules?", "type": "number",
         "expected_answer": "6 miles", "rule": "Rule 22", "rule_set": "International",
-        "page": "45", "source_quote": "a masthead light, 6 miles;",
+        "page": "45", "source_quote": "a masthead light, 6 miles;", "accepted_sources": "book.pdf:45",
     }
     row.update(changes)
     return row
@@ -110,7 +115,8 @@ def test_doc_must_be_plain_pdf_name():
 def test_compare_row_needs_two_pages_and_two_quotes():
     good = explain_row(type="compare", rule_set="Both", page="107|108",
                        expected_answer="5 miles and 2 miles",
-                       source_quote="range of 5 miles | range of 2 miles")
+                       source_quote="range of 5 miles | range of 2 miles",
+                       accepted_sources="book.pdf:107;book.pdf:108")
     assert check_explain_row(good) == []
     one_quote = dict(good, source_quote="range of 5 miles and 2 miles")
     assert check_explain_row(one_quote) == ["compare row needs 2 page(s) and 2 quote(s)"]
@@ -175,6 +181,14 @@ def test_quote_on_stated_page(row, docs):
     assert verify_quotes(row, docs) == []
 
 
+@pytest.mark.parametrize("row", EXPLAIN_ROWS, ids=lambda r: r["id"])
+def test_accepted_sources_are_exactly_the_pages_with_the_quote(row, docs):
+    names = sorted({r["doc"] for r in EXPLAIN_ROWS + TRAP_ROWS})
+    for name in names:
+        need_pdf(docs, name)
+    assert verify_accepted_sources(row, docs, names) == []
+
+
 @pytest.mark.parametrize("row", TRAP_ROWS, ids=lambda r: r["id"])
 def test_trap_keywords_absent_from_document(row, docs):
     need_pdf(docs, row["doc"])
@@ -188,6 +202,44 @@ def test_question_must_name_its_rule_set():
     clear = explain_row(rule_set="International", question="Under the International Rules, how far?")
     assert check_explain_row(clear) == []
     assert check_explain_row(explain_row(rule_set="N/A", question="How far?")) == []
+
+
+def test_accepted_sources_format():
+    assert parse_sources("b.pdf:3;a.pdf:12") == [("b.pdf", 3), ("a.pdf", 12)]
+    assert parse_sources("a.pdf:x") is None and parse_sources("") is None
+    assert format_sources([("b.pdf", 3), ("a.pdf", 12), ("a.pdf", 12)]) == "a.pdf:12;b.pdf:3"
+    assert check_explain_row(explain_row(accepted_sources="book.pdf:46")) == [
+        "accepted_sources must include the row's own page(s)"]
+    assert check_explain_row(explain_row(accepted_sources="page 45"))[0].startswith("accepted_sources must be")
+
+
+class FakePages:
+    def __init__(self, docs):
+        self.docs = docs  # {doc: {page: text}}
+
+    def page_count(self, doc):
+        return len(self.docs[doc])
+
+    def pages(self, doc, numbers):
+        return {n: self.docs[doc].get(n) for n in numbers}
+
+
+def test_find_accepted_sources_ignores_marker_and_short_quotes():
+    pages = FakePages({
+        "a.pdf": {1: "(p) A high intensity white light flashing 50 to 70 times per minute.",
+                  2: "A high intensity white light\nflashing 50 to 70 times per minute. Inland only.",
+                  3: "(h) [Reserved]"},
+        "b.pdf": {1: "a high intensity white light flashing 60 times", 2: "(h) [Reserved]"},
+    })
+    row = explain_row(doc="a.pdf", page="1",
+                      source_quote="(p) A high intensity white light flashing 50 to 70 times per minute.")
+    assert quote_core(row["source_quote"]).startswith("A high")
+    assert find_accepted_sources(row, pages, ["a.pdf", "b.pdf"]) == [("a.pdf", 1), ("a.pdf", 2)]
+    short = explain_row(doc="a.pdf", page="3", source_quote="(h) [Reserved]")
+    assert find_accepted_sources(short, pages, ["a.pdf", "b.pdf"]) == [("a.pdf", 3)]  # too short to search
+    listed = dict(row, accepted_sources="a.pdf:1")
+    assert verify_accepted_sources(listed, pages, ["a.pdf", "b.pdf"]) == [
+        "page has the same text but is not listed: a.pdf:2"]
 
 
 def test_overall_result():

@@ -43,11 +43,12 @@ RULE_SET_WORDS = ("International", "Inland")
 # gemini-3.1-flash-lite 1.5 s, gemini-3.5-flash 2.7 s, gemini-3.8-flash 504 after 13.6 s.
 GEMINI_MODEL = "gemini-3.1-flash-lite"
 GROQ_MODEL = "openai/gpt-oss-120b"  # no Llama 70B model is offered on this Groq account
-LLM_TIMEOUT_S = 15
+MAIN_LLM_TIMEOUT_S = 7  # main AI (flash-lite normally answers in 1-5 s)
+FALLBACK_LLM_TIMEOUT_S = 15  # fallback AI(s)
 # After this many failures in a row (timeout, 503, 504) an AI is skipped for the rest
-# of the run, so users do not wait LLM_TIMEOUT_S on every question.
+# of the run, so users do not wait for the timeout on every question.
 MAX_FAILURES_IN_A_ROW = 2
-PROMPT_VERSION = 1  # raise when the prompt changes, so cached answers are not reused
+PROMPT_VERSION = 3  # raise when the prompt changes, so cached answers are not reused
 # A quote must have at least this many words (a 2-word quote proves nothing).
 MIN_QUOTE_WORDS = 4
 # Ask before an eval run that needs more AI calls than this.

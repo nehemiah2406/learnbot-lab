@@ -1,12 +1,14 @@
 """AI calls: Gemini (main) and Groq (fallback), with timeouts, no retries and a cache.
 
-- Every call has a timeout (config.LLM_TIMEOUT_S), set in the SDK and checked again here.
+- Every call has a timeout (main AI config.MAIN_LLM_TIMEOUT_S, fallback
+  config.FALLBACK_LLM_TIMEOUT_S), set in the SDK and checked again here.
 - Nothing is retried. A daily limit (HTTP 429, or a 429 that does not say "per minute")
   switches that provider off for the rest of the run, so quota is never spent on
-  retries. So do config.MAX_FAILURES_IN_A_ROW slow/busy failures in a row (timeout,
-  503, 504, per-minute limit); one such failure only sends that question to the fallback.
+  retries. So do config.MAX_FAILURES_IN_A_ROW failures in a row of any other kind
+  (timeout, 503, 504, per-minute limit, or e.g. a 400 from a bad setting); one failure
+  only sends that question to the fallback.
 - If every provider fails, the caller shows a friendly "AI busy" note instead.
-- Error messages never contain keys: only the error kind is kept.
+- Error messages never contain keys: only the error kind (and HTTP status) is kept.
 - Replies are cached in config.CACHE_DIR by prompt + model names, so the same question
   with the same pieces never spends quota twice.
 """
@@ -22,6 +24,7 @@ from pathlib import Path
 from learnbot import config
 
 AI_BUSY = "The AI is busy right now. Here are the best matching pieces from your document instead."
+GEMINI_MIN_DEADLINE_S = 10  # "Minimum allowed deadline is 10s" (Gemini API, HTTP 400)
 
 
 class LLMError(Exception):
@@ -44,8 +47,6 @@ class LLMUnavailable(LLMError):
     kind = "unavailable"  # HTTP 503 (overloaded) or 504 (deadline exceeded)
 
 
-# Failures that mean "this AI is slow, busy or down right now" (a per-minute limit too).
-SLOW_OR_DOWN = (LLMTimeout, LLMUnavailable, LLMRateLimit)
 # Words in a 429 message that mean a daily limit (the message itself is never kept).
 DAILY_LIMIT = re.compile(r"per ?day|\bRPD\b|\bTPD\b", re.IGNORECASE)
 MINUTE_LIMIT = re.compile(r"per ?minute|\bRPM\b|\bTPM\b", re.IGNORECASE)
@@ -86,7 +87,10 @@ def classify(exc):
         return LLMTimeout()
     if status in (503, 504):
         return LLMUnavailable()
-    return LLMError()
+    err = LLMError()
+    if isinstance(status, int):
+        err.kind = f"error {status}"  # e.g. "error 400": the HTTP status only, no message
+    return err
 
 
 class Provider:
@@ -96,7 +100,7 @@ class Provider:
 
     def __init__(self, model, timeout_s=None):
         self.model = model
-        self.timeout_s = timeout_s or config.LLM_TIMEOUT_S
+        self.timeout_s = timeout_s or config.FALLBACK_LLM_TIMEOUT_S
 
     @property
     def label(self):
@@ -121,8 +125,12 @@ class GeminiProvider(Provider):
         from google.genai import types
 
         self._types = types
+        # The SDK sends its timeout to Google as a server deadline, and Google rejects
+        # deadlines under 10 s (HTTP 400). Our own clock in Provider.ask() still stops
+        # waiting after self.timeout_s.
+        server_deadline_s = max(self.timeout_s, GEMINI_MIN_DEADLINE_S)
         self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(
-            timeout=int(self.timeout_s * 1000), retry_options=types.HttpRetryOptions(attempts=1)))
+            timeout=int(server_deadline_s * 1000), retry_options=types.HttpRetryOptions(attempts=1)))
 
     def _call(self, prompt):
         reply = self._client.models.generate_content(
@@ -204,7 +212,7 @@ class LLMChain:
                 attempts.append((p.label, err.kind, time.perf_counter() - start))
                 if isinstance(err, LLMDailyLimit):
                     self.switched_off.add(p.label)
-                elif isinstance(err, SLOW_OR_DOWN):
+                else:  # timeout, 503/504, per-minute limit, or any other error (e.g. a bad setting)
                     self.failures_in_a_row[p.label] = self.failures_in_a_row.get(p.label, 0) + 1
                     if self.failures_in_a_row[p.label] >= config.MAX_FAILURES_IN_A_ROW:
                         self.switched_off.add(p.label)
@@ -222,9 +230,11 @@ def default_chain(cache=True):
     from dotenv import load_dotenv
 
     load_dotenv()
+    makers = [(GeminiProvider, "GEMINI_API_KEY"), (GroqProvider, "GROQ_API_KEY")]
     providers = []
-    if os.getenv("GEMINI_API_KEY"):
-        providers.append(GeminiProvider(os.getenv("GEMINI_API_KEY")))
-    if os.getenv("GROQ_API_KEY"):
-        providers.append(GroqProvider(os.getenv("GROQ_API_KEY")))
+    for maker, env in makers:
+        if os.getenv(env):
+            # The first (main) AI gets the short timeout, every fallback the longer one.
+            timeout = config.FALLBACK_LLM_TIMEOUT_S if providers else config.MAIN_LLM_TIMEOUT_S
+            providers.append(maker(os.getenv(env), timeout_s=timeout))
     return LLMChain(providers, ReplyCache() if cache else None)

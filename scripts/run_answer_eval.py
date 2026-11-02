@@ -72,18 +72,19 @@ def where(sources):
     return "; ".join(f"{s['doc']} p.{s['page']} ({short(s['title'], 60)})" for s in sources)
 
 
-def build_report(records, base, chain, k):
+def build_report(records, base, chain, k, title):
     explain = [r for r in records if not r["trap"]]
     fresh = [r["ans"].seconds for r in records if not r["ans"].cached and r["ans"].provider]
     s4, s3 = summary(records), summary(base)
     providers = Counter(r["ans"].provider or "none (no AI answer)" for r in records)
     lines = [
-        "## Phase 4: hybrid search + AI answer + proof check",
+        title,
         "",
         f"- Search: `{config.SEARCH_METHOD}` (BM25 + `{config.EMBED_MODEL}`, RRF), rule-set filter on, "
         f"re-ranker `{config.RERANK_MODEL}`; top {k} pieces sent to the AI",
         f"- AI: {', '.join(p.label for p in chain.providers)} (in this order), timeout "
-        f"{config.LLM_TIMEOUT_S} s, no retries; prompt version {config.PROMPT_VERSION}",
+        f"{config.MAIN_LLM_TIMEOUT_S} s (main) / {config.FALLBACK_LLM_TIMEOUT_S} s (fallback), no retries; "
+        f"prompt version {config.PROMPT_VERSION}",
         "- Every answer passed the proof check (quote on its page, numbers + units in the quote, "
         "page was sent, rule set, topic) or was replaced by \"Not in this document\"",
         "- **Wrong** = answer shown is not supported by the expected source, OR its numbers differ "
@@ -153,9 +154,13 @@ def main():
     parser.add_argument("--max-calls", type=int, default=config.MAX_LLM_CALLS_WITHOUT_ASKING)
     parser.add_argument("--dry-run", action="store_true", help="only count the AI calls needed")
     parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each new AI call")
+    parser.add_argument("--explain", default="eval/explain_questions.csv")
+    parser.add_argument("--traps", default="eval/trap_questions.csv")
+    parser.add_argument("--section", default="phase4-answers", help="results.md section to write")
+    parser.add_argument("--title", default="## Phase 4: hybrid search + AI answer + proof check")
     args = parser.parse_args()
 
-    explain, traps = load_rows("eval/explain_questions.csv"), load_rows("eval/trap_questions.csv")
+    explain, traps = load_rows(args.explain), load_rows(args.traps)
     needed = sorted({r["doc"] for r in explain + traps})
     missing = [d for d in needed if not (DATA_DIR / d).is_file()]
     if missing:
@@ -208,7 +213,7 @@ def main():
         print("INCOMPLETE: some questions were not tested (AI busy). These numbers are not a valid result.")
     if not args.ids:
         base = baseline_records(library, explain, traps)
-        replace_section(RESULTS, "phase4-answers", build_report(records, base, chain, config.PIECES_TO_LLM))
+        replace_section(RESULTS, args.section, build_report(records, base, chain, config.PIECES_TO_LLM, args.title))
         print(f"Saved {RESULTS.as_posix()}")
     return 0
 

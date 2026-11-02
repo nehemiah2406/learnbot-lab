@@ -16,8 +16,17 @@ from learnbot.pdf_text import read_page_text
 DATA_DIR = Path("data/raw")
 EXPLAIN_COLUMNS = [
     "doc", "id", "question", "type", "expected_answer",
-    "rule", "rule_set", "page", "source_quote",
+    "rule", "rule_set", "page", "source_quote", "accepted_sources",
 ]
+# accepted_sources: every "doc.pdf:page" where the row's quote text appears (filled by
+# scripts/find_accepted_sources.py, verified by the checker). An answer from any of them
+# counts as the right source.
+SOURCE_SEPARATOR = ";"
+# A leading paragraph marker ("(p)", "(12)", "§ 87.1") is a label, not text.
+LEADING_MARKER = re.compile(r"^\s*(\([a-zA-Z0-9]{1,4}\)|§\s*[\d.]+)\s*")
+# Shorter quotes ("[Reserved]") would match unrelated pages, so they are only accepted
+# on their own page.
+ACCEPT_MIN_WORDS = 6
 TRAP_COLUMNS = ["doc", "id", "question", "type", "expected_answer", "keywords"]
 EXPLAIN_TYPES = {"fact", "number", "compare", "paraphrase", "annex"}
 TRAP_TYPES = {"maritime_outside", "off_topic"}
@@ -131,7 +140,28 @@ def check_explain_row(row):
     missing = missing_numbers(row["expected_answer"], " ".join(quotes))
     if missing:
         problems.append(f"numbers in answer not in source_quote: {', '.join(missing)}")
+
+    sources = parse_sources(row["accepted_sources"])
+    if sources is None:
+        problems.append(f"accepted_sources must be 'doc.pdf:N;doc.pdf:M': {row['accepted_sources']}")
+    elif pages is not None and not {(row["doc"], p) for p in pages} <= set(sources):
+        problems.append("accepted_sources must include the row's own page(s)")
     return problems
+
+
+def parse_sources(value):
+    """[(doc, page)] from 'a.pdf:12;b.pdf:3', or None if the text is not valid."""
+    sources = []
+    for part in (value or "").split(SOURCE_SEPARATOR):
+        doc, _, page = part.strip().rpartition(":")
+        if not is_plain_filename(doc) or not page.isdigit():
+            return None
+        sources.append((doc, int(page)))
+    return sources
+
+
+def format_sources(sources):
+    return SOURCE_SEPARATOR.join(f"{doc}:{page}" for doc, page in sorted(set(sources)))
 
 
 def check_trap_row(row):
@@ -204,6 +234,33 @@ def verify_quotes(row, docs):
             problems.append(f"page {page} does not exist in {row['doc']}")
         elif not quote_on_page(quote, texts[page]):
             problems.append(f"quote not found on page {page}: {quote[:60]}...")
+    return problems
+
+
+def quote_core(quote):
+    return LEADING_MARKER.sub("", quote)
+
+
+def find_accepted_sources(row, docs, doc_names):
+    """Every (doc, page) where the row's quote text appears: the row's own page(s), plus
+    any page of the given documents with the same text (leading marker removed)."""
+    found = {(row["doc"], p) for p in row_pages(row) or []}
+    for quote in split_pair(row["source_quote"]):
+        core = normalize(quote_core(quote))
+        if len(core.split()) < ACCEPT_MIN_WORDS:
+            continue
+        for doc in doc_names:
+            texts = docs.pages(doc, range(1, docs.page_count(doc) + 1))
+            found |= {(doc, n) for n, text in texts.items() if text and core in normalize(text)}
+    return sorted(found)
+
+
+def verify_accepted_sources(row, docs, doc_names):
+    """Problems if accepted_sources is not exactly the pages that have the quote text."""
+    listed = set(parse_sources(row["accepted_sources"]) or [])
+    found = set(find_accepted_sources(row, docs, doc_names))
+    problems = [f"accepted source has no matching text: {d}:{p}" for d, p in sorted(listed - found)]
+    problems += [f"page has the same text but is not listed: {d}:{p}" for d, p in sorted(found - listed)]
     return problems
 
 

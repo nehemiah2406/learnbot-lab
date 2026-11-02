@@ -78,12 +78,27 @@ def test_success_resets_the_failure_count():
     assert gemini.calls == 6 and "gemini:fake-model" not in chain.switched_off
 
 
-def test_one_ordinary_error_does_not_skip_main_ai():
+def test_any_error_twice_in_a_row_skips_main_ai():
+    # e.g. a bad setting gives HTTP 400 on every call: stop after 2, do not spend 37 calls.
     gemini, groq = Fake("gemini", HttpError(400)), Fake("groq", "ok")
     chain = LLMChain([gemini, groq])
-    for question in ["q1", "q2", "q3"]:
+    for question in ["q1", "q2", "q3", "q4"]:
         chain.ask(question)
-    assert gemini.calls == 3  # a 400 is not "slow or down"
+    assert gemini.calls == 2 and groq.calls == 4
+    assert chain.calls == 6
+
+
+def test_gemini_server_deadline_is_at_least_10_s(monkeypatch):
+    seen = {}
+
+    class FakeClient:
+        def __init__(self, api_key, http_options):
+            seen["timeout_ms"] = http_options.timeout
+
+    monkeypatch.setattr("google.genai.Client", FakeClient)
+    provider = llm.GeminiProvider("fake-key", model="m", timeout_s=7)
+    assert provider.timeout_s == 7  # our own clock stops waiting after 7 s
+    assert seen["timeout_ms"] == 10_000  # Google rejects server deadlines under 10 s
 
 
 def test_minute_limit_sends_only_this_question_to_the_fallback():
@@ -115,7 +130,7 @@ def test_all_failed_reports_kinds_without_message_text():
     groq = Fake("groq", HttpError(500, "key gsk_SECRET456 broken"))
     with pytest.raises(AllProvidersFailed) as info:
         LLMChain([gemini, groq]).ask("q")
-    assert [a[:2] for a in info.value.attempts] == [("gemini:fake-model", "daily_limit"), ("groq:fake-model", "error")]
+    assert [a[:2] for a in info.value.attempts] == [("gemini:fake-model", "daily_limit"), ("groq:fake-model", "error 500")]
     assert "SECRET" not in str(info.value) and "SECRET" not in repr(info.value.attempts)
 
 
@@ -134,6 +149,8 @@ def test_classify_errors():
     assert isinstance(classify(APITimeoutError()), LLMTimeout)
     assert type(classify(ValueError("x"))) is LLMError
     assert str(classify(ValueError("secret"))) == ""
+    bad = classify(HttpError(400, "Manually set deadline 7s is too short; key AIzaSECRET"))
+    assert bad.kind == "error 400" and "SECRET" not in bad.kind + str(bad)
 
 
 def test_cache_saves_quota(tmp_path):
@@ -150,6 +167,24 @@ def test_failed_calls_are_not_cached(tmp_path):
     with pytest.raises(AllProvidersFailed):
         chain.ask("p")
     assert not chain.is_cached("p")
+
+
+def test_main_ai_gets_short_timeout_fallback_longer(monkeypatch):
+    class Made:
+        def __init__(self, key, timeout_s=None):
+            self.timeout_s, self.label = timeout_s, type(self).__name__
+
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)  # never read the real .env
+    monkeypatch.setattr(llm, "GeminiProvider", type("GeminiProvider", (Made,), {}))
+    monkeypatch.setattr(llm, "GroqProvider", type("GroqProvider", (Made,), {}))
+    monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    chain = llm.default_chain(cache=False)
+    assert [(p.label, p.timeout_s) for p in chain.providers] == [
+        ("GeminiProvider", llm.config.MAIN_LLM_TIMEOUT_S), ("GroqProvider", llm.config.FALLBACK_LLM_TIMEOUT_S)]
+    monkeypatch.delenv("GEMINI_API_KEY")
+    only_groq = llm.default_chain(cache=False)
+    assert only_groq.providers[0].timeout_s == llm.config.MAIN_LLM_TIMEOUT_S  # the only AI is the main AI
 
 
 def test_default_chain_skips_providers_without_key(monkeypatch):

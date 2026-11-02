@@ -3,7 +3,7 @@
 """
 
 from learnbot.baseline import NOT_FOUND, Hit, tokenize
-from learnbot.eval_check import normalize, numbers_in, row_pages, split_pair
+from learnbot.eval_check import normalize, numbers_in, parse_sources, row_pages, split_pair
 
 # Outcomes
 RIGHT = "right"  # answered, top-1 piece is from the right doc + page
@@ -15,9 +15,15 @@ TRAP_ANSWERED = "trap_answered"  # trap, but gave an answer (also wrong)
 NOT_TESTED = "not_tested"  # Phase 4: no AI could be reached ("AI busy"); the run is incomplete
 
 
+def right_sources(row):
+    """{(doc, page)}: the row's own page(s) (compare: either) plus its accepted_sources."""
+    own = {(row["doc"], p) for p in row_pages(row) or []}
+    return own | set(parse_sources(row.get("accepted_sources", "")) or [])
+
+
 def on_right_page(row, hit):
-    """True if the hit is from the row's doc and one of its pages (compare: either page)."""
-    return hit.chunk.doc == row["doc"] and hit.chunk.page in (row_pages(row) or [])
+    """True if the hit is from one of the row's right sources."""
+    return (hit.chunk.doc, hit.chunk.page) in right_sources(row)
 
 
 def key_words(text):
@@ -117,7 +123,7 @@ def score_answer(row, is_trap, ans):
 
 
 def hit_on_right_page(row, source):
-    return source["doc"] == row["doc"] and source["page"] in (row_pages(row) or [])
+    return (source["doc"], source["page"]) in right_sources(row)
 
 
 def choose_threshold(table):
