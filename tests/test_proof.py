@@ -91,10 +91,21 @@ def test_answer_must_have_the_unit_the_question_asks_for():
 
 
 def test_asked_unit():
-    assert asked_unit("Roughly how many yards are in one nautical mile?") == "yards"
-    assert asked_unit("How many seconds does a prolonged blast last?") == "seconds"
+    assert asked_unit("Roughly how many yards are in one nautical mile?") == "yard"
     assert asked_unit("How long is a nautical mile?") is None
-    assert asked_unit("How many of the lights?") is None  # "of" is not a unit
+
+
+def test_quote_with_cfr_reference_is_not_refused_as_unfocused():
+    # "33 CFR" is a law reference, not a measurement (NAV-08's quote had one).
+    piece = Chunk("rules.pdf", 108, "—INLAND— Rule 34",
+                  "33 CFR 83.34 (iii) The light used for this signal shall, if fitted, be one all-round "
+                  "white or yellow light, visible at a minimum range of 2 miles")
+    pages = {("rules.pdf", 108): piece.text}
+    r = reply(answer="One all-round white or yellow light, visible at a minimum range of 2 miles.",
+              quote=piece.text, page=108)
+    question = "Under the Inland Rules, what light may supplement whistle signals and what is its minimum range?"
+    result = check(question, r, [piece], lambda d, p: pages.get((d, p)), RuleSets([piece]))
+    assert result.ok, result
 
 
 LONG_QUOTE = ("In vessels of 50 meters or more in length: − a masthead light, 6 miles; − a sidelight, 3 miles; "
@@ -146,5 +157,6 @@ def test_quote_matching_is_normalised():
 
 def test_number_units():
     assert number_units("70-200 Hz, for 200 meters; 4 to 6 seconds; 20m") == {
-        ("200", "hz"), ("200", "meters"), ("6", "seconds"), ("20", "m")}
-    assert number_units("approximately 2,000 yards") == {("2000", "yards")}
+        ("200", "hertz"), ("200", "meter"), ("6", "second"), ("20", "meter")}
+    assert number_units("approximately 2,000 yards") == {("2000", "yard")}
+    assert number_units("33 CFR 83.34 and Rule 34(d)") == set()

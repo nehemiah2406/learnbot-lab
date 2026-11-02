@@ -12,22 +12,25 @@ An answer is shown only if ALL checks pass for every source; otherwise the user 
                      piece text, one must occur in the quote (not just in the broad piece
                      title; words compared by their first 5 letters); numbers in the question must
                      be in a quote or in the title of the piece quoted
-  unit_missing       a question that asks "how many <unit>" gets an answer with that unit
+  unit_missing       a question that asks for a unit ("how many yards", "... in km?") gets
+                     an answer with that unit
   number_not_in_quote  every number in the answer is in a quote
-  quote_not_focused  the quote has no other measurement ("number + unit") than those in
-                     the answer or the question: an AI that quotes a whole list ("masthead
-                     light, 6 miles; sidelight, 3 miles") cannot pick the wrong item unseen
-  unit_not_in_quote    every "number + unit" in the answer ("6 miles", "200 Hz") is in a quote
+  unit_not_in_quote  every measurement in the answer ("6 miles", "200 Hz", "$5") is in a quote
+  quote_not_focused  the quote has no other measurement than those in the answer or the
+                     question: an AI that quotes a whole list ("masthead light, 6 miles;
+                     sidelight, 3 miles") cannot pick the wrong item unseen
+A measurement is a number WITH a unit from learnbot.units; "33 CFR", "Rule 34(d)" or
+"Annex 1" are references, not measurements.
 """
 
 import re
 from dataclasses import dataclass
 
 from learnbot import config
-from learnbot.baseline import STOPWORDS, tokenize
+from learnbot.baseline import tokenize
 from learnbot.eval_check import normalize, numbers_in
+from learnbot.units import asked_unit, measurements, units_in
 
-NUMBER_UNIT = re.compile(r"(\d+(?:[.,]\d+)*)\s*([a-z%°]+)")
 # Lines are joined with spaces in pieces, so "look-\nout" becomes "look- out".
 BROKEN_HYPHEN = re.compile(r"(\w)- (\w)")
 
@@ -37,23 +40,12 @@ def same_text(text):
 
 
 def number_units(text):
-    """{(number, unit)} pairs like ("6", "miles"); words like "to" or "and" are not units."""
-    pairs = NUMBER_UNIT.findall(same_text(text).lower())
-    return {(n.replace(",", ""), u) for n, u in pairs if u not in STOPWORDS}
+    """{(number, canonical unit)}: only a number WITH a known unit ("6 miles", "$5");
+    "33 CFR" or "Rule 34" are not measurements (see learnbot.units)."""
+    return measurements(same_text(text))
 
 
 STEM_LETTERS = 5  # "expire" / "expiration" and "signal" / "signals" count as the same word
-
-
-HOW_MANY = re.compile(r"\bhow many ([a-z]+)", re.IGNORECASE)
-UNIT_LETTERS = 4  # "yard" / "yards", "second" / "seconds" count as the same unit
-
-
-def asked_unit(question):
-    """The unit a question asks for ("how many yards" -> "yards"), or None."""
-    match = HOW_MANY.search(question)
-    word = match.group(1).lower() if match else None
-    return word if word and word not in STOPWORDS else None
 
 
 def key_words(text, ignore=()):
@@ -110,7 +102,7 @@ def check(question, reply, sent, page_text, rule_sets):
         titles += [c.title for c in pieces]
 
     unit = asked_unit(question)
-    if unit and not any(t.startswith(unit[:UNIT_LETTERS]) for t in tokenize(answer)):
+    if unit and unit not in units_in(same_text(answer)):
         return fail("unit_missing", f"question asks for {unit}")
     quotes = " ".join(s["quote"] for s in sources)
     missing = numbers_in(question) - numbers_in(quotes + " " + " ".join(titles))
