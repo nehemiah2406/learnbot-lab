@@ -376,3 +376,66 @@ Decision: **no safe threshold**. Every right quote that shares no word with its 
 | NAV-10 | 2.05 | (iii) the light used for this signal shall, if fitted, be an all-round white lig |
 | BG-06 | 2.01 | includes synthetic ropes, Prohibited in all areas fishing nets, and plastic bags |
 <!-- END phase4-topic-threshold -->
+
+<!-- BEGIN phase4-topic-threshold-baai-bge-reranker-base -->
+## Phase 4: topic threshold for paraphrased questions (BAAI/bge-reranker-base)
+
+Re-ranker `BAAI/bge-reranker-base` score of (question, quote). Used only when the quote shares no word with the question. Chosen by `scripts/choose_topic_threshold.py` (no AI calls).
+
+- Highest bad-quote score (trap quotes + wrong-number quotes): **1.00** (CP-04); highest trap quote: 0.97
+- Lowest safe threshold: **1.00**
+- Time to score one (question, quote): avg 55 ms, max 116 ms (model load once: 48.7 s)
+- Right quotes at or above it: 0/32; of the right quotes that share no word with their question: 0/3
+
+Decision: **no safe threshold**. Every right quote that shares no word with its question scores below the bad quotes, so any threshold that lets it pass would also let bad quotes pass. `TOPIC_MIN_SCORE` stays `None` (off): such answers stay "Not in this document".
+
+| Right quote (question) | Score | Shares a word | Passes threshold |
+|---|---|---|---|
+| NAV-01 | 0.94 | yes | no |
+| NAV-02 | 0.99 | yes | no |
+| NAV-03 | 0.53 | yes | no |
+| NAV-04 | 0.99 | yes | no |
+| NAV-05 | 0.95 | yes | no |
+| NAV-06 | 1.00 | yes | no |
+| NAV-07 | 0.97 | yes | no |
+| NAV-07 | 0.98 | yes | no |
+| NAV-08 | 0.23 | yes | no |
+| NAV-08 | 0.39 | yes | no |
+| NAV-09 | 1.00 | yes | no |
+| NAV-09 | 0.00 | no | no |
+| NAV-10 | 0.93 | yes | no |
+| NAV-11 | 0.00 | no | no |
+| NAV-12 | 1.00 | yes | no |
+| NAV-13 | 0.07 | yes | no |
+| BG-01 | 0.99 | yes | no |
+| BG-02 | 0.66 | yes | no |
+| BG-03 | 0.82 | yes | no |
+| BG-04 | 0.99 | yes | no |
+| BG-05 | 0.34 | yes | no |
+| BG-06 | 1.00 | yes | no |
+| BG-07 | 0.49 | yes | no |
+| BG-08 | 0.10 | no | no |
+| CP-01 | 1.00 | yes | no |
+| CP-02 | 0.95 | yes | no |
+| CP-03 | 1.00 | yes | no |
+| CP-04 | 1.00 | yes | no |
+| CP-05 | 0.13 | yes | no |
+| CP-06 | 0.92 | yes | no |
+| CP-07 | 1.00 | yes | no |
+| CP-08 | 0.91 | yes | no |
+
+| Highest bad quote per question | Score | Quote |
+|---|---|---|
+| CP-04 | 1.00 | nautical mile — 1,852 meters / 6,076.12 feet 25 OCT 2026 acre — 43,560 square fe |
+| CP-07 | 1.00 | A nautical mile is one minute of latitude, or approximately 2,000 yards, and is  |
+| BG-04 | 0.99 | Use letters not less than 4 inches in height. |
+| NAV-07 | 0.98 | (313) Navigation Rules, International-Inland, Rule 34(d), states that when vesse |
+| TRAP-BG-01 | 0.97 | In addition to the requirements stated in this document, the owner/operator may  |
+| NAV-09 | 0.97 | A vessel constrained by her draft may, in addition to the lights prescribed for  |
+| BG-08 | 0.96 | In consideration of procedures and for potential conflict between aircraft and m |
+| NAV-12 | 0.95 | The range of audibility of the signal from a whistle shall be determined by thos |
+| NAV-10 | 0.94 | (iii) the light used for this signal shall, if fitted, be an all-round white lig |
+| BG-06 | 0.94 | includes synthetic ropes, Prohibited in all areas fishing nets, and plastic bags |
+| BG-01 | 0.87 | Coast Guard conducts nearly 55,000 boardings a year in its multiple roles: enfor |
+| NAV-06 | 0.82 | (a) A power-driven vessel making way through the water shall sound at intervals  |
+<!-- END phase4-topic-threshold-baai-bge-reranker-base -->
