@@ -157,161 +157,172 @@ Rule-set check: 10 questions name one rule set; their expected page has that rul
 <!-- END phase4-search -->
 
 <!-- BEGIN phase4-answers -->
-## Phase 4: hybrid search + AI answer + proof check
+## Phase 4: hybrid search + AI answer + proof check (run 4: prompt v4, list items, counts, one source, 9 s budget)
 
 - Search: `hybrid` (BM25 + `BAAI/bge-small-en-v1.5`, RRF), rule-set filter on, re-ranker `cross-encoder/ms-marco-MiniLM-L6-v2`; top 5 pieces sent to the AI
-- AI: gemini:gemini-3.1-flash-lite, groq:openai/gpt-oss-120b (in this order), timeout 7 s (main) / 15 s (fallback), no retries; prompt version 3
-- Every answer passed the proof check (quote on its page, numbers + units in the quote, page was sent, rule set, topic) or was replaced by "Not in this document"
+- AI: gemini:gemini-3.1-flash-lite, groq:openai/gpt-oss-120b (in this order), timeout 5 s (main) / 15 s (fallback), all within 9 s per question, no retries; prompt version 4
+- Every answer passed the proof check (quote on its page, numbers + units in the quote, page was sent, rule set, topic, one source unless comparing, every number of the quote in the answer) or was replaced by "Not in this document"
 - **Wrong** = answer shown is not supported by the expected source, OR its numbers differ from the expected answer's numbers
 
 | Measure | Phase 3 baseline | Phase 4 | Target |
 |---|---|---|---|
-| Right doc + page | 19/29 (66%) | 20/29 (69%) | 9 of 10 or better |
-| Exact answer (all numbers + key words) | 15/29 (52%) | 20/29 (69%) | (tracked) |
+| Right doc + page | 19/29 (66%) | 16/29 (55%) | 9 of 10 or better |
+| Exact answer (all numbers + key words) | 15/29 (52%) | 16/29 (55%) | (tracked) |
 | Correct, other source | 0 | 0 | |
-| Traps "Not in this document" | 7/8 (88%) | 8/8 (100%) | all |
+| Traps "Not in this document" | 7/8 (88%) | 7/8 (88%) | all |
 | **Wrong** | 6 | **2** | **0** |
 | **Traps answered** | 1 | **0** | **0** |
-| Missed (real question, said "Not in this document") | 4 | 7 | |
-| Not tested (AI busy; the run is incomplete if > 0) | n/a | 0 | 0 |
-| Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 2.9 s, max 10.1 s | under 10 s |
+| Missed (real question, said "Not in this document") | 4 | 9 | |
+| Not tested (AI busy; the run is incomplete if > 0) | n/a | 3 | 0 |
+| Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 2.3 s, max 8.5 s | under 10 s |
 
-Which AI answered: gemini:gemini-3.1-flash-lite 35, groq:openai/gpt-oss-120b 2
+Which AI answered: groq:openai/gpt-oss-120b 34, none (no AI answer) 3
 
 #### Per document
 
 | Document | Questions | Right page | Correct, other source | Wrong | Missed |
 |---|---|---|---|---|---|
-| boaters_guide.pdf | 8 | 6/8 (75%) | 0 | 0 | 2 |
-| coast_pilot4_ch1.pdf | 8 | 6/8 (75%) | 0 | 1 | 1 |
-| nav_rules.pdf | 13 | 8/13 (62%) | 0 | 1 | 4 |
+| boaters_guide.pdf | 8 | 5/8 (62%) | 0 | 0 | 3 |
+| coast_pilot4_ch1.pdf | 8 | 4/8 (50%) | 0 | 1 | 1 |
+| nav_rules.pdf | 13 | 7/13 (54%) | 0 | 1 | 5 |
 
 ### Per question: outcome and which AI answered
 
 | Question | Outcome | AI that answered | Time (new answers) |
 |---|---|---|---|
-| NAV-01 | right | gemini:gemini-3.1-flash-lite | 2.3 s |
-| NAV-02 | right | gemini:gemini-3.1-flash-lite | 1.4 s |
-| NAV-03 | right | gemini:gemini-3.1-flash-lite | 2.9 s |
-| NAV-04 | missed | gemini:gemini-3.1-flash-lite | 3.3 s |
-| NAV-05 | right | gemini:gemini-3.1-flash-lite | 2.7 s |
-| NAV-06 | right | gemini:gemini-3.1-flash-lite | 2.1 s |
-| NAV-07 | right | gemini:gemini-3.1-flash-lite | 1.9 s |
-| NAV-08 | wrong | gemini:gemini-3.1-flash-lite | 2.3 s |
-| NAV-09 | missed | gemini:gemini-3.1-flash-lite | 2.2 s |
-| NAV-10 | missed | gemini:gemini-3.1-flash-lite | 2.2 s |
-| NAV-11 | missed | groq:openai/gpt-oss-120b | 9.5 s |
-| NAV-12 | right | gemini:gemini-3.1-flash-lite | 2.0 s |
-| NAV-13 | right | gemini:gemini-3.1-flash-lite | 2.2 s |
-| BG-01 | right | gemini:gemini-3.1-flash-lite | 5.5 s |
-| BG-02 | missed | gemini:gemini-3.1-flash-lite | 2.2 s |
-| BG-03 | right | gemini:gemini-3.1-flash-lite | 2.3 s |
-| BG-04 | right | gemini:gemini-3.1-flash-lite | 2.8 s |
-| BG-05 | right | gemini:gemini-3.1-flash-lite | 2.2 s |
-| BG-06 | right | gemini:gemini-3.1-flash-lite | 2.5 s |
-| BG-07 | right | gemini:gemini-3.1-flash-lite | 1.8 s |
-| BG-08 | missed | gemini:gemini-3.1-flash-lite | 2.3 s |
-| CP-01 | right | gemini:gemini-3.1-flash-lite | 1.6 s |
-| CP-02 | right | gemini:gemini-3.1-flash-lite | 2.1 s |
-| CP-03 | right | gemini:gemini-3.1-flash-lite | 2.2 s |
-| CP-04 | wrong | gemini:gemini-3.1-flash-lite | 4.3 s |
-| CP-05 | right | gemini:gemini-3.1-flash-lite | 1.6 s |
-| CP-06 | right | groq:openai/gpt-oss-120b | 10.1 s |
-| CP-07 | missed | gemini:gemini-3.1-flash-lite | 2.7 s |
-| CP-08 | right | gemini:gemini-3.1-flash-lite | 1.8 s |
-| TRAP-NAV-01 | refused | gemini:gemini-3.1-flash-lite | 1.6 s |
-| TRAP-NAV-02 | refused | gemini:gemini-3.1-flash-lite | 1.9 s |
-| TRAP-NAV-03 | refused | gemini:gemini-3.1-flash-lite | 2.4 s |
-| TRAP-BG-01 | refused | gemini:gemini-3.1-flash-lite | 2.3 s |
-| TRAP-BG-02 | refused | gemini:gemini-3.1-flash-lite | 2.4 s |
-| TRAP-BG-03 | refused | gemini:gemini-3.1-flash-lite | 4.4 s |
-| TRAP-CP-01 | refused | gemini:gemini-3.1-flash-lite | 3.8 s |
-| TRAP-CP-02 | refused | gemini:gemini-3.1-flash-lite | 2.1 s |
+| NAV-01 | right | groq:openai/gpt-oss-120b | 8.5 s |
+| NAV-02 | right | groq:openai/gpt-oss-120b | 6.7 s |
+| NAV-03 | right | groq:openai/gpt-oss-120b | 2.2 s |
+| NAV-04 | right | groq:openai/gpt-oss-120b | 1.5 s |
+| NAV-05 | right | groq:openai/gpt-oss-120b | 1.5 s |
+| NAV-06 | right | groq:openai/gpt-oss-120b | 2.1 s |
+| NAV-07 | missed | groq:openai/gpt-oss-120b | 1.6 s |
+| NAV-08 | missed | groq:openai/gpt-oss-120b | 2.2 s |
+| NAV-09 | missed | groq:openai/gpt-oss-120b | 1.5 s |
+| NAV-10 | missed | groq:openai/gpt-oss-120b | 1.7 s |
+| NAV-11 | missed | groq:openai/gpt-oss-120b | 2.8 s |
+| NAV-12 | right | groq:openai/gpt-oss-120b | 1.5 s |
+| NAV-13 | wrong | groq:openai/gpt-oss-120b | 1.8 s |
+| BG-01 | missed | groq:openai/gpt-oss-120b | 1.6 s |
+| BG-02 | right | groq:openai/gpt-oss-120b | 1.9 s |
+| BG-03 | right | groq:openai/gpt-oss-120b | 5.9 s |
+| BG-04 | right | groq:openai/gpt-oss-120b | 4.2 s |
+| BG-05 | right | groq:openai/gpt-oss-120b | 1.8 s |
+| BG-06 | missed | groq:openai/gpt-oss-120b | 2.4 s |
+| BG-07 | right | groq:openai/gpt-oss-120b | 1.8 s |
+| BG-08 | missed | groq:openai/gpt-oss-120b | 1.7 s |
+| CP-01 | right | groq:openai/gpt-oss-120b | 1.7 s |
+| CP-02 | right | groq:openai/gpt-oss-120b | 2.1 s |
+| CP-03 | not_tested | none (AI busy) | 0.6 s |
+| CP-04 | wrong | groq:openai/gpt-oss-120b | 2.7 s |
+| CP-05 | right | groq:openai/gpt-oss-120b | 2.6 s |
+| CP-06 | not_tested | none (AI busy) | 1.2 s |
+| CP-07 | missed | groq:openai/gpt-oss-120b | 2.6 s |
+| CP-08 | right | groq:openai/gpt-oss-120b | 1.7 s |
+| TRAP-NAV-01 | refused | groq:openai/gpt-oss-120b | 1.9 s |
+| TRAP-NAV-02 | refused | groq:openai/gpt-oss-120b | 1.2 s |
+| TRAP-NAV-03 | refused | groq:openai/gpt-oss-120b | 1.2 s |
+| TRAP-BG-01 | refused | groq:openai/gpt-oss-120b | 1.3 s |
+| TRAP-BG-02 | not_tested | none (AI busy) | 0.5 s |
+| TRAP-BG-03 | refused | groq:openai/gpt-oss-120b | 1.5 s |
+| TRAP-CP-01 | refused | groq:openai/gpt-oss-120b | 1.3 s |
+| TRAP-CP-02 | refused | groq:openai/gpt-oss-120b | 0.8 s |
 
 ### Failed questions
 
-- **NAV-04** (missed) expected nav_rules.pdf p.45: Under the International Rules, what is the minimum range of visibility of a masthead light on a vessel of 50 meters or more in length?  
-  Reason: proof:quote_not_focused (quote has other measurements: 3 mile)  
+- **NAV-07** (missed) expected nav_rules.pdf p.107|108: When power-driven vessels in sight of one another manoeuvre, what does one short blast mean under the International Rules and under the Inland Rules?  
+  Reason: llm_not_found  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 2.3 s
-- **NAV-08** (wrong) expected nav_rules.pdf p.107|108: What light may supplement manoeuvring whistle signals and what is its minimum range under the International and Inland Rules?  
-  Reason: numbers differ: expected ['1', '2', '5'], shown ['2', '5']  
-  Shown: "Under International Rules, an all-round white light visible at 5 miles; under Inland Rules, an all-round white or yellow light visible at 2 miles." from nav_rules.pdf p.107 (—INTERNATIONAL— Sound and Light Signals Rule 34 Maneuvering ...); nav_rules.pdf p.108 (—INLAND— Sound and Light Signals Rule 34 Maneuvering and War...)  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.5 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.2 s
+- **NAV-08** (missed) expected nav_rules.pdf p.107|108: What light may supplement manoeuvring whistle signals and what is its minimum range under the International and Inland Rules?  
+  Reason: proof:quote_not_focused (quote has numbers the answer leaves out: 1)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.9 s
 - **NAV-09** (missed) expected nav_rules.pdf p.15|16: Do both the International and Inland Rules define a vessel constrained by her draft?  
   Reason: llm_not_found  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.2 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 0.7 s
 - **NAV-10** (missed) expected nav_rules.pdf p.45: How far away must the top white light of a big ship (50 m or longer) be visible under the International Rules?  
-  Reason: proof:quote_not_focused (quote has other measurements: 3 mile)  
+  Reason: proof:quote_not_focused (quote has other measurements: 6 mile)  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.2 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.3 s
 - **NAV-11** (missed) expected nav_rules.pdf p.109: What horn signal do I give under the International Rules if I do not understand what the other ship is doing?  
   Reason: proof:off_topic (quote has none of the question's words: the vessel in doubt shall immediately indicate such doubt by)  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite timeout 7.0 s -> groq:openai/gpt-oss-120b ok 1.7 s
-- **BG-02** (missed) expected boaters_guide.pdf p.10: What must the owner of a documented recreational vessel mark on the hull?  
-  Reason: proof:number_not_in_quote (4)  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 2.3 s
+- **NAV-13** (wrong) expected nav_rules.pdf p.144: Under the Inland Rules, which flashing white light is a distress signal?  
+  Reason: answer shown is not supported by the expected source  
+  Shown: "a high-intensity white light flashing at regular intervals from 50-70 times per minute" from boaters_guide.pdf p.18 (Electric Distress Signals (night only))  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.4 s
+- **BG-01** (missed) expected boaters_guide.pdf p.12: Which items does the Coast Guard not regulate?  
+  Reason: proof:page_not_sent (boat
+
+ers_guide.pdf p.12)  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.0 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.1 s
+- **BG-06** (missed) expected boaters_guide.pdf p.26: What size of oil discharge placard must vessels 26 feet and greater in length with machinery spaces display?  
+  Reason: proof:off_topic (question numbers not in the quote: 26)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.7 s
 - **BG-08** (missed) expected boaters_guide.pdf p.9: How tall do the numbers on the side of my boat have to be?  
   Reason: proof:off_topic (quote has none of the question's words: Lettering must be in plain, vertical block characters of not)  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.7 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.2 s
+- **CP-03** (not_tested) expected coast_pilot4_ch1.pdf p.1: From what level are the vertical clearances of bridges and overhead cables given?  
+  Reason: ai_busy (gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b rate_limit 0.2 s)  
+  Shown: The AI is busy right now. Here are the best matching pieces from your document instead.
 - **CP-04** (wrong) expected coast_pilot4_ch1.pdf p.2: How long is a nautical mile?  
-  Reason: numbers differ: expected ['1', '1.15', '2000'], shown ['1', '1.15', '1852', '2000', '6076.12']  
-  Shown: "A nautical mile is one minute of latitude, or approximately 2,000 yards, and is about 1.15 statute miles; it is also 1,852 meters or 6,076.12 feet." from coast_pilot4_ch1.pdf p.2 (Distances); coast_pilot4_ch1.pdf p.34 (Measurements and Equivalencies)  
-  AI calls: gemini:gemini-3.1-flash-lite ok 2.0 s
+  Reason: numbers differ: expected ['1', '1.15', '2000'], shown ['1852', '6076.12']  
+  Shown: "1,852 meters / 6,076.12 feet" from coast_pilot4_ch1.pdf p.34 (Measurements and Equivalencies)  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.6 s
+- **CP-06** (not_tested) expected coast_pilot4_ch1.pdf p.15: Which ships must guard VHF channel 13 in addition to VHF channel 16 within U.S. territorial waters?  
+  Reason: ai_busy (gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b rate_limit 0.5 s)  
+  Shown: The AI is busy right now. Here are the best matching pieces from your document instead.
 - **CP-07** (missed) expected coast_pilot4_ch1.pdf p.2: Roughly how many yards are in one nautical mile?  
   Reason: proof:quote_not_focused (quote has other measurements: 1.15 statute mile)  
   Shown: Not in this document  
-  AI calls: gemini:gemini-3.1-flash-lite ok 1.2 s
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.8 s
+- **TRAP-BG-02** (not_tested) expected "Not in this document": Where is the load line (Plimsoll) mark painted on a ship?  
+  Reason: ai_busy (gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b rate_limit 0.1 s)  
+  Shown: The AI is busy right now. Here are the best matching pieces from your document instead.
 
 ### All answers shown
 
-- **NAV-01** (right): A vessel restricted in her ability to maneuver is a vessel that is restricted in her ability to maneuver as required by these Rules due to the nature ...  
-  Source: nav_rules.pdf p.15 (—INTERNATIONAL— General Rule 3 General Definitions); quote: "(g) The term vessel restricted in her ability to maneuver means a vessel which from the nature of her work is restricted..."
+- **NAV-01** (right): A vessel which, because of the nature of its work, is restricted in its ability to maneuver as required by the Rules and cannot keep out of the way of...  
+  Source: nav_rules.pdf p.15 (—INTERNATIONAL— General Rule 3 General Definitions); quote: "The term vessel restricted in her ability to maneuver means a vessel which from the nature of her work is restricted in her ability to maneuver as required by t..."
 - **NAV-02** (right): The word underway means that a vessel is not at anchor, or made fast to the shore, or aground.  
-  Source: nav_rules.pdf p.17 (—INTERNATIONAL— General Rule 3—CONTINUED); quote: "(i) The word underway means that a vessel is not at anchor, or made fast to the shore, or aground."
-- **NAV-03** (right): The vessel shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle, which may be supplemented by a light s...  
-  Source: nav_rules.pdf p.109 (—INTERNATIONAL— Sound and Light Signals Rule 34—CONTINUED); quote: "(d) When vessels in sight of one another are approaching each other and from any cause either vessel fails to understand..."
-- **NAV-05** (right): A prolonged blast is a blast of from 4 to 6 seconds’ duration.  
+  Source: nav_rules.pdf p.17 (—INTERNATIONAL— General Rule 3—CONTINUED); quote: "The word underway means that a vessel is not at anchor, or made fast to the shore, or aground."
+- **NAV-03** (right): at least five short and rapid blasts on the whistle  
+  Source: nav_rules.pdf p.109 (—INTERNATIONAL— Sound and Light Signals Rule 34—CONTINUED); quote: "the vessel in doubt shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle."
+- **NAV-04** (right): 6 miles  
+  Source: nav_rules.pdf p.45 (—INTERNATIONAL— Lights and Shapes Rule 22 Visibility of Ligh...); quote: "In vessels of 50 meters or more in length: − a masthead light, 6 miles;"
+- **NAV-05** (right): from 4 to 6 seconds’ duration  
   Source: nav_rules.pdf p.106 (SUBPART D—SOUND AND LIGHT SIGNALS Rule 32 Definitions); quote: "The term prolonged blast means a blast of from 4 to 6 seconds’ duration."
-- **NAV-06** (right): The vessel shall sound two prolonged blasts in succession with an interval of about 2 seconds between them at intervals of not more than 2 minutes.  
-  Source: nav_rules.pdf p.111 (—INTERNATIONAL— Sound and Light Signals Rule 35 Sound Signal...); quote: "(b) A power-driven vessel underway but stopped and making no way through the water shall sound at intervals of not more ..."
-- **NAV-07** (right): Under both International and Inland Rules, one short blast means "I am altering my course to starboard".  
-  Source: nav_rules.pdf p.107 (—INTERNATIONAL— Sound and Light Signals Rule 34 Maneuvering ...); nav_rules.pdf p.108 (—INLAND— Sound and Light Signals Rule 34 Maneuvering and War...); quote: "− one short blast to mean “I am altering my course to starboard”;" | "(a) When power-driven vessels are in sight of one another and meeting or crossing at a distance within half a mile of ea..."
-- **NAV-08** (wrong): Under International Rules, an all-round white light visible at 5 miles; under Inland Rules, an all-round white or yellow light visible at 2 miles.  
-  Source: nav_rules.pdf p.107 (—INTERNATIONAL— Sound and Light Signals Rule 34 Maneuvering ...); nav_rules.pdf p.108 (—INLAND— Sound and Light Signals Rule 34 Maneuvering and War...); quote: "(iii) the light used for this signal shall, if fitted, be an all-round white light, visible at a minimum range of 5 mile..." | "(iii) The light used for this signal shall, if fitted, be one all-round white or yellow light, visible at a minimum rang..."
-- **NAV-12** (right): The fundamental frequency of the whistle must be 70-200 Hz for a vessel 200 meters or more in length.  
-  Source: nav_rules.pdf p.137 (—INTERNATIONAL— Annex III Technical Details of Sound Signal ...); quote: "(i) 70-200 Hz, for a vessel 200 meters or more in length;"
-- **NAV-13** (right): A high intensity white light flashing at regular intervals from 50 to 70 times per minute.  
-  Source: nav_rules.pdf p.116 (—INLAND— Sound and Light Signals Rule 37 Distress Signals); quote: "A high intensity white light flashing at regular intervals from 50 to 70 times per minute."
-- **BG-01** (right): The Coast Guard does not regulate anchors, paddles, rearview mirrors, or diver/ski flags.  
-  Source: boaters_guide.pdf p.12 (Equipment Requirements); quote: "The Coast Guard does not regulate anchors, paddles, rearview mirrors, or diver/ski flags."
+- **NAV-06** (right): It shall sound two prolonged blasts in succession at intervals of not more than 2 minutes (with about 2 seconds between the blasts).  
+  Source: nav_rules.pdf p.111 (—INTERNATIONAL— Sound and Light Signals Rule 35 Sound Signal...); quote: "A power-driven vessel underway but stopped and making no way through the water shall sound at intervals of not more than 2 minutes two prolonged blasts in succe..."
+- **NAV-12** (right): 70-200 Hz  
+  Source: nav_rules.pdf p.137 (—INTERNATIONAL— Annex III Technical Details of Sound Signal ...); quote: "70-200 Hz, for a vessel 200 meters or more in length;"
+- **NAV-13** (wrong): a high-intensity white light flashing at regular intervals from 50-70 times per minute  
+  Source: boaters_guide.pdf p.18 (Electric Distress Signals (night only)); quote: "Under the Inland Navigation Rules, a high-intensity white light flashing at regular intervals from 50-70 times per minute is considered a distress signal."
+- **BG-02** (right): Mark the name and hailing port of the vessel together in one place on the hull (usually on the stern).  
+  Source: boaters_guide.pdf p.10 (); quote: "Mark the name and hailing port of the vessel together in one place on the hull (usually on the stern)."
 - **BG-03** (right): Pyrotechnic visual distress signals must be U.S. Coast Guard-approved, not expired, in serviceable condition, and readily accessible.  
-  Source: boaters_guide.pdf p.16 (Pyrotechnic Devices); quote: "Pyrotechnic visual distress signals must be U.S. Coast Guard-approved, not expired, in serviceable condition, and readil..."
-- **BG-04** (right): The letters and numbers of the registration number must be not less than 3 inches in height.  
+  Source: boaters_guide.pdf p.16 (Pyrotechnic Devices); quote: "Pyrotechnic visual distress signals must be U.S. Coast Guard-approved, not expired, in serviceable condition, and readily accessible."
+- **BG-04** (right): not less than 3 inches in height  
   Source: boaters_guide.pdf p.9 (Display of Numbers); quote: "Lettering must be in plain, vertical block characters of not less than 3 inches in height."
-- **BG-05** (right): Pyrotechnic visual distress signals expire 42 months after the date of manufacture.  
+- **BG-05** (right): 42 months after the date of manufacture  
   Source: boaters_guide.pdf p.16 (Pyrotechnic Devices); quote: "Check the expiration date (42 months after the date of manufacture)."
-- **BG-06** (right): Vessels 26 feet and greater in length, with machinery spaces, must display a placard at least 5 by 8 inches.  
-  Source: boaters_guide.pdf p.26 (Pollution Regulations (33 CFR 151/155)); quote: "Vessels 26 feet and greater in length, with machinery spaces, must display a placard at least 5 by 8 inches, made of dur..."
-- **BG-07** (right): Boat flares are good for 42 months after the date of manufacture.  
+- **BG-07** (right): 42 months after the date of manufacture  
   Source: boaters_guide.pdf p.16 (Pyrotechnic Devices); quote: "Check the expiration date (42 months after the date of manufacture)."
 - **CP-01** (right): The controlling depth is the least known depth of a channel as determined by hydrographic surveys and restricts the safe use of the channel to drafts ...  
-  Source: coast_pilot4_ch1.pdf p.2 (Depths); quote: "(26) The controlling depth is the least known depth of a channel as determined by hydrographic surveys and restricts the..."
+  Source: coast_pilot4_ch1.pdf p.2 (Depths); quote: "(26) The controlling depth is the least known depth of a channel as determined by hydrographic surveys and restricts the safe use of the channel to drafts less ..."
 - **CP-02** (right): Squat denotes a change in trim of a ship underway, relative to her trim when stopped.  
-  Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "(36) Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
-- **CP-03** (right): Vertical clearances are given in feet above mean high water, unless otherwise stated.  
-  Source: coast_pilot4_ch1.pdf p.1 (Bridges and Cables); quote: "Vertical clearances of bridges and overhead cables are in feet above mean high water unless otherwise stated; clearances..."
-- **CP-04** (wrong): A nautical mile is one minute of latitude, or approximately 2,000 yards, and is about 1.15 statute miles; it is also 1,852 meters or 6,076.12 feet.  
-  Source: coast_pilot4_ch1.pdf p.2 (Distances); coast_pilot4_ch1.pdf p.34 (Measurements and Equivalencies); quote: "A nautical mile is one minute of latitude, or approximately 2,000 yards, and is about 1.15 statute miles." | "nautical mile — 1,852 meters / 6,076.12 feet"
-- **CP-05** (right): Settlement is appreciable when the depth is less than seven times the draft of the ship and increases as the depth decreases and the speed increases.  
-  Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "Settlement is appreciable when the depth is less than seven times the draft of the ship and increases as the depth decre..."
-- **CP-06** (right): All ships of length 20m or greater must guard VHF channel 13 in addition to VHF channel 16 within U.S. territorial waters.  
-  Source: coast_pilot4_ch1.pdf p.15 (U.S. VHF Channel Information Ship Frequency (MHz) New Old Ch...); quote: "All ships of length 20m or greater are required to guard VHF channel 13, in addition to VHF channel 16, when operating w..."
-- **CP-08** (right): Squat is a change in the trim of a moving ship compared to when it is stopped, which usually causes the stern to sit deeper in the water, although it ...  
+  Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
+- **CP-04** (wrong): 1,852 meters / 6,076.12 feet  
+  Source: coast_pilot4_ch1.pdf p.34 (Measurements and Equivalencies); quote: "nautical mile — 1,852 meters / 6,076.12 feet"
+- **CP-05** (right): when the depth is less than seven times the draft of the ship  
+  Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "Settlement is appreciable when the depth is less than seven times the draft of the ship and increases as the depth decreases and the speed increases."
+- **CP-08** (right): Squat denotes a change in trim of a ship underway, relative to her trim when stopped.  
   Source: coast_pilot4_ch1.pdf p.2 (Under-keel clearances); quote: "Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
 <!-- END phase4-answers -->
 
