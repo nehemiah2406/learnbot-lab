@@ -33,7 +33,7 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 
 ## Definition of done
 - A phase is done only when ALL tests pass (.venv\Scripts\python -m pytest).
-- From Phase 4 onward it also needs the eval to meet every success metric in PLAN.md: 0 wrong answers, 9/10+ correct source (rule/page), "Not in this document" for every trap question.
+- From Phase 4 onward it also needs, on the eval set, the hold-out set AND the new PDF: 0 wrong answers, "Not in this document" for every trap question, every answer under 10 s. Right source (rule/page) is reported honestly every run but is not a gate (reason: PLAN.md Success metrics).
 - Never say "done" with a failing test or a missed metric. Fix it first, then show the real numbers.
 
 ## Git rules
