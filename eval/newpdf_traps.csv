@@ -1,0 +1,3 @@
+doc,id,question,type,expected_answer,keywords
+osha3124.pdf,TRAP-OSHA-01,What is the maximum working height of a scissor lift under OSHA rules?,off_topic,Not in this document,scissor;aerial lift
+osha3124.pdf,TRAP-OSHA-02,How long is the wingspan of a bald eagle?,off_topic,Not in this document,eagle;wingspan
