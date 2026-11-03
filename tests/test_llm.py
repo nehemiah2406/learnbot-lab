@@ -278,14 +278,40 @@ def test_warm_up_reports_ok_or_the_error_kind():
     assert not ok and status.startswith("gemini:fake-model unavailable")
 
 
+def test_failed_warm_up_starts_the_run_with_main_ai_switched_off():
+    # Real case (3 Nov 2026): Gemini failed the warm-up twice, so no hold-out question was
+    # asked. Now the run starts as after 2 failures: fallback answers, main retried every 5.
+    script = load_eval_script()
+    gemini, groq = Fake("gemini", HttpError(503)), Fake("groq", "answer")
+    chain = LLMChain([gemini, groq])
+    assert script.warm_up(chain)[0] is False and gemini.calls == 1
+    for i in range(4):
+        assert chain.ask(f"q{i}")[1] == "groq:fake-model"
+    assert gemini.calls == 1  # skipped on questions 1-4
+    gemini.behaviour = "answer"
+    assert chain.ask("q4")[1] == "gemini:fake-model"  # question 5: tried again, used again
+    assert chain.ask("q5")[1] == "gemini:fake-model"
+
+
+def test_warm_up_daily_limit_is_never_tried_again():
+    script = load_eval_script()
+    gemini, groq = Fake("gemini", HttpError(429, "quota exceeded")), Fake("groq", "answer")
+    chain = LLMChain([gemini, groq])
+    assert script.warm_up(chain)[0] is False
+    for i in range(10):
+        chain.ask(f"q{i}")
+    assert gemini.calls == 1
+
+
 # --- Call limit: checked before EVERY real call (warm-up, main AI, fallback) -----------
 def test_call_limit_is_checked_before_every_call():
     # Real case (3 Nov 2026): limit 4, warm-up + 2 questions x (Gemini timeout + Groq)
     # made 5 calls, because the limit was only checked before each question.
     script = load_eval_script()
-    gemini, groq = Fake("gemini", HttpError(503)), Fake("groq", "answer")
+    gemini, groq = Fake("gemini", '{"ok": true}'), Fake("groq", "answer")
     chain = LLMChain([gemini, groq], max_calls=4)
-    assert script.warm_up(chain)[0] is False  # call 1
+    assert script.warm_up(chain)[0] is True  # call 1
+    gemini.behaviour = HttpError(503)
     assert chain.ask("q1")[0] == "answer"  # calls 2 (gemini fails) and 3 (groq)
     with pytest.raises(CallLimitReached):
         chain.ask("q2")  # call 4 = gemini (fails), then groq would be call 5: stopped

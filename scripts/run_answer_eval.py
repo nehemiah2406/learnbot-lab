@@ -30,7 +30,7 @@ from learnbot.evaluate import (  # noqa: E402
     exact_answer_in, outcome, score_answer,
 )
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
-from learnbot.llm import CallLimitReached, LLMError, default_chain  # noqa: E402
+from learnbot.llm import CallLimitReached, LLMDailyLimit, LLMError, default_chain  # noqa: E402
 from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.report import replace_section  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
@@ -155,13 +155,19 @@ WARM_UP_PROMPT = 'Reply with JSON only: {"ok": true}'
 
 
 def warm_up(chain):
-    """(ok?, "label ok/kind seconds"): one tiny call to the main AI (counts as a call)."""
+    """(ok?, "label ok/kind seconds"): one tiny call to the main AI (counts as a call).
+    If it fails, the run starts with the main AI switched off, exactly as after
+    config.MAX_FAILURES_IN_A_ROW failures: it is tried again every
+    config.RETRY_SWITCHED_OFF_EVERY questions (a daily limit: never again this run)."""
     main = chain.providers[0]
     chain.count_call()  # raises CallLimitReached if the limit is used up
     start = time.perf_counter()
     try:
         main.ask(WARM_UP_PROMPT)
     except LLMError as err:
+        chain.switched_off.add(main.label)
+        if isinstance(err, LLMDailyLimit):
+            chain.daily_limit.add(main.label)
         return False, f"{main.label} {err.kind} {time.perf_counter() - start:.1f} s"
     return True, f"{main.label} ok {time.perf_counter() - start:.1f} s"
 
@@ -219,8 +225,8 @@ def main():
             return 2
         print(f"Warm-up call: {status}")
         if not ok:
-            print("STOPPED: the main AI did not answer the warm-up call. Nothing else was called.")
-            return 3
+            print(f"Main AI switched off from the start (tried again every "
+                  f"{config.RETRY_SWITCHED_OFF_EVERY} questions); the fallback answers meanwhile.")
 
     records = []
     for row, trap in rows:
