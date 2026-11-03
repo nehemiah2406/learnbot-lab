@@ -521,3 +521,67 @@ Which AI answered: groq:openai/gpt-oss-120b 12
 - **HO-CP-03** (right): in excess of 12 knots  
   Source: coast_pilot4_ch1.pdf p.22 (Small craft); quote: "Large vessels may appear to move slowly due to their large size but actually transit at speeds in excess of 12 knots, requiring a great distance in which to man..."
 <!-- END phase4-holdout -->
+
+<!-- BEGIN phase4-newpdf -->
+## Phase 4: new PDF (osha3124.pdf, 5 questions + 2 traps, run once)
+
+- Search: `hybrid` (BM25 + `BAAI/bge-small-en-v1.5`, RRF), rule-set filter on, re-ranker `cross-encoder/ms-marco-MiniLM-L6-v2`; top 5 pieces sent to the AI
+- AI: gemini:gemini-3.1-flash-lite, groq:openai/gpt-oss-120b (in this order), timeout 5 s (main) / 15 s (fallback), all within 9 s per question, no retries; prompt version 4
+- Every answer passed the proof check (quote on its page, numbers + units in the quote, page was sent, rule set, topic, one source unless comparing, every number of the quote in the answer) or was replaced by "Not in this document"
+- **Wrong** = answer shown is not supported by the expected source, OR its numbers differ from the expected answer's numbers
+
+| Measure | Phase 3 baseline | Phase 4 | Target |
+|---|---|---|---|
+| Right doc + page | 3/5 (60%) | 3/5 (60%) | reported (aim 9 of 10, not a gate) |
+| Exact answer (all numbers + key words) | 2/5 (40%) | 3/5 (60%) | (tracked) |
+| Correct, other source | 0 | 0 | |
+| Traps "Not in this document" | 2/2 (100%) | 1/2 (50%) | all |
+| **Wrong** | 1 | **0** | **0** |
+| **Traps answered** | 0 | **0** | **0** |
+| Missed (real question, said "Not in this document") | 1 | 2 | |
+| Not tested (AI busy; the run is incomplete if > 0) | n/a | 1 | 0 |
+| Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 4.0 s, max 6.0 s | under 10 s |
+
+Which AI answered: groq:openai/gpt-oss-120b 4, gemini:gemini-3.1-flash-lite 2, none (no AI answer) 1
+
+#### Per document
+
+| Document | Questions | Right page | Correct, other source | Wrong | Missed |
+|---|---|---|---|---|---|
+| osha3124.pdf | 5 | 3/5 (60%) | 0 | 0 | 2 |
+
+### Per question: outcome and which AI answered
+
+| Question | Outcome | AI that answered | Time (new answers) |
+|---|---|---|---|
+| OSHA-01 | right | groq:openai/gpt-oss-120b | 6.0 s |
+| OSHA-02 | right | groq:openai/gpt-oss-120b | 4.1 s |
+| OSHA-03 | right | groq:openai/gpt-oss-120b | 4.3 s |
+| OSHA-04 | missed | groq:openai/gpt-oss-120b | 4.4 s |
+| OSHA-05 | missed | gemini:gemini-3.1-flash-lite | 2.6 s |
+| TRAP-OSHA-01 | not_tested | none (AI busy) | 8.1 s |
+| TRAP-OSHA-02 | refused | gemini:gemini-3.1-flash-lite | 2.7 s |
+
+### Failed questions
+
+- **OSHA-04** (missed) expected osha3124.pdf p.8: On stairways that will not be a permanent part of the building, how big must the landings be and how often are they needed?  
+  Reason: proof:quote_not_focused (quote has other measurements: 3.7 meter, 56 centimeter)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.9 s
+- **OSHA-05** (missed) expected osha3124.pdf p.9: What weight must handrails and top rails of stair rail systems be able to withstand?  
+  Reason: proof:quote_not_focused (quote has other measurements: 2 inch, 5 centimeter)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite ok 1.7 s
+- **TRAP-OSHA-01** (not_tested) expected "Not in this document": What is the maximum working height of a scissor lift under OSHA rules?  
+  Reason: ai_busy (gemini:gemini-3.1-flash-lite timeout 5.0 s -> groq:openai/gpt-oss-120b no_time_left 0.0 s)  
+  Shown: The AI is busy right now. Here are the best matching pieces from your document instead.
+
+### All answers shown
+
+- **OSHA-01** (right): 11.5 inches (29 cm)  
+  Source: osha3124.pdf p.5 (Portable Ladders); quote: "The minimum clear distance between side rails for all portable ladders must be 11.5 inches (29 cm)."
+- **OSHA-02** (right): at least 3 feet (.9 m)  
+  Source: osha3124.pdf p.5 (Stepladders); quote: "When portable ladders are used for access to an upper landing surface, the side rails must extend at least 3 feet (.9 m) above the upper landing surface."
+- **OSHA-03** (right): at least 30 degrees —and no more than 50 degrees  
+  Source: osha3124.pdf p.8 (Defective Ladders); quote: "Stairways must be installed at least 30 degrees —and no more than 50 degrees—from the horizontal."
+<!-- END phase4-newpdf -->
