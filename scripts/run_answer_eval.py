@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from learnbot import config  # noqa: E402
-from learnbot.answer import ANSWERED, Answer, answer_question, build_prompt  # noqa: E402
+from learnbot.answer import ANSWERED, answer_question, build_prompt  # noqa: E402
 from learnbot.baseline import NOT_FOUND, BM25Index, answer as baseline_answer  # noqa: E402
 from learnbot.eval_check import load_rows  # noqa: E402
 from learnbot.evaluate import (  # noqa: E402
@@ -30,7 +30,7 @@ from learnbot.evaluate import (  # noqa: E402
     exact_answer_in, outcome, score_answer,
 )
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
-from learnbot.llm import LLMError, default_chain  # noqa: E402
+from learnbot.llm import CallLimitReached, LLMError, default_chain  # noqa: E402
 from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.report import replace_section  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
@@ -157,7 +157,7 @@ WARM_UP_PROMPT = 'Reply with JSON only: {"ok": true}'
 def warm_up(chain):
     """(ok?, "label ok/kind seconds"): one tiny call to the main AI (counts as a call)."""
     main = chain.providers[0]
-    chain.calls += 1
+    chain.count_call()  # raises CallLimitReached if the limit is used up
     start = time.perf_counter()
     try:
         main.ask(WARM_UP_PROMPT)
@@ -192,6 +192,7 @@ def main():
     searcher = default_searcher(library)
     chain = default_chain()
     chain.read_cache = not args.fresh
+    chain.max_calls = args.max_calls  # checked before every real call (warm-up, Gemini, Groq)
     if not chain.providers:
         print("No AI key set (GEMINI_API_KEY / GROQ_API_KEY in .env). Nothing to run.")
         return 1
@@ -211,7 +212,11 @@ def main():
         return 2
 
     if uncached:
-        ok, status = warm_up(chain)
+        try:
+            ok, status = warm_up(chain)
+        except CallLimitReached:
+            print(f"STOPPED: call limit {args.max_calls} reached before the warm-up call. Nothing was asked.")
+            return 2
         print(f"Warm-up call: {status}")
         if not ok:
             print("STOPPED: the main AI did not answer the warm-up call. Nothing else was called.")
@@ -220,12 +225,15 @@ def main():
     records = []
     for row, trap in rows:
         cached = chain.is_cached(build_prompt(row["question"], searcher.search(row["question"])))
-        if chain.calls >= args.max_calls and not cached:
-            ans = Answer("ai_busy", "skipped: call limit reached", [], reason="call_limit")
-        else:
-            if not cached and chain.calls and args.pause:
-                time.sleep(args.pause)  # stay under the free per-minute limits
+        if not cached and chain.calls and args.pause:
+            time.sleep(args.pause)  # stay under the free per-minute limits
+        try:
             ans = answer_question(row["question"], searcher, chain)
+        except CallLimitReached:
+            print(f"STOPPED at {row['id']}: call limit {args.max_calls} reached ({chain.calls} real AI calls). "
+                  "No more calls were made. These numbers are not a valid result; results.md was not written. "
+                  "Ask Hari, then run again with --max-calls N.")
+            return 2
         result, reason = score_answer(row, trap, ans)
         exact = (not trap and ans.status == ANSWERED and exact_answer_in(
             row["expected_answer"], ans.text + " " + " ".join(shown_quote(s) for s in ans.sources)))

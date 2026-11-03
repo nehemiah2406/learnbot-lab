@@ -11,7 +11,7 @@ from learnbot.evaluate import (
     CORRECT_OTHER, MISSED, NOT_TESTED, RIGHT, TRAP_ANSWERED, WRONG, numbers_differ, score_answer,
 )
 from learnbot.evaluate import REFUSED as TRAP_REFUSED
-from learnbot.llm import AI_BUSY, AllProvidersFailed
+from learnbot.llm import AI_BUSY, AllProvidersFailed, CallLimitReached
 from learnbot.rule_sets import RuleSets
 
 PIECE = Chunk("guide.pdf", 16, "Pyrotechnic Devices",
@@ -43,6 +43,8 @@ class FakeChain:
     def ask(self, prompt, budget_s=None):
         self.prompts.append(prompt)
         self.budget_s = budget_s
+        if self.fail == "limit":
+            raise CallLimitReached(4)
         if self.fail:
             raise AllProvidersFailed([("gemini:x", "rate_limit", 0.3), ("groq:y", "timeout", 15.0)])
         return self.reply, "gemini:x", False
@@ -82,6 +84,12 @@ def test_ai_busy_shows_pieces_not_an_answer():
     ans = ask(fail=True)
     assert ans.status == AI_BUSY_STATUS and ans.text == AI_BUSY and ans.pieces == [PIECE]
     assert "rate_limit" in ans.detail and not ans.sources
+
+
+def test_call_limit_stops_the_run_instead_of_ai_busy():
+    # The limit is an eval-run stop, not an answer: it must not become "AI busy".
+    with pytest.raises(CallLimitReached):
+        ask(fail="limit")
 
 
 def test_no_pieces_means_no_ai_call():

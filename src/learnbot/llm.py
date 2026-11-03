@@ -12,6 +12,8 @@
   it answers it is used again. One failure only sends that question to the fallback.
 - If every provider fails, the caller shows a friendly "AI busy" note instead.
 - Error messages never contain keys: only the error kind (and HTTP status) is kept.
+- An optional call limit (LLMChain.max_calls, used by the eval scripts) is checked
+  before EVERY real call; when it is reached, CallLimitReached stops the run.
 - Replies are cached in config.CACHE_DIR by prompt + model names, so the same question
   with the same pieces never spends quota twice.
 """
@@ -53,6 +55,14 @@ class LLMUnavailable(LLMError):
 # Words in a 429 message that mean a daily limit (the message itself is never kept).
 DAILY_LIMIT = re.compile(r"per ?day|\bRPD\b|\bTPD\b", re.IGNORECASE)
 MINUTE_LIMIT = re.compile(r"per ?minute|\bRPM\b|\bTPM\b", re.IGNORECASE)
+
+
+class CallLimitReached(Exception):
+    """The chain's max_calls is used up: no further real call is made (stops an eval run)."""
+
+    def __init__(self, limit):
+        super().__init__(f"AI call limit reached ({limit} calls)")
+        self.limit = limit
 
 
 class AllProvidersFailed(Exception):
@@ -183,8 +193,9 @@ class ReplyCache:
 class LLMChain:
     """Ask providers in order; first success wins. Counts real (not cached) calls."""
 
-    def __init__(self, providers, cache=None, read_cache=True):
+    def __init__(self, providers, cache=None, read_cache=True, max_calls=None):
         self.providers = list(providers)
+        self.max_calls = max_calls  # None = no limit (the app); checked before every call
         self.cache = cache
         self.read_cache = read_cache  # False: ask again, but still save the new replies
         self.switched_off = set()  # providers skipped (daily limit: for the rest of the run)
@@ -193,6 +204,12 @@ class LLMChain:
         self.questions_off = {}  # provider label -> questions skipped since it was last tried
         self.calls = 0
         self.last_attempts = []  # [(provider label, "ok" or error kind, seconds)] of the last ask()
+
+    def count_call(self):
+        """Count one real call, or raise CallLimitReached if max_calls is used up."""
+        if self.max_calls is not None and self.calls >= self.max_calls:
+            raise CallLimitReached(self.max_calls)
+        self.calls += 1
 
     def cache_key(self, prompt):
         return ReplyCache.key([p.label for p in self.providers], prompt)
@@ -225,7 +242,7 @@ class LLMChain:
                     attempts.append((p.label, "no_time_left", 0.0))
                     continue
                 timeout = min(timeout, left)
-            self.calls += 1
+            self.count_call()
             start = time.perf_counter()
             try:
                 reply = p.ask(prompt, timeout)

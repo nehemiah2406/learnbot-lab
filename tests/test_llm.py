@@ -6,7 +6,7 @@ import pytest
 
 from learnbot import llm
 from learnbot.llm import (
-    AllProvidersFailed, LLMChain, LLMDailyLimit, LLMError, LLMRateLimit, LLMTimeout, LLMUnavailable, Provider,
+    AllProvidersFailed, CallLimitReached, LLMChain, LLMDailyLimit, LLMError, LLMRateLimit, LLMTimeout, LLMUnavailable, Provider,
     ReplyCache, classify,
 )
 
@@ -276,6 +276,40 @@ def test_warm_up_reports_ok_or_the_error_kind():
     chain = LLMChain([Fake("gemini", HttpError(504)), Fake("groq", "ok")])
     ok, status = script.warm_up(chain)
     assert not ok and status.startswith("gemini:fake-model unavailable")
+
+
+# --- Call limit: checked before EVERY real call (warm-up, main AI, fallback) -----------
+def test_call_limit_is_checked_before_every_call():
+    # Real case (3 Nov 2026): limit 4, warm-up + 2 questions x (Gemini timeout + Groq)
+    # made 5 calls, because the limit was only checked before each question.
+    script = load_eval_script()
+    gemini, groq = Fake("gemini", HttpError(503)), Fake("groq", "answer")
+    chain = LLMChain([gemini, groq], max_calls=4)
+    assert script.warm_up(chain)[0] is False  # call 1
+    assert chain.ask("q1")[0] == "answer"  # calls 2 (gemini fails) and 3 (groq)
+    with pytest.raises(CallLimitReached):
+        chain.ask("q2")  # call 4 = gemini (fails), then groq would be call 5: stopped
+    assert chain.calls == 4 and gemini.calls == 3 and groq.calls == 1
+
+
+def test_call_limit_stops_the_warm_up_too():
+    script = load_eval_script()
+    gemini = Fake("gemini", '{"ok": true}')
+    chain = LLMChain([gemini], max_calls=0)
+    with pytest.raises(CallLimitReached):
+        script.warm_up(chain)
+    assert gemini.calls == 0 and chain.calls == 0
+
+
+def test_no_call_limit_and_cached_replies_never_count(tmp_path):
+    gemini = Fake("gemini", "answer")
+    chain = LLMChain([gemini])  # the app: no limit
+    for i in range(10):
+        chain.ask(f"q{i}")
+    assert chain.calls == 10
+    cached = LLMChain([gemini], ReplyCache(tmp_path), max_calls=1)
+    cached.ask("p")
+    assert cached.ask("p")[2] is True and cached.calls == 1  # a cache hit is not a call
 
 
 def test_fresh_run_asks_again_but_still_saves(tmp_path):
