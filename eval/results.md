@@ -176,6 +176,8 @@ Rule-set check: 10 questions name one rule set; their expected page has that rul
 | Not tested (AI busy; the run is incomplete if > 0) | n/a | 2 | 0 |
 | Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 4.4 s, max 7.9 s | under 10 s |
 
+**Completed on 3 Nov 2026** (same code, same budgets): only NAV-02 and NAV-08 asked again with `--ids NAV-02,NAV-08 --fresh --pause 10 --max-calls 4`. First try: Gemini warm-up timeout, nothing asked (1 call). After 10 min: warm-up ok 2.4 s; NAV-02 **right** 7.1 s, NAV-08 **right** 7.3 s (both: Gemini timeout 5 s -> Groq ok); 5 calls. With the 35 run-5 answers: right page 22/29, wrong 0, traps 8/8, not tested 0, max time 9.0 s -> **eval set passes the Phase 4 gate**.
+
 Which AI answered: groq:openai/gpt-oss-120b 30, gemini:gemini-3.1-flash-lite 5, none (no AI answer) 2
 
 #### Per document
