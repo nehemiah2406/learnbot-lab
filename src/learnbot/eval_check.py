@@ -11,7 +11,9 @@ from pathlib import Path
 
 import pdfplumber
 
+from learnbot.baseline import tokenize
 from learnbot.pdf_text import read_page_text
+from learnbot.units import measurements
 
 DATA_DIR = Path("data/raw")
 EXPLAIN_COLUMNS = [
@@ -286,6 +288,62 @@ def find_accepted_sources(row, docs, doc_names, rule_sets=None):
             found |= {(doc, n) for n, text in texts.items() if text and core in normalize(text)
                       and (rule_sets is None or rule_sets.allowed(row["question"], doc, n))}
     return sorted(found)
+
+
+# Same fact in other words: a page with the expected answer's number + unit near the
+# question's key words may answer the question too. Real case (hold-out HO-CP-01): "every
+# 4 to 6 minutes" is on one page AND, worded differently, on another; only the first was
+# listed, so a right answer from p.28 was scored wrong. These pages are only listed for a
+# person to review before a run (add them to other_answers or not); never added by code.
+SAME_FACT_WINDOW = 400  # characters on each side of the number
+SAME_FACT_MIN_WORDS = 2  # question key words (word stems) that must be in that window
+STEM_LETTERS = 5  # same stems as the proof check ("repeat" / "repeated")
+
+
+def question_stems(text):
+    return {t[:STEM_LETTERS] for t in tokenize(text) if t.isalpha() and len(t) >= 3}
+
+
+def listed_pages(row):
+    """{(doc, page)} already named by the row: own page(s), accepted_sources, other_answers."""
+    own = {(row["doc"], p) for p in row_pages(row) or []}
+    others = {(d, p) for d, p, _ in parse_other_answers(row.get("other_answers", "")) or []}
+    return own | set(parse_sources(row.get("accepted_sources", "")) or []) | others
+
+
+def same_fact_snippet(text, wanted, stems):
+    """Text around the first place where every wanted (number, unit) and at least
+    SAME_FACT_MIN_WORDS of the stems are within SAME_FACT_WINDOW characters, or None."""
+    first = min(wanted)[0]
+    for m in DIGITS.finditer(text):
+        if m.group().replace(",", "") != first:
+            continue
+        window = text[max(0, m.start() - SAME_FACT_WINDOW):m.end() + SAME_FACT_WINDOW]
+        if wanted <= measurements(window) and len(stems & question_stems(window)) >= SAME_FACT_MIN_WORDS:
+            return text[max(0, m.start() - 100):m.end() + 60]
+    return None
+
+
+def find_same_fact_pages(row, docs, doc_names, rule_sets=None):
+    """[(doc, page, snippet)]: pages the row does not list yet that have every number +
+    unit of the expected answer near the question's key words (rule-set pages only, as in
+    the app). Rows whose expected answer has no number + unit: []."""
+    wanted = measurements(normalize(row["expected_answer"]))
+    if not wanted:
+        return []
+    stems = question_stems(row["question"])
+    known = listed_pages(row)
+    found = []
+    for doc in doc_names:
+        for n, text in docs.pages(doc, range(1, docs.page_count(doc) + 1)).items():
+            if not text or (doc, n) in known:
+                continue
+            if rule_sets is not None and not rule_sets.allowed(row["question"], doc, n):
+                continue
+            snippet = same_fact_snippet(normalize(text), wanted, stems)
+            if snippet:
+                found.append((doc, n, snippet))
+    return found
 
 
 def verify_other_answers(row, docs):

@@ -24,6 +24,7 @@ from learnbot.eval_check import (
     numbers_in,
     quote_on_page,
     find_accepted_sources,
+    find_same_fact_pages,
     format_sources,
     parse_other_answers,
     parse_sources,
@@ -238,6 +239,42 @@ class FakePages:
 
     def pages(self, doc, numbers):
         return {n: self.docs[doc].get(n) for n in numbers}
+
+
+def test_same_fact_in_other_words_on_another_page_is_listed_for_review():
+    # Real case (hold-out HO-CP-01): same fact, other words, on a second page.
+    pages = FakePages({"pilot.pdf": {
+        1: "NOAA Weather Radio stations operate 24 hours daily, and messages are repeated every 4 to 6 minutes.",
+        2: "NOAA Weather Radio provides continuous broadcasts. These broadcasts repeat recorded "
+            "messages every 4 to 6 minutes. Messages are updated periodically.",
+        3: "Tide tables are revised every 4 to 6 minutes in this made-up text.",  # number, other subject
+        4: "Weather radio messages are repeated every 6 hours.",  # subject, other number + unit
+    }})
+    row = explain_row(doc="pilot.pdf", page="1", question="How often are NOAA Weather Radio messages repeated?",
+                      expected_answer="Every 4 to 6 minutes.", source_quote="messages are repeated every 4 to 6 minutes",
+                      accepted_sources="pilot.pdf:1")
+    found = find_same_fact_pages(row, pages, ["pilot.pdf"])
+    assert [(d, p) for d, p, _ in found] == [("pilot.pdf", 2)]
+    assert "repeat recorded messages every 4 to 6 minutes" in found[0][2]
+    listed = dict(row, other_answers="pilot.pdf:2=These broadcasts repeat recorded messages every 4 to 6 minutes.")
+    assert find_same_fact_pages(listed, pages, ["pilot.pdf"]) == []  # already listed: nothing to review
+
+
+def test_same_fact_check_needs_a_number_with_unit_and_respects_rule_sets():
+    pages = FakePages({"rules.pdf": {1: "International: one prolonged blast at intervals of not more than 2 minutes.",
+                                     2: "Inland: one prolonged blast at intervals of not more than 2 minutes."}})
+    row = explain_row(doc="rules.pdf", page="1", question="Under the International Rules, how often is one prolonged blast sounded?",
+                      expected_answer="At intervals of not more than 2 minutes.", accepted_sources="rules.pdf:1",
+                      source_quote="one prolonged blast at intervals of not more than 2 minutes")
+
+    class OnlyPage1:
+        def allowed(self, question, doc, page):
+            return page == 1
+
+    assert [(d, p) for d, p, _ in find_same_fact_pages(row, pages, ["rules.pdf"])] == [("rules.pdf", 2)]
+    assert find_same_fact_pages(row, pages, ["rules.pdf"], OnlyPage1()) == []
+    no_unit = dict(row, expected_answer="A vessel not at anchor.")
+    assert find_same_fact_pages(no_unit, pages, ["rules.pdf"]) == []
 
 
 def test_find_accepted_sources_ignores_marker_and_short_quotes():

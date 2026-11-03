@@ -456,6 +456,8 @@ Decision: **no safe threshold**. Every right quote that shares no word with its 
 | Not tested (AI busy; the run is incomplete if > 0) | n/a | 0 | 0 |
 | Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 1.8 s, max 3.0 s | under 10 s |
 
+**Re-scored on 3 Nov 2026: p.28 added after the run; original score was wrong 1.** HO-CP-01 showed "every 4 to 6 minutes" from coast_pilot4_ch1.pdf p.28 ("These broadcasts repeat recorded messages every 4 to 6 minutes.", NOAA Weather Radio, paragraph 393), the same fact as the row's p.17 in other words. With Hari's OK, p.28 was added to the row's `other_answers` (checker-verified on the page; the new same-fact check lists it) and the saved answers were scored again (0 AI calls, same answers): right page **7/10**, **wrong 0**, traps 2/2, missed 3; answer times unchanged (from the live run above, max 3.0 s) -> hold-out passes the Phase 4 gate. The table above is the original live-run score.
+
 Which AI answered: groq:openai/gpt-oss-120b 12
 
 #### Per document

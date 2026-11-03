@@ -19,6 +19,7 @@ from learnbot.eval_check import (  # noqa: E402
     check_explain_row,
     check_trap_row,
     duplicate_ids,
+    find_same_fact_pages,
     load_rows,
     overall_result,
     verify_accepted_sources,
@@ -29,6 +30,22 @@ from learnbot.eval_check import (  # noqa: E402
 
 EXPLAIN_CSV = Path("eval/explain_questions.csv")
 TRAP_CSV = Path("eval/trap_questions.csv")
+
+
+def same_fact_reviews(explain, docs):
+    """{row id: [(doc, page, snippet)]}: pages with the same number + unit near the
+    question's key words that the row does not list (to review by hand, not a failure)."""
+    doc_names = sorted({r["doc"] for r in explain})
+    if not all(docs.exists(d) for d in doc_names):
+        return {}
+    rule_sets = docs.rule_sets(doc_names)
+    reviews = {}
+    for row in explain:
+        if not check_explain_row(row):
+            found = find_same_fact_pages(row, docs, doc_names, rule_sets)
+            if found:
+                reviews[row["id"]] = found
+    return reviews
 
 
 def check_all(explain, traps, docs):
@@ -92,7 +109,9 @@ def main():
     args = parser.parse_args()
     explain, traps = load_rows(args.explain), load_rows(args.traps)
     print_counts(explain, traps)
-    problems, verified, checked, traps_ok, missing_docs = check_all(explain, traps, DocumentPages())
+    docs = DocumentPages()
+    problems, verified, checked, traps_ok, missing_docs = check_all(explain, traps, docs)
+    reviews = same_fact_reviews(explain, docs)
     print()
     print(f"Quotes verified on their page (and accepted sources complete): {verified}/{len(explain)}")
     print(f"Trap keywords absent from their document: {traps_ok}/{len(traps)}")
@@ -101,6 +120,12 @@ def main():
     for row_id, row_problems in problems.items():
         for problem in row_problems:
             print(f"FAIL {row_id}: {problem}")
+    print("\nPages with the same number + unit near the question words, not listed "
+          f"(review by hand; add to other_answers only if they answer the same question): "
+          f"{sum(len(v) for v in reviews.values())}")
+    for row_id, found in reviews.items():
+        for doc, page, snippet in found:
+            print(f"REVIEW {row_id}: {doc}:{page}: ...{snippet}...")
     result = overall_result(problems, missing_docs)
     if result == SKIPPED:
         print(f"\nRESULT: SKIPPED ({len(missing_docs)} PDF(s) not in data/raw; nothing wrong found)")
