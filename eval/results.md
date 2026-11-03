@@ -435,3 +435,87 @@ Decision: **no safe threshold**. Every right quote that shares no word with its 
 | BG-01 | 0.87 | Coast Guard conducts nearly 55,000 boardings a year in its multiple roles: enfor |
 | NAV-06 | 0.82 | (a) A power-driven vessel making way through the water shall sound at intervals  |
 <!-- END phase4-topic-threshold-baai-bge-reranker-base -->
+
+<!-- BEGIN phase4-holdout -->
+## Phase 4: hold-out set (10 questions + 2 traps, run once)
+
+- Search: `hybrid` (BM25 + `BAAI/bge-small-en-v1.5`, RRF), rule-set filter on, re-ranker `cross-encoder/ms-marco-MiniLM-L6-v2`; top 5 pieces sent to the AI
+- AI: gemini:gemini-3.1-flash-lite, groq:openai/gpt-oss-120b (in this order), timeout 5 s (main) / 15 s (fallback), all within 9 s per question, no retries; prompt version 4
+- Every answer passed the proof check (quote on its page, numbers + units in the quote, page was sent, rule set, topic, one source unless comparing, every number of the quote in the answer) or was replaced by "Not in this document"
+- **Wrong** = answer shown is not supported by the expected source, OR its numbers differ from the expected answer's numbers
+
+| Measure | Phase 3 baseline | Phase 4 | Target |
+|---|---|---|---|
+| Right doc + page | 8/10 (80%) | 6/10 (60%) | reported (aim 9 of 10, not a gate) |
+| Exact answer (all numbers + key words) | 8/10 (80%) | 7/10 (70%) | (tracked) |
+| Correct, other source | 0 | 0 | |
+| Traps "Not in this document" | 1/2 (50%) | 2/2 (100%) | all |
+| **Wrong** | 1 | **1** | **0** |
+| **Traps answered** | 1 | **0** | **0** |
+| Missed (real question, said "Not in this document") | 1 | 3 | |
+| Not tested (AI busy; the run is incomplete if > 0) | n/a | 0 | 0 |
+| Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 1.8 s, max 3.0 s | under 10 s |
+
+Which AI answered: groq:openai/gpt-oss-120b 12
+
+#### Per document
+
+| Document | Questions | Right page | Correct, other source | Wrong | Missed |
+|---|---|---|---|---|---|
+| boaters_guide.pdf | 3 | 2/3 (67%) | 0 | 0 | 1 |
+| coast_pilot4_ch1.pdf | 3 | 2/3 (67%) | 0 | 1 | 0 |
+| nav_rules.pdf | 4 | 2/4 (50%) | 0 | 0 | 2 |
+
+### Per question: outcome and which AI answered
+
+| Question | Outcome | AI that answered | Time (new answers) |
+|---|---|---|---|
+| HO-NAV-01 | right | groq:openai/gpt-oss-120b | 2.2 s |
+| HO-NAV-02 | missed | groq:openai/gpt-oss-120b | 1.6 s |
+| HO-NAV-03 | right | groq:openai/gpt-oss-120b | 1.8 s |
+| HO-NAV-04 | missed | groq:openai/gpt-oss-120b | 1.8 s |
+| HO-BG-01 | right | groq:openai/gpt-oss-120b | 2.4 s |
+| HO-BG-02 | right | groq:openai/gpt-oss-120b | 2.1 s |
+| HO-BG-03 | missed | groq:openai/gpt-oss-120b | 1.9 s |
+| HO-CP-01 | wrong | groq:openai/gpt-oss-120b | 1.6 s |
+| HO-CP-02 | right | groq:openai/gpt-oss-120b | 1.5 s |
+| HO-CP-03 | right | groq:openai/gpt-oss-120b | 3.0 s |
+| TRAP-HO-NAV-01 | refused | groq:openai/gpt-oss-120b | 1.3 s |
+| TRAP-HO-BG-01 | refused | groq:openai/gpt-oss-120b | 1.1 s |
+
+### Failed questions
+
+- **HO-NAV-02** (missed) expected nav_rules.pdf p.112: Under the Inland Rules, what sound signal must a manned vessel being towed give in restricted visibility?  
+  Reason: proof:quote_not_focused (quote has other measurements: 2 minute)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.3 s
+- **HO-NAV-04** (missed) expected nav_rules.pdf p.111: Under the International Rules, in fog, what horn signal does my motor ship give when it is stopped and not moving through the water?  
+  Reason: proof:quote_not_focused (quote has other measurements: 2 minute)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.3 s
+- **HO-BG-03** (missed) expected boaters_guide.pdf p.35: If I am caught driving my boat drunk, how big can the federal civil fine be?  
+  Reason: proof:quote_not_focused (quote has other measurements: 5000 usd)  
+  Shown: Not in this document  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 1.3 s
+- **HO-CP-01** (wrong) expected coast_pilot4_ch1.pdf p.17: How often are NOAA Weather Radio messages repeated?  
+  Reason: answer shown is not supported by the expected source  
+  Shown: "every 4 to 6 minutes" from coast_pilot4_ch1.pdf p.28 (Marine Weather Forecasts)  
+  AI calls: gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b ok 0.9 s
+
+### All answers shown
+
+- **HO-NAV-01** (right): at intervals of not more than 2 minutes  
+  Source: nav_rules.pdf p.111 (—INTERNATIONAL— Sound and Light Signals Rule 35 Sound Signal...); quote: "A power-driven vessel making way through the water shall sound at intervals of not more than 2 minutes one prolonged blast."
+- **HO-NAV-03** (right): at intervals of not more than 1 minute, ring the bell rapidly for about 5 seconds  
+  Source: nav_rules.pdf p.114 (—INLAND— Sound and Light Signals Rule 35—CONTINUED); quote: "A vessel at anchor shall at intervals of not more than 1 minute ring the bell rapidly for about 5 seconds."
+- **HO-BG-01** (right): $2,000 or more  
+  Source: boaters_guide.pdf p.11 (Report of casualty or accident (33 CFR 173.55)); quote: "Damage to the boat and other property damage of $2,000 or more."
+- **HO-BG-02** (right): children under 13 years of age must wear an appropriate U.S. Coast Guard-approved life jacket unless they are below deck or within an enclosed cabin.  
+  Source: boaters_guide.pdf p.14 (Child Life Jacket Requirements); quote: "On a vessel that is underway, children under 13 years of age must wear an appropriate U.S. Coast Guard-approved life jacket unless they are: • Below deck, or • ..."
+- **HO-CP-01** (wrong): every 4 to 6 minutes  
+  Source: coast_pilot4_ch1.pdf p.28 (Marine Weather Forecasts); quote: "These broadcasts repeat recorded messages every 4 to 6 minutes."
+- **HO-CP-02** (right): 34 to 47 knots  
+  Source: coast_pilot4_ch1.pdf p.29 (NATIONAL WEATHER SERVICE COASTAL WARNING DISPLAYS DAYTIME SI...); quote: "GALE WARNING: To indicate winds within the range 34 to 47 knots are"
+- **HO-CP-03** (right): in excess of 12 knots  
+  Source: coast_pilot4_ch1.pdf p.22 (Small craft); quote: "Large vessels may appear to move slowly due to their large size but actually transit at speeds in excess of 12 knots, requiring a great distance in which to man..."
+<!-- END phase4-holdout -->
