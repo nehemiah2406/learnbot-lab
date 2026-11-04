@@ -659,3 +659,48 @@ History (the table below is the re-score from saved replies, so its times and "A
   - a square shape
   Source: nav_rules.pdf p.61 (—INTERNATIONAL— Lights and Shapes Rule 24—CONTINUED); quote: "(iii) when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen."
 <!-- END day1-quiz -->
+
+<!-- BEGIN day1-cards -->
+## Day 1: Flashcards (5 topics + 2 traps)
+
+**Gate: PASS**
+
+Clean first run: topics committed before the run (`aea8693`), nothing changed after it. Fixes from the quiz run were already in.
+
+- **Limits:** both traps were refused by the topic-word check, without the AI. CARD-01's section label is "Defective Ladders" though the fact is about stairways: the label comes from the nearest heading the piece reader found, on a two-page spread. CARD-05's back leaves out the "except in designated No Discharge Zone areas" in its quote; the quote is shown with the card.
+- **Read by a person (Claude):** the 4 kept backs match their quotes.
+- **Try-out after the run (not part of the gate):** `make_flashcards.py boaters_guide.pdf --count 2` kept 2 cards (3 AI calls). `make_quiz.py osha3124.pdf --topic "fixed ladders" --count 2` kept 0 of 4 tries (5 AI calls) and said "Not in this document" though the document covers the topic. All 4 drops were the checks working: a wrong option in the quote, a quote not on the page (two-page spread), a quote without the topic word, overlapping options.
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 4/5 | 4/5 | 0 | 2/2 | 1 | 0 | 7.3 s | 7 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| CARD-01 | right | groq:openai/gpt-oss-120b | 3.1 s |  |
+| CARD-02 | right | groq:openai/gpt-oss-120b | 2.5 s |  |
+| CARD-03 | missed | groq:openai/gpt-oss-120b | 3.3 s | proof:quote_not_focused (quote has other measurements: 5 percent) |
+| CARD-04 | right | groq:openai/gpt-oss-120b | 3.3 s |  |
+| CARD-05 | right | groq:openai/gpt-oss-120b | 7.3 s |  |
+| TRAP-CARD-01 | refused | none | 0.6 s | no_topic_words |
+| TRAP-CARD-02 | refused | none | 1.1 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **CARD-01** (right), topic: variations in riser height stair tread depth
+  Q: What is the maximum allowed variation in riser height or stair tread depth?
+  A: must not exceed 1/4 inch
+  Source: osha3124.pdf p.8 (Defective Ladders); quote: "Variations in riser height or stair tread depth must not exceed 1/4 inch in any stairway system, including any foundation structure used as one or more treads of the stairs."
+- **CARD-02** (right), topic: temporary handrails clearance
+  Q: What is the minimum clearance required for temporary handrails?
+  A: 3 inches (8 cm)
+  Source: osha3124.pdf p.9 (Handrails); quote: "Temporary handrails must have a minimum clearance of 3 inches (8 cm) between the handrail and walls, stair rail systems and other objects."
+- **CARD-04** (right), topic: gong vessel at anchor 100 meters International
+  Q: According to International rules, where is the gong sounded on a vessel of 100 meters or more at anchor?
+  A: the gong shall be sounded rapidly for about 5 seconds in the after part of the vessel.
+  Source: nav_rules.pdf p.113 (—INTERNATIONAL— Sound and Light Signals Rule 35—CONTINUED); quote: "In a vessel of 100 meters or more in length the bell shall be sounded in the forepart of the vessel and immediately after the ringing of the bell the gong shall be sounded rapidly for about 5 seconds in the after part of the vessel."
+- **CARD-05** (right), topic: treated sewage discharge shore
+  Q: Within how many nautical miles of shore is treated sewage discharge allowed?
+  A: within 3 nautical miles of shore
+  Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "The discharge of treated sewage is allowed within 3 nautical miles of shore except in designated “No Discharge Zone” areas."
+<!-- END day1-cards -->
