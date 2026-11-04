@@ -3,7 +3,7 @@
 AI tutor for maritime crew training. The user uploads their own PDFs; LearnBot explains and quizzes only from them, and shows weak topics. It must work on any readable PDF, not one fixed book.
 Built from scratch by Hari P (Data Science Intern). Idea inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache 2.0); all code here is our own.
 
-Status: Phase 3 (Baseline) done, Phase 4 (RAG pipeline) next · Started 30 Oct 2026 · Target: ~5 working days
+Status: Phase 4 (RAG pipeline) closed on 4 Nov 2026 with caveats (section 0); next: the 4-day plan in section 3, Day 1 · Started 30 Oct 2026
 
 > **Main product rule:** For ANY uploaded file, LearnBot gives only exact answers from that file's text: exact numbers and units, with page and source quote, checked before showing. If not found or unsure: 'Not in this document'. Never guess.
 
@@ -35,6 +35,23 @@ Baseline details and every failed question: `eval/results.md`. Phase 4 must beat
 **Phase 4 pass gate (Hari's decision, 2 Nov 2026):** wrong = 0 + every trap "Not in this document" + max answer time under 10 s, on all three sets: the 29 eval questions, the 10 hold-out questions (step 7) and the new public PDF (step 8). Right page is reported honestly in every run but is not a gate.
 
 Why: the product promise is "exact answer with its source, or 'Not in this document'". A missed answer is safe (the user is told it is not found); a wrong answer is not. Reaching 9/10 right page now depends on accepting paraphrased questions that share no word with their quote (NAV-11, BG-08), and no local check could do that safely: both re-rankers and the embedding model scored those right quotes below wrong-number and trap quotes (`eval/results.md`, topic threshold sections). Loosening the proof to reach 9/10 would risk wrong answers, which breaks the main product rule. A second AI judging the answer was rejected: code must prove the answer.
+
+**Phase 4 closed (Hari's decision, 4 Nov 2026) on the gate numbers:**
+
+| Set | Wrong | Traps refused | Not tested | Slowest | Right page (not a gate) |
+|---|---|---|---|---|---|
+| Eval (29 + 8 traps) | 0 | 8/8 | 0 | 9.0 s | 22/29 |
+| Hold-out (10 + 2 traps) | 0 (original score: wrong 1) | 2/2 | 0 | 3.0 s | 7/10 |
+| New PDF `osha3124.pdf` (5 + 2 traps) | 0 | 2/2 | 0 | 8.1 s | 3/5 |
+
+Caveats:
+
+- **Not one clean run per set.** Eval: NAV-02 and NAV-08 got "AI busy" and were asked again (same code). New PDF: TRAP-OSHA-01 got "AI busy" and was asked again (same code).
+- **Hold-out changed after the run.** p.28 was added to HO-CP-01 after the run; the original score was wrong 1. The answer shown was exact and on p.28, but the row listed only p.17. The new checker review step lists such pages before a run.
+- **4th PDF not re-run.** Eval and hold-out ran with 3 PDFs in `data/raw`. `osha3124.pdf` now shares the search, and those two sets have not been re-run with it.
+- **"AI busy" can still happen.** Gemini often timed out or gave 503 on 3-4 Nov, and a fallback can run out of the 9 s budget. It is never a wrong answer, but the user gets no answer. It happened again in the live timing test (OSHA-01, 9.0 s).
+- **Re-ranker can be slow.** It took 1.0-3.9 s per question on battery with 2-3 GB RAM free, against about 0.5 s average on 3 Nov. The models then took 104.7 s to load (44.7 s on 3 Nov). The cause is not proven: the plugged-in repeat test was not run, and the power state on 3 Nov was not recorded. No fix was made.
+- **Missed answers remain.** Safe refusals, not gate failures: eval 7, hold-out 3, new PDF 2, most of them from the `quote_not_focused` check or paraphrased questions.
 
 ---
 
@@ -75,16 +92,26 @@ progress (scores per topic) -> local file/SQLite
 
 | # | Phase | Output | Done when |
 |---|---|---|---|
-| 0 | Problem framing | This plan | Hari agrees |
-| 1 | Data + upload self-check | `src/learnbot/pdf_check.py`, `scripts/data_check.py`, reports | Self-check works on any PDF; we know layout, issues, cleaning rules |
-| 2 | Eval set first | `eval/explain_questions.csv`, `eval/quiz_rules.md`, trap questions | 20+ questions with expected rule/page |
-| 3 | Baseline | Keyword search answer | Baseline score recorded |
-| 4 | RAG pipeline | Read, chunk, embed, store, search, answer with source; Gemini + Groq fallback; timeouts | Beats baseline, meets explain target |
-| 5 | Quiz generation + upload self-test | MCQ from document + validation (answer must be in source, rules in `eval/quiz_rules.md`). **Upload self-test:** when any new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page | 0 wrong answer keys on eval; self-test passes on all 3 test PDFs |
-| 6 | Progress | Scores per topic, weak-topic re-quiz | Works across app restarts |
-| 7 | Evaluate + improve | `eval/results.md` table | All success metrics pass |
-| 8 | App | Streamlit UI, friendly errors; runs the upload self-check and the upload self-test on every new file. **If the self-test fails, the user sees a warning** | Demo works end to end |
-| 9 | Ship | Tests, README, GitHub, resume line | Pushed + verified on GitHub |
+| 0 | Problem framing (done) | This plan | Hari agrees |
+| 1 | Data + upload self-check (done) | `src/learnbot/pdf_check.py`, `scripts/data_check.py`, reports | Self-check works on any PDF; we know layout, issues, cleaning rules |
+| 2 | Eval set first (done) | `eval/explain_questions.csv`, `eval/quiz_rules.md`, trap questions | 20+ questions with expected rule/page |
+| 3 | Baseline (done) | Keyword search answer | Baseline score recorded |
+| 4 | RAG pipeline (closed with caveats, section 0) | Read, chunk, embed, store, search, answer with source; Gemini + Groq fallback; timeouts | Phase 4 pass gate (section 0) |
+
+### New plan (Hari's decision, 4 Nov 2026): 4 days
+
+A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mode + book maker + research. This replaces the old phases 5-9. All code is our own.
+
+| Day | Build | Done when |
+|---|---|---|
+| 1 | Quiz + flashcards | Each feature: 5 questions + 2 traps, wrong 0 |
+| 2 | Notebook + reading mode | Each feature: 5 questions + 2 traps, wrong 0 |
+| 3 | Book maker + research | Each feature: 5 questions + 2 traps, wrong 0 |
+| 4 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
+
+Everything else from DeepTutor is dropped.
+
+Old phases 5-9 items that are not in the 4 days, so not scheduled: upload self-test, progress + weak-topic re-quiz.
 
 ---
 
@@ -123,3 +150,4 @@ progress (scores per topic) -> local file/SQLite
 | 3 Nov 2026 | **Hold-out set passes the Phase 4 gate, after a post-run fix of the row: p.28 added after the run; original score was wrong 1.** Hari chose to add Coast Pilot p.28 (same subject: NOAA Weather Radio repeat interval, same number + unit) to HO-CP-01 `other_answers`; re-scored from saved answers (0 AI calls): right page 7/10, **wrong 0**, traps **2/2**, max time **3.0 s** (live run). Checker improved so this cannot happen silently again: besides same-quote pages it now lists (REVIEW, never added by code) every page with the expected answer's number + unit within 400 characters of at least 2 of the question's key words. On the eval set it lists 9 pages (none judged the same answer: CP-07 nav_rules p.9 is a conversion table, CP-06 nav_rules p.172 is 33 CFR 26.03, the rest share only the number); on the hold-out 2 more (other "2 minutes" signals). No answer logic changed. 399 tests pass |
 | 3 Nov 2026 | Step 8: new PDF `osha3124.pdf` (OSHA "Stairways and Ladders", 2003, 15 pages, text PDF, public-domain note, no copyright notice). 5 questions + 2 traps (`eval/newpdf_questions.csv`, `eval/newpdf_traps.csv`, checker ALL PASS, review step 0 pages), committed before the run. Run once (8 AI calls; warm-up Gemini timeout, so Groq answered at first): **wrong 0**, right page 3/5, missed 2 (`quote_not_focused`), trap 1/1 tested refused, max time 8.1 s, but **1 not tested** (TRAP-OSHA-01: Gemini timeout 5 s, then too little of the 9 s budget left for Groq) -> run INCOMPLETE, not a pass. Time outside the AI was 1-4 s per question in this run (0.5 s in the 0-call timing check). Waiting for Hari's decision. 399 tests pass |
 | 4 Nov 2026 | New-PDF run completed with the same code: only TRAP-OSHA-01 asked again (2 AI calls): **refused**, 4.0 s. Total: right page 3/5, **wrong 0**, traps **2/2**, not tested 0, slowest **8.1 s**. All three gate sets now meet the numbers: eval (wrong 0, traps 8/8, 9.0 s; 2 questions asked again), hold-out (wrong 0 only after p.28 was added after the run; original score was wrong 1; traps 2/2, 3.0 s), new PDF (1 trap asked again). Not re-run: eval and hold-out were run with 3 PDFs in `data/raw`; `osha3124.pdf` is now a 4th. Live timing (report only, no fix, script outside the project, 5 AI calls, replies not saved): the time outside the AI is almost all the re-ranker: 1.0-3.1 s live, 1.8-3.9 s with 0 AI calls on the same 5 questions (NAV-04 was 0.46 s on 3 Nov), about 15 s of CPU over 10 threads; every other step about 0.1 s or less; model load 104.7 s (44.7 s on 3 Nov). Laptop on battery, Balanced plan, CPU load 2-5 % at question start, 2.4 GB RAM free. Cause not proven. One live question got "AI busy" again (Gemini timeout + Groq out of time, 9.0 s). 399 tests pass |
+| 4 Nov 2026 | **Phase 4 closed by Hari on the gate numbers** (wrong 0, all traps refused, under 10 s on eval, hold-out and new PDF), with caveats written in section 0 and `eval/results.md`: questions asked again, hold-out row changed after the run (original score wrong 1), 4th PDF not re-run, "AI busy" can happen, re-ranker slow on battery with low RAM (cause not proven). New 4-day plan written in section 3 (chat + quiz + flashcards + notebook + reading mode + book maker + research; each feature 5 questions + 2 traps, wrong 0); everything else from DeepTutor dropped. Docs only, no code changed. 399 tests pass |

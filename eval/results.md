@@ -587,3 +587,23 @@ Which AI answered: groq:openai/gpt-oss-120b 4, gemini:gemini-3.1-flash-lite 2, n
 - **OSHA-03** (right): at least 30 degrees —and no more than 50 degrees  
   Source: osha3124.pdf p.8 (Defective Ladders); quote: "Stairways must be installed at least 30 degrees —and no more than 50 degrees—from the horizontal."
 <!-- END phase4-newpdf -->
+
+<!-- BEGIN phase4-closed -->
+## Phase 4 closed (Hari's decision, 4 Nov 2026)
+
+Closed on the gate: wrong 0, all traps refused, under 10 s, on all three sets. Right page is reported, not a gate.
+
+| Set | Wrong | Traps refused | Not tested | Slowest | Right page | Missed |
+|---|---|---|---|---|---|---|
+| Eval (29 + 8 traps) | 0 | 8/8 | 0 | 9.0 s | 22/29 | 7 |
+| Hold-out (10 + 2 traps) | 0 (original score: wrong 1) | 2/2 | 0 | 3.0 s | 7/10 | 3 |
+| New PDF `osha3124.pdf` (5 + 2 traps) | 0 | 2/2 | 0 | 8.1 s | 3/5 | 2 |
+
+Caveats:
+
+- **Questions asked again:** the sections above show the first runs. Eval: NAV-02 and NAV-08 got "AI busy" and were asked again (same code). New PDF: TRAP-OSHA-01 got "AI busy" and was asked again (same code).
+- **Hold-out row changed after the run:** p.28 added after the run; original score was wrong 1 (HO-CP-01: exact answer shown from p.28, row listed only p.17).
+- **4th PDF not re-run:** eval and hold-out ran with 3 PDFs in `data/raw`. `osha3124.pdf` now shares the search, and those two sets have not been re-run with it.
+- **"AI busy" can still happen:** Gemini often timed out or gave 503 on 3-4 Nov, and a fallback can run out of the 9 s budget. Never a wrong answer, but the user gets no answer. It happened again in the live timing test (OSHA-01, 9.0 s).
+- **Re-ranker can be slow:** 1.0-3.9 s per question on battery with 2-3 GB RAM free, against about 0.5 s average on 3 Nov; models took 104.7 s to load (44.7 s on 3 Nov). Cause not proven: the plugged-in repeat test was not run and the power state on 3 Nov was not recorded. No fix made.
+<!-- END phase4-closed -->
