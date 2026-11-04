@@ -17,7 +17,6 @@ import random
 import re
 
 from learnbot import study
-from learnbot.eval_check import normalize
 from learnbot.proof import number_units
 
 BANNED_OPTION = re.compile(r"\b(all|none) of (the above|these|the options|the answers)\b"
@@ -52,17 +51,17 @@ def options_problem(reply):
     answer, wrong = reply["answer"], reply["wrong"]
     if len(wrong) != 3 or not all(wrong):
         return "bad_options", f"{len(wrong)} wrong options"
-    options = [normalize(o).lower().rstrip(".") for o in [answer, *wrong]]
+    options = [answer, *wrong]
     for i, a in enumerate(options):
-        if any(a in b for j, b in enumerate(options) if i != j):
+        if any(study.has_words(b, a) for j, b in enumerate(options) if i != j):
             return "same_options", a
-    for option in [answer, *wrong]:
+    for option in options:
         if BANNED_OPTION.search(option):
             return "banned_option", option
     quote = reply["sources"][0]["quote"]
     for option in wrong:
         pairs = number_units(option)
-        if normalize(option).lower().rstrip(".") in normalize(quote).lower() or (pairs and pairs <= number_units(quote)):
+        if study.has_words(quote, option) or (pairs and pairs <= number_units(quote)):
             return "wrong_in_quote", option
     return None
 

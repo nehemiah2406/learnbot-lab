@@ -93,13 +93,22 @@ def parse_item(text):
             "sources": sources}
 
 
+def plain(text):
+    return normalize(text).lower().rstrip(".")
+
+
+def has_words(text, part):
+    """True if part is in the text as whole words ("5 years" is not in "15 years")."""
+    return re.search(rf"(?<!\w){re.escape(plain(part))}(?!\w)", plain(text)) is not None
+
+
 def item_problem(topic, reply, rule_sets):
     """(check, detail) of the first failed shared check, or None."""
     question, answer = reply["question"], reply["answer"]
     source = reply["sources"][0]
     if not question or not answer:
         return "bad_shape", "no question or answer"
-    if normalize(answer).lower().rstrip(".") in normalize(question).lower():
+    if has_words(question, answer):
         return "answer_in_question", answer
     if topic and not topic_words(topic, rule_sets) & topic_stems(source["quote"]):
         return "topic_not_in_quote", source["quote"][:60]

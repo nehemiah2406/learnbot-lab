@@ -131,6 +131,25 @@ def test_bad_options_drop_the_question(wrong, reason):
     assert ask(reply(wrong=wrong)).reason == reason
 
 
+def test_options_are_compared_as_whole_words():
+    # Real case: "5 years" was dropped as the same option as "15 years".
+    good = {"answer": "12 years", "wrong": ["10 years", "5 years", "15 years"], "sources": [{"quote": "It lasts 12 years."}]}
+    assert options_problem(good) is None
+    overlap = {"answer": "exceed 500 knots", "wrong": ["500 knots", "20 knots", "30 knots"],
+               "sources": [{"quote": "It can exceed 500 knots."}]}
+    assert options_problem(overlap)[0] == "same_options"
+    in_quote = {"answer": "12 years", "wrong": ["2 years", "5 years", "the bottom"],
+                "sources": [{"quote": "It lasts 12 years from the date on the bottom."}]}
+    assert options_problem(in_quote)[0] == "wrong_in_quote"
+
+
+def test_answer_inside_a_longer_number_is_not_given_away():
+    page = Chunk("guide.pdf", 5, "Ladder rungs", "Ladder rungs last 5 years in 15 years of service.")
+    q = ask(reply(question="In 15 years of service, how long do ladder rungs last?", answer="5 years",
+                  quote="Ladder rungs last 5 years in 15 years of service."), pieces=[page])
+    assert q.reason != "answer_in_question"
+
+
 def test_wrong_option_may_use_words_like_above():
     data = {"answer": "12 inches apart", "wrong": ["8 inches above it", "20 inches below it", "30 inches apart"],
             "sources": [{"quote": QUOTE}]}
