@@ -99,25 +99,28 @@ Research mode (separate): question -> Tavily web search -> answer labelled "From
 | 3 | Baseline (done) | Keyword search answer | Baseline score recorded |
 | 4 | RAG pipeline (closed with caveats, section 0) | Read, chunk, embed, store, search, answer with source; Gemini + Groq fallback; timeouts | Phase 4 pass gate (section 0) |
 
-### New plan (Hari's decision, 4 Nov 2026): 4 days
+### New plan (Hari's decision, 4 Nov 2026)
 
-A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mode + book maker + research. This replaces the old phases 5-9. All code is our own.
+A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mode + book maker + research. This replaces the old phases 5-9. All code is our own. (Now 5 days: Hari added a day for all file types.)
 
 | Day | Build | Done when |
 |---|---|---|
-| 1 | Quiz + flashcards | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
-| 2 | Notebook + reading mode | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
-| 3 | Book maker + research | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
-| 4 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
+| 1 | Quiz + flashcards | Feature gate (below) |
+| 2 | Upload self-test + notebook + reading mode | Feature gate (below) |
+| 3 | Book maker + research | Feature gate (below) |
+| 4 | All file types | 3 questions + 1 trap per file type, wrong 0, under 10 s |
+| 5 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
+
+**Feature gate:** 5 questions + 2 traps; wrong 0; every trap refused; every question, card or answer under 10 s (each one by itself, shown as it is ready, not a whole quiz in 10 s); at least 3 of the 5 kept, otherwise the feature is not done, because a feature that drops everything would pass "wrong 0".
 
 Everything else from DeepTutor is dropped.
 
 **Decisions on the older items (Hari, 4 Nov 2026):**
 
-- **Upload self-test: kept. Day not chosen yet.** When a new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page. If the self-test fails, the user sees a warning.
-- **All file types (old Part B): kept. Day not chosen yet.** One upload entry point; the real type is detected from the file content. Supported: PDF with text; scanned PDF and images (.png, .jpg, .jpeg) via OCR; .docx; .pptx; .xlsx and .csv; .txt and .md; .html. Old formats (.doc, .xls, .ppt): convert if a converter is available, else a clear message asking the user to save in the new format. Anything else: a clear "This file type can't be read", never a crash or a guess. Every type gets an exact location label, the same proof rules and the same OK / WARNING / FAIL self-check. Plan + Hari's OK before installing any library or OCR tool.
+- **Upload self-test: kept, Day 2.** When a new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page. If the self-test fails, the user sees a warning.
+- **All file types (old Part B): kept, Day 4.** One upload entry point; the real type is detected from the file content. Supported: PDF with text; scanned PDF and images (.png, .jpg, .jpeg) via OCR; .docx; .pptx; .xlsx and .csv; .txt and .md; .html. Old formats (.doc, .xls, .ppt): convert if a converter is available, else a clear message asking the user to save in the new format. Anything else: a clear "This file type can't be read", never a crash or a guess. Every type gets an exact location label, the same proof rules and the same OK / WARNING / FAIL self-check. Plan + Hari's OK before installing any library or OCR tool.
 - **Research: web search with Tavily (`TAVILY_API_KEY`).** A separate mode. Every web answer is labelled "From the web" with the source link and is never mixed into document answers. Document answers keep the main product rule (only from uploaded files). Timeout + friendly message if Tavily fails.
-- **Dropped:** weak-topic re-quiz; website URLs and YouTube links (old Part C).
+- **Dropped:** weak-topic re-quiz; all of old Part C except web research (website URLs, YouTube links, GitHub repos, code files, `.svg`).
 
 ---
 
@@ -158,3 +161,4 @@ Everything else from DeepTutor is dropped.
 | 4 Nov 2026 | New-PDF run completed with the same code: only TRAP-OSHA-01 asked again (2 AI calls): **refused**, 4.0 s. Total: right page 3/5, **wrong 0**, traps **2/2**, not tested 0, slowest **8.1 s**. All three gate sets now meet the numbers: eval (wrong 0, traps 8/8, 9.0 s; 2 questions asked again), hold-out (wrong 0 only after p.28 was added after the run; original score was wrong 1; traps 2/2, 3.0 s), new PDF (1 trap asked again). Not re-run: eval and hold-out were run with 3 PDFs in `data/raw`; `osha3124.pdf` is now a 4th. Live timing (report only, no fix, script outside the project, 5 AI calls, replies not saved): the time outside the AI is almost all the re-ranker: 1.0-3.1 s live, 1.8-3.9 s with 0 AI calls on the same 5 questions (NAV-04 was 0.46 s on 3 Nov), about 15 s of CPU over 10 threads; every other step about 0.1 s or less; model load 104.7 s (44.7 s on 3 Nov). Laptop on battery, Balanced plan, CPU load 2-5 % at question start, 2.4 GB RAM free. Cause not proven. One live question got "AI busy" again (Gemini timeout + Groq out of time, 9.0 s). 399 tests pass |
 | 4 Nov 2026 | **Phase 4 closed by Hari on the gate numbers** (wrong 0, all traps refused, under 10 s on eval, hold-out and new PDF), with caveats written in section 0 and `eval/results.md`: questions asked again, hold-out row changed after the run (original score wrong 1), 4th PDF not re-run, "AI busy" can happen, re-ranker slow on battery with low RAM (cause not proven). New 4-day plan written in section 3 (chat + quiz + flashcards + notebook + reading mode + book maker + research; each feature 5 questions + 2 traps, wrong 0); everything else from DeepTutor dropped. Docs only, no code changed. 399 tests pass |
 | 4 Nov 2026 | Hari's decisions recorded in this plan and CLAUDE.md: upload self-test kept; all file types kept (old Part B); weak-topic re-quiz and website URL / YouTube (old Part C) dropped; Research = Tavily web search as a separate mode, labelled "From the web" with the source link, never mixed into document answers (`TAVILY_API_KEY` confirmed set in `.env`; value not read out); Definition of done is now per feature: 5 questions + 2 traps, wrong 0, under 10 s. Docs only, no code changed. 399 tests pass |
+| 4 Nov 2026 | Hari's OK on the Day 1 plan and the open points: under 10 s applies to each question or card; at least 3 of 5 kept per feature; upload self-test on Day 2; all file types on a new Day 4 (3 questions + 1 trap per type), UI + README move to Day 5; the rest of old Part C dropped. Docs only |
