@@ -1,6 +1,6 @@
 # LearnBot Lab - Project Plan
 
-AI tutor for maritime crew training. The user uploads their own PDFs; LearnBot explains and quizzes only from them, and shows weak topics. It must work on any readable PDF, not one fixed book.
+AI tutor for maritime crew training. The user uploads their own files; LearnBot explains and quizzes only from them. It must work on any readable file of a supported type (section 3), not one fixed book. Research is a separate web mode, always labelled "From the web".
 Built from scratch by Hari P (Data Science Intern). Idea inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache 2.0); all code here is our own.
 
 Status: Phase 4 (RAG pipeline) closed on 4 Nov 2026 with caveats (section 0); next: the 4-day plan in section 3, Day 1 · Started 30 Oct 2026
@@ -15,8 +15,8 @@ Status: Phase 4 (RAG pipeline) closed on 4 Nov 2026 with caveats (section 0); ne
 |---|---|
 | **User** | Ship crew, cadets and freshers studying a maritime topic |
 | **Problem** | Long rule books are hard to read alone, there is no one to ask doubts, and it is hard to know what you have really learned |
-| **Solution** | Upload any PDF (it is self-checked first), then (a) ask doubts and get an explanation with the exact source, (b) take quizzes made from the document, (c) see weak topics and practise them again |
-| **Not in v1** | Login, video, voice, company documents, own backend API |
+| **Solution** | Upload a file (it is self-checked and self-tested first), then (a) ask doubts and get an explanation with the exact source, (b) take quizzes and use flashcards made from the document, (c) use the notebook, reading mode and book maker, (d) search the web in the separate Research mode |
+| **Not in v1** | Login, video, voice, company documents, own backend API, website URLs, YouTube links, weak-topic re-quiz |
 
 ### Success metrics (must pass before "done")
 
@@ -25,7 +25,7 @@ Status: Phase 4 (RAG pipeline) closed on 4 Nov 2026 with caveats (section 0); ne
 | Explain: answer comes from the right rule/page | Reported honestly every run (aim: 9 of 10); **not a gate** since 2 Nov 2026, see below | 17/29 (59%) right doc+page in top 1; 23/29 (79%) in top 3 |
 | Explain: exact answer (all numbers + key words) in the top result | (tracked) | 15/29 (52%) |
 | Wrong answers (answer shown is not supported by its piece) | 0 | 7 wrong + 4 missed (+1 correct, other source) |
-| Quiz: correct answer is supported by the source text | 100% (wrong answer keys = 0) | n/a (Phase 5) |
+| Quiz: correct answer is supported by the source text | 100% (wrong answer keys = 0) | n/a (Day 1) |
 | Trap questions (not in the document) | Says "Not in this document" every time | 7/8 (1 trap answered) |
 | Answer time | Under 10 s | 2 ms search per question; 22-28 s to read + chunk the 3 PDFs once |
 | Automated tests | All pass before every push | 171 pass |
@@ -57,7 +57,7 @@ Caveats:
 
 ## 1. Data
 
-LearnBot is upload-based: users bring their own PDFs. The 3 files below are only for testing, chosen for different layouts so nothing is book-specific. All are US government works (public domain). PDFs are not committed; download them into `data/raw/` with the names below. Answers in the eval are for these exact editions.
+LearnBot is upload-based: users bring their own files. The 3 files below are only for testing, chosen for different layouts so nothing is book-specific. All are US government works (public domain). PDFs are not committed; download them into `data/raw/` with the names below. Answers in the eval are for these exact editions.
 
 | File (`data/raw/`) | Document | Edition / date | Official URL | Downloaded | Layout |
 |---|---|---|---|---|---|
@@ -79,10 +79,11 @@ LearnBot is upload-based: users bring their own PDFs. The 3 files below are only
 PDF upload -> self-check (OK / WARNING / FAIL) -> read pages (pdfplumber) -> clean -> split by rule/section -> embeddings (local, sentence-transformers)
     -> vector store (ChromaDB, local) -> search top 3-5 pieces
     -> LLM writes answer / quiz (Gemini main, Groq fallback) -> checks -> Streamlit app
-progress (scores per topic) -> local file/SQLite
+Research mode (separate): question -> Tavily web search -> answer labelled "From the web" with source link
 ```
 
 - **LLM:** Gemini (main) + Groq (fallback when Gemini is busy or out of quota). Own keys in `.env` only.
+- **Web search:** Tavily, Research mode only, key `TAVILY_API_KEY` in `.env`. Never mixed into document answers.
 - **No own backend API in v1.** Streamlit runs UI + logic. FastAPI can be added later if another app must call LearnBot.
 - **Token saving:** send only the top 3-5 pieces, cache generated quizzes, reuse answers to repeated questions, embeddings run locally.
 
@@ -104,14 +105,19 @@ A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mo
 
 | Day | Build | Done when |
 |---|---|---|
-| 1 | Quiz + flashcards | Each feature: 5 questions + 2 traps, wrong 0 |
-| 2 | Notebook + reading mode | Each feature: 5 questions + 2 traps, wrong 0 |
-| 3 | Book maker + research | Each feature: 5 questions + 2 traps, wrong 0 |
+| 1 | Quiz + flashcards | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
+| 2 | Notebook + reading mode | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
+| 3 | Book maker + research | Each feature: 5 questions + 2 traps, wrong 0, under 10 s |
 | 4 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
 
 Everything else from DeepTutor is dropped.
 
-Old phases 5-9 items that are not in the 4 days, so not scheduled: upload self-test, progress + weak-topic re-quiz.
+**Decisions on the older items (Hari, 4 Nov 2026):**
+
+- **Upload self-test: kept. Day not chosen yet.** When a new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page. If the self-test fails, the user sees a warning.
+- **All file types (old Part B): kept. Day not chosen yet.** One upload entry point; the real type is detected from the file content. Supported: PDF with text; scanned PDF and images (.png, .jpg, .jpeg) via OCR; .docx; .pptx; .xlsx and .csv; .txt and .md; .html. Old formats (.doc, .xls, .ppt): convert if a converter is available, else a clear message asking the user to save in the new format. Anything else: a clear "This file type can't be read", never a crash or a guess. Every type gets an exact location label, the same proof rules and the same OK / WARNING / FAIL self-check. Plan + Hari's OK before installing any library or OCR tool.
+- **Research: web search with Tavily (`TAVILY_API_KEY`).** A separate mode. Every web answer is labelled "From the web" with the source link and is never mixed into document answers. Document answers keep the main product rule (only from uploaded files). Timeout + friendly message if Tavily fails.
+- **Dropped:** weak-topic re-quiz; website URLs and YouTube links (old Part C).
 
 ---
 
@@ -121,7 +127,7 @@ Old phases 5-9 items that are not in the 4 days, so not scheduled: upload self-t
 1. Eval set first, with expected answers. Wrong answers must be 0.
 2. General rules only, never one-off fixes for one question.
 3. When unsure, say "Not in this document" instead of guessing. Never invent numbers.
-4. Timeout + friendly fallback on every external call (Gemini, Groq).
+4. Timeout + friendly fallback on every external call (Gemini, Groq, Tavily).
 5. Self-check when a new document is uploaded.
 6. Thumbs-down answers are saved into the eval list.
 7. Run tests + eval before every push; one commit per change.
@@ -151,3 +157,4 @@ Old phases 5-9 items that are not in the 4 days, so not scheduled: upload self-t
 | 3 Nov 2026 | Step 8: new PDF `osha3124.pdf` (OSHA "Stairways and Ladders", 2003, 15 pages, text PDF, public-domain note, no copyright notice). 5 questions + 2 traps (`eval/newpdf_questions.csv`, `eval/newpdf_traps.csv`, checker ALL PASS, review step 0 pages), committed before the run. Run once (8 AI calls; warm-up Gemini timeout, so Groq answered at first): **wrong 0**, right page 3/5, missed 2 (`quote_not_focused`), trap 1/1 tested refused, max time 8.1 s, but **1 not tested** (TRAP-OSHA-01: Gemini timeout 5 s, then too little of the 9 s budget left for Groq) -> run INCOMPLETE, not a pass. Time outside the AI was 1-4 s per question in this run (0.5 s in the 0-call timing check). Waiting for Hari's decision. 399 tests pass |
 | 4 Nov 2026 | New-PDF run completed with the same code: only TRAP-OSHA-01 asked again (2 AI calls): **refused**, 4.0 s. Total: right page 3/5, **wrong 0**, traps **2/2**, not tested 0, slowest **8.1 s**. All three gate sets now meet the numbers: eval (wrong 0, traps 8/8, 9.0 s; 2 questions asked again), hold-out (wrong 0 only after p.28 was added after the run; original score was wrong 1; traps 2/2, 3.0 s), new PDF (1 trap asked again). Not re-run: eval and hold-out were run with 3 PDFs in `data/raw`; `osha3124.pdf` is now a 4th. Live timing (report only, no fix, script outside the project, 5 AI calls, replies not saved): the time outside the AI is almost all the re-ranker: 1.0-3.1 s live, 1.8-3.9 s with 0 AI calls on the same 5 questions (NAV-04 was 0.46 s on 3 Nov), about 15 s of CPU over 10 threads; every other step about 0.1 s or less; model load 104.7 s (44.7 s on 3 Nov). Laptop on battery, Balanced plan, CPU load 2-5 % at question start, 2.4 GB RAM free. Cause not proven. One live question got "AI busy" again (Gemini timeout + Groq out of time, 9.0 s). 399 tests pass |
 | 4 Nov 2026 | **Phase 4 closed by Hari on the gate numbers** (wrong 0, all traps refused, under 10 s on eval, hold-out and new PDF), with caveats written in section 0 and `eval/results.md`: questions asked again, hold-out row changed after the run (original score wrong 1), 4th PDF not re-run, "AI busy" can happen, re-ranker slow on battery with low RAM (cause not proven). New 4-day plan written in section 3 (chat + quiz + flashcards + notebook + reading mode + book maker + research; each feature 5 questions + 2 traps, wrong 0); everything else from DeepTutor dropped. Docs only, no code changed. 399 tests pass |
+| 4 Nov 2026 | Hari's decisions recorded in this plan and CLAUDE.md: upload self-test kept; all file types kept (old Part B); weak-topic re-quiz and website URL / YouTube (old Part C) dropped; Research = Tavily web search as a separate mode, labelled "From the web" with the source link, never mixed into document answers (`TAVILY_API_KEY` confirmed set in `.env`; value not read out); Definition of done is now per feature: 5 questions + 2 traps, wrong 0, under 10 s. Docs only, no code changed. 399 tests pass |
