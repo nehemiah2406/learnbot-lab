@@ -542,6 +542,8 @@ Which AI answered: groq:openai/gpt-oss-120b 12
 | Not tested (AI busy; the run is incomplete if > 0) | n/a | 1 | 0 |
 | Answer time (search + AI + check), new answers | ~2 ms (search only) | avg 4.0 s, max 6.0 s | under 10 s |
 
+**Completed on 4 Nov 2026** (same code, same budgets): only TRAP-OSHA-01 asked again with `--ids TRAP-OSHA-01 --fresh --pause 10 --max-calls 3`. Warm-up: Gemini timeout; Groq answered; **refused**, 4.0 s; 2 AI calls. With the 6 answers of the first run: right page 3/5, wrong 0, traps 2/2, not tested 0, slowest 8.1 s (the "AI busy" attempt; slowest answer shown 6.0 s) -> **new PDF meets the Phase 4 gate**. The table above is the first run.
+
 Which AI answered: groq:openai/gpt-oss-120b 4, gemini:gemini-3.1-flash-lite 2, none (no AI answer) 1
 
 #### Per document
