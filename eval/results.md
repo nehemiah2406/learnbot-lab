@@ -607,3 +607,40 @@ Caveats:
 - **"AI busy" can still happen:** Gemini often timed out or gave 503 on 3-4 Nov, and a fallback can run out of the 9 s budget. Never a wrong answer, but the user gets no answer. It happened again in the live timing test (OSHA-01, 9.0 s).
 - **Re-ranker can be slow:** 1.0-3.9 s per question on battery with 2-3 GB RAM free, against about 0.5 s average on 3 Nov; models took 104.7 s to load (44.7 s on 3 Nov). Cause not proven: the plugged-in repeat test was not run and the power state on 3 Nov was not recorded. No fix made.
 <!-- END phase4-closed -->
+
+<!-- BEGIN day1-quiz -->
+## Day 1: Quiz (5 topics + 2 traps, run once)
+
+**Gate: NOT PASSED: wrong 1; not tested (AI busy) 1; only 1 kept (at least 3 needed); slowest 70.3 s (must be under 10 s)**
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 2/5 | 1/5 | 1 | 2/2 | 2 | 1 | 70.3 s | 6 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| QUIZ-01 | not_tested | none | 70.3 s | ai_busy (gemini:gemini-3.1-flash-lite switched_off 0.0 s -> groq:openai/gpt-oss-120b no_time_left 0.0 s) |
+| QUIZ-02 | missed | groq:openai/gpt-oss-120b | 3.0 s | same_options (type i) |
+| QUIZ-03 | missed | groq:openai/gpt-oss-120b | 2.6 s | same_options (500 knots) |
+| QUIZ-04 | wrong | groq:openai/gpt-oss-120b | 5.5 s | numbers differ: expected ['0.87', '5280'], shown ['5280'] |
+| QUIZ-05 | right | groq:openai/gpt-oss-120b | 7.5 s |  |
+| TRAP-QUIZ-01 | refused | none | 1.0 s | no_topic_words |
+| TRAP-QUIZ-02 | refused | none | 0.9 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **QUIZ-04** (wrong), topic: statute mile feet
+  Q: According to the Coast Pilot, a statute mile is about 0.87 nautical mile. How many feet are in a statute mile?
+  - 5,000 feet
+  * 5,280 feet
+  - 6,000 feet
+  - 4,800 feet
+  Source: coast_pilot4_ch1.pdf p.3 (); quote: "A statute mile is 5,280 feet or about 0.87 nautical mile."
+- **QUIZ-05** (right), topic: shape when the tow exceeds 200 meters International
+  Q: According to International Lights and Shapes Rule 24, what shape must be displayed when the length of the tow exceeds 200 meters?
+  - a rectangular shape
+  * a diamond shape
+  - a circle shape
+  - a square shape
+  Source: nav_rules.pdf p.61 (—INTERNATIONAL— Lights and Shapes Rule 24—CONTINUED); quote: "(iii) when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen."
+<!-- END day1-quiz -->
