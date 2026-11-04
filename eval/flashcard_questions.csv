@@ -1,0 +1,6 @@
+doc,id,question,type,expected_answer,rule,rule_set,page,source_quote,accepted_sources,other_answers
+osha3124.pdf,CARD-01,variations in riser height stair tread depth,number,Must not exceed 1/4 inch.,Stairways,N/A,8,Variations in riser height or stair tread depth must not exceed 1/4 inch in any stairway system,osha3124.pdf:8,
+osha3124.pdf,CARD-02,temporary handrails clearance,number,A minimum clearance of 3 inches (8 cm).,Handrails,N/A,9,Temporary handrails must have a minimum clearance of 3 inches (8 cm) between the handrail and walls,osha3124.pdf:9,
+coast_pilot4_ch1.pdf,CARD-03,echo sounders velocity of sound in water,number,800 fathoms per second.,Echo soundings,N/A,9,Most types of echo sounders are factory calibrated for a velocity of sound in water of 800 fathoms per second,coast_pilot4_ch1.pdf:9,
+nav_rules.pdf,CARD-04,gong vessel at anchor 100 meters International,number,Sounded rapidly for about 5 seconds in the after part of the vessel.,Rule 35,International,113,the gong shall be sounded rapidly for about 5 seconds in the after part of the vessel,nav_rules.pdf:113,
+boaters_guide.pdf,CARD-05,treated sewage discharge shore,number,Allowed within 3 nautical miles of shore.,Marine Sanitation Devices,N/A,28,The discharge of treated sewage is allowed within 3 nautical miles of shore,boaters_guide.pdf:28,

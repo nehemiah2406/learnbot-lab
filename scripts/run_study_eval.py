@@ -33,6 +33,8 @@ RESULTS = Path("eval/results.md")
 # feature: (module, function that makes one item, topics, traps, name)
 FEATURES = {
     "quiz": ("learnbot.quiz", "make_question", "eval/quiz_questions.csv", "eval/quiz_traps.csv", "Quiz"),
+    "cards": ("learnbot.flashcards", "make_card", "eval/flashcard_questions.csv", "eval/flashcard_traps.csv",
+              "Flashcards"),
 }
 
 
