@@ -142,6 +142,13 @@ class Library:
                 store.add(d)
         return cls(documents, store)
 
+    def only(self, name):
+        """The same library with one document (same stored vectors). Raises ValueError."""
+        documents = [d for d in self.documents if d.name == name]
+        if not documents:
+            raise ValueError(f"document not loaded: {name}")
+        return Library(documents, self.store)
+
     def chunk(self, digest, number):
         return self._by_key.get((digest, number))
 

@@ -1,0 +1,6 @@
+doc,id,question,type,expected_answer,rule,rule_set,page,source_quote,accepted_sources,other_answers
+boaters_guide.pdf,QUIZ-01,expiry of non-rechargeable extinguishers,number,12 years from date stamped on bottom.,Fire Extinguishers,N/A,21,"The extinguisher is not expired (for non-rechargeable extinguishers, 12 years from date stamped on bottom).",boaters_guide.pdf:21,
+boaters_guide.pdf,QUIZ-02,marine sanitation device vessels over 65 feet,fact,A Type II or III MSD.,Marine Sanitation Devices,N/A,28,Vessels over 65 feet must install a Type II or III MSD.,boaters_guide.pdf:28,
+coast_pilot4_ch1.pdf,QUIZ-03,tsunami speed deep ocean,number,It can exceed 500 knots in the deep ocean but slows to 20 or 30 knots in the shallow water near land.,Tsunamis,N/A,19,A tsunami can exceed 500 knots in the deep ocean but slows to 20 or 30 knots in the shallow water near land.,coast_pilot4_ch1.pdf:19,
+coast_pilot4_ch1.pdf,QUIZ-04,statute mile feet,number,"5,280 feet or about 0.87 nautical mile.",Measurements,N/A,3,"A statute mile is 5,280 feet or about 0.87 nautical mile.",coast_pilot4_ch1.pdf:3,
+nav_rules.pdf,QUIZ-05,shape when the tow exceeds 200 meters International,fact,A diamond shape.,Rule 24,International,55,"when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen.",nav_rules.pdf:55;nav_rules.pdf:61,

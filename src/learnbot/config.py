@@ -67,3 +67,8 @@ MIN_QUOTE_WORDS = 4
 TOPIC_MIN_SCORE = None
 # Ask before an eval run that needs more AI calls than this.
 MAX_LLM_CALLS_WITHOUT_ASKING = 50
+
+# --- Day 1: quiz + flashcards ---------------------------------------------------------
+STUDY_MIN_KEPT = 3  # a feature must keep at least this many of its 5 test items
+STUDY_TRIES_PER_ITEM = 2  # pieces tried per wanted item, so dropped items can be replaced
+STUDY_MIN_PIECE_WORDS = 25  # a shorter piece is not used for a quiz with no topic

@@ -1,6 +1,6 @@
 # Quiz rules
 
-Every quiz question LearnBot makes (Phase 5) must pass ALL of these rules.
+Every quiz question LearnBot makes (`src/learnbot/quiz.py`) must pass ALL of these rules.
 A question that fails any rule is dropped, never shown to the user.
 They apply to any uploaded document, not one book.
 
@@ -24,3 +24,7 @@ They apply to any uploaded document, not one book.
 10. Every number in the correct option appears in the source quote.
 11. No two options are the same after normalising spaces and case.
 12. If any check fails or LearnBot is unsure, the question is dropped. Fewer good questions are better than one wrong answer key.
+
+## What a person must still check
+
+Code proves the right answer and catches a wrong option that is in the source quote. Code cannot fully prove rules 3 and 6 (each wrong option is wrong according to the document). So the feature test prints every kept question for a person to read. A "wrong" option that is actually correct counts as a wrong question in the score.

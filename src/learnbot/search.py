@@ -54,6 +54,14 @@ class Searcher:
         self.position = {id(c): i for i, c in enumerate(self.chunks)}
         self.bm25 = BM25Index(self.chunks)
         self.rule_sets = RuleSets(self.chunks)
+        self.document_searchers = {}
+
+    def for_document(self, name):
+        """The same search, only inside one document (same models). Raises ValueError."""
+        if name not in self.document_searchers:
+            self.document_searchers[name] = Searcher(self.library.only(name), self.method, self.use_rule_sets,
+                                                     self.reranker)
+        return self.document_searchers[name]
 
     def ranked(self, question, n):
         """Piece positions, best first, from the chosen method."""

@@ -1,0 +1,3 @@
+doc,id,question,type,expected_answer,keywords
+boaters_guide.pdf,TRAP-QUIZ-01,life jacket color,maritime_outside,Not in this document,jacket color;color of
+osha3124.pdf,TRAP-QUIZ-02,plank thickness,off_topic,Not in this document,plank

@@ -2,6 +2,9 @@
 (baseline now, RAG in Phase 4): it only needs doc, page and text of the top hits.
 """
 
+from collections import Counter
+
+from learnbot import config
 from learnbot.baseline import NOT_FOUND, Hit, tokenize
 from learnbot.eval_check import (
     normalize, numbers_in, parse_other_answers, parse_sources, row_pages, split_pair,
@@ -121,6 +124,25 @@ def score_answer(row, is_trap, ans):
         if any(has_source_quote(row, Hit(0, c)) for c in page_pieces):
             return CORRECT_OTHER, f"from {s['doc']} p.{s['page']}"
     return WRONG, "answer shown is not supported by the expected source"
+
+
+def feature_gate(outcomes, slowest_s):
+    """Failures of one feature's test run ([] = passed), PLAN.md feature gate. outcomes:
+    one per question and trap; slowest_s: the slowest item, in seconds."""
+    failures = []
+    count = Counter(outcomes)
+    if count[WRONG]:
+        failures.append(f"wrong {count[WRONG]}")
+    if count[TRAP_ANSWERED]:
+        failures.append(f"traps answered {count[TRAP_ANSWERED]}")
+    if count[NOT_TESTED]:
+        failures.append(f"not tested (AI busy) {count[NOT_TESTED]}")
+    kept = count[RIGHT] + count[CORRECT_OTHER]
+    if kept < config.STUDY_MIN_KEPT:
+        failures.append(f"only {kept} kept (at least {config.STUDY_MIN_KEPT} needed)")
+    if slowest_s >= 10:
+        failures.append(f"slowest {slowest_s:.1f} s (must be under 10 s)")
+    return failures
 
 
 def hit_on_right_page(row, source):
