@@ -56,7 +56,7 @@ def build_report(name, records, chain, failures):
     refused = sum(r["item"].status == "not_found" for r in traps)
     slowest = max(r["item"].seconds for r in records)
     lines = [
-        f"## Day 1: {name} ({len(real)} topics + {len(traps)} traps, run once)",
+        f"## Day 1: {name} ({len(real)} topics + {len(traps)} traps)",
         "",
         f"**Gate: {'PASS' if not failures else 'NOT PASSED: ' + '; '.join(failures)}**",
         "",
@@ -86,6 +86,7 @@ def main():
     parser.add_argument("--max-calls", type=int, default=config.MAX_LLM_CALLS_WITHOUT_ASKING)
     parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each item")
     parser.add_argument("--dry-run", action="store_true", help="only check that everything loads; call no AI")
+    parser.add_argument("--no-warm-up", action="store_true", help="skip the 1-call check of the main AI")
     args = parser.parse_args()
 
     module, function, questions, traps, name = FEATURES[args.feature]
@@ -97,6 +98,7 @@ def main():
         return 0
     pdfs = sorted(p for p in DATA_DIR.iterdir() if p.suffix.lower() == ".pdf")
     searcher = default_searcher(Library.load(pdfs, VectorStore(Embedder())))
+    searcher.search("warm up")  # loads the models now, so no item pays for the loading
     chain = default_chain()
     chain.max_calls = args.max_calls  # checked before every real call
     if not chain.providers:
@@ -108,8 +110,9 @@ def main():
 
     records = []
     try:
-        ok, status = warm_up(chain)
-        print(f"Warm-up call: {status}" + ("" if ok else " (main AI switched off for now; the fallback answers)"))
+        if not args.no_warm_up:
+            ok, status = warm_up(chain)
+            print(f"Warm-up call: {status}" + ("" if ok else " (main AI switched off for now; the fallback answers)"))
         for row, trap in rows:
             time.sleep(args.pause)  # stay under the free per-minute limits
             item = make_one(row["question"], searcher.for_document(row["doc"]), chain)

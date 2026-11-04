@@ -88,11 +88,13 @@ def same_numbers(text):
     return {WORD_NUMBERS.get(n, n) for n in numbers_in(text)}
 
 
-def numbers_differ(expected_answer, shown_answer, question):
+def numbers_differ(expected_answer, shown_answer, question, given=""):
     """True if a number of the expected answer is missing from the shown answer, or the
-    shown answer has a number that is neither expected nor in the question."""
+    shown answer has a number that is neither expected nor in the question. given: text
+    shown with the answer whose numbers count as shown (a quiz question's own wording;
+    the proof check requires them to be in the quote or the piece title)."""
     expected, shown = same_numbers(expected_answer), same_numbers(shown_answer)
-    return not expected <= shown or not shown <= expected | same_numbers(question)
+    return not expected <= shown | same_numbers(given) or not shown <= expected | same_numbers(question)
 
 
 def score_answer(row, is_trap, ans):
@@ -109,12 +111,13 @@ def score_answer(row, is_trap, ans):
     if ans.status != "answered":
         reason = ans.reason + (f" ({ans.detail})" if ans.detail else "")
         return MISSED, reason if right_sent else f"search miss (right page not sent); {reason}"
+    given = getattr(ans, "question", "")  # a study item's question (a chat answer has none)
     for doc, page, text in parse_other_answers(row.get("other_answers", "")) or []:
         # Another exact answer of the document (other_answers), shown from its own page.
         if (any((s["doc"], s["page"]) == (doc, page) for s in ans.sources)
-                and not numbers_differ(text, ans.text, row["question"])):
+                and not numbers_differ(text, ans.text, row["question"], given)):
             return RIGHT, f"other answer from {doc} p.{page}"
-    if numbers_differ(row["expected_answer"], ans.text, row["question"]):
+    if numbers_differ(row["expected_answer"], ans.text, row["question"], given):
         expected, shown = sorted(same_numbers(row["expected_answer"])), sorted(same_numbers(ans.text))
         return WRONG, f"numbers differ: expected {expected}, shown {shown}"
     if any(hit_on_right_page(row, s) for s in ans.sources):

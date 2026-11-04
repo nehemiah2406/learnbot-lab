@@ -286,6 +286,15 @@ def test_kept_question_is_scored_like_a_chat_answer():
     assert score_answer(ROW, True, ask(reply()))[0] == TRAP_ANSWERED
 
 
+def test_number_stated_in_the_question_counts_as_shown():
+    row = {**ROW, "expected_answer": "12 inches or 30 cm"}
+    assert score_answer(row, False, ask(reply()))[0] == WRONG  # 30 is nowhere
+    page = Chunk("guide.pdf", 5, "Rungs", "Ladder rungs are 12 inches or 30 cm apart.")
+    text = reply(question="Ladder rungs are 30 cm apart. How many inches is that?", answer="12 inches",
+                 quote="Ladder rungs are 12 inches or 30 cm apart.")
+    assert score_answer(row, False, ask(text, pieces=[page]))[0] == RIGHT
+
+
 def test_report_prints_kept_questions_for_a_person_to_read(monkeypatch):
     scripts = Path(__file__).resolve().parents[1] / "scripts"
     monkeypatch.syspath_prepend(str(scripts))
