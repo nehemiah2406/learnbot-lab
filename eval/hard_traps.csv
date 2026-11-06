@@ -1,0 +1,6 @@
+doc,id,question,type,expected_answer,keywords
+nav_rules.pdf,HARD-01,"Under the International Rules, what is the minimum range of visibility of the searchlight of a towing vessel?",maritime_outside,Not in this document,range of the searchlight;searchlight shall be visible;searchlight must be visible
+nav_rules.pdf,HARD-02,"Under the International Rules, how many strokes must the bell of a vessel at anchor give each minute?",maritime_outside,Not in this document,strokes each minute;strokes per minute;strokes every minute;strokes of the bell each minute
+boaters_guide.pdf,HARD-03,How long must the owner keep a copy of a Boating Accident Report?,maritime_outside,Not in this document,keep a copy;retain a copy;copy of the report;keep the report
+coast_pilot4_ch1.pdf,HARD-04,What is the speed limit for large vessels in a channel?,maritime_outside,Not in this document,speed limit;limit of speed
+osha3124.pdf,HARD-05,What weight must a ladder cage be able to support?,off_topic,Not in this document,cage must support;cages must support;cages must be able to support;cage must be able to support
