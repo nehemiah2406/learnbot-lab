@@ -1170,3 +1170,41 @@ Hard traps with the rule: 17 different traps with Gemini first, 16 refused. The 
   about 50 percent  
   boaters_guide.pdf p.42: "This is important because about 50 percent of body heat loss is from the head."
 <!-- END day2-notebook -->
+
+<!-- BEGIN day2-page -->
+## Day 2: Reading mode (5 questions + 2 traps, run once)
+
+**Gate: PASS**
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|
+| 5/5 | 0 | 2/2 | 0 | 0 | 6.1 s | 8 |
+
+| Id | Outcome | Shown | AI | Time | Reason |
+|---|---|---|---|---|---|
+| RD-01 | right | Most vessels more than 25 feet in length will measure five net tons or more. | gemini:gemini-3.1-flash-lite | 1.0 s |  |
+| RD-02 | right | The letters must be not less than 4 inches in height. | gemini:gemini-3.1-flash-lite | 1.1 s |  |
+| RD-03 | right | You will lose the effective use of your fingers, arms, and legs in the next 10 minutes. | gemini:gemini-3.1-flash-lite | 1.0 s |  |
+| RD-04 | right | A pilot vessel when not engaged on pilotage duty must exhibit the lights or shapes prescribed for a similar vessel of he | gemini:gemini-3.1-flash-lite | 1.2 s |  |
+| RD-05 | right | The towing vessel may direct a searchlight in the direction of the tow to indicate its presence to an approaching vessel | gemini:gemini-3.1-flash-lite | 1.0 s |  |
+| TRAP-RD-01 | refused | Not on this page | gemini:gemini-3.1-flash-lite | 2.6 s | llm_not_found |
+| TRAP-RD-02 | refused | Not on this page | groq:openai/gpt-oss-120b | 6.1 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **RD-01** How many net tons will most vessels more than 25 feet in length measure?  
+  Most vessels more than 25 feet in length will measure five net tons or more.  
+  boaters_guide.pdf p.9: "Notice: Most vessels more than 25 feet in length will measure five net tons or more."
+- **RD-02** What minimum height must the letters of the name and hailing port be?  
+  The letters must be not less than 4 inches in height.  
+  boaters_guide.pdf p.10: "Use letters not less than 4 inches in height."
+- **RD-03** During cold incapacitation, within how many minutes will you lose the effective use of your fingers, arms, and legs?  
+  You will lose the effective use of your fingers, arms, and legs in the next 10 minutes.  
+  boaters_guide.pdf p.42: "Cold Incapacitation: in the next 10 minutes you will lose the effective use of your fingers, arms, and legs for any meaningful movement."
+- **RD-04** Under the International Rules, what must a pilot vessel exhibit when not engaged on pilotage duty?  
+  A pilot vessel when not engaged on pilotage duty must exhibit the lights or shapes prescribed for a similar vessel of her length.  
+  nav_rules.pdf p.97: "(b) A pilot vessel when not engaged on pilotage duty shall exhibit the lights or shapes prescribed for a similar vessel of her length."
+- **RD-05** Under the Inland Rules, why may the towing vessel direct a searchlight in the direction of the tow?  
+  The towing vessel may direct a searchlight in the direction of the tow to indicate its presence to an approaching vessel.  
+  nav_rules.pdf p.66: "(v) The towing vessel may direct a searchlight in the direction of the tow to indicate its presence to an approaching vessel."
+<!-- END day2-page -->
