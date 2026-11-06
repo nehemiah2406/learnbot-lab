@@ -1208,3 +1208,37 @@ Hard traps with the rule: 17 different traps with Gemini first, 16 refused. The 
   The towing vessel may direct a searchlight in the direction of the tow to indicate its presence to an approaching vessel.  
   nav_rules.pdf p.66: "(v) The towing vessel may direct a searchlight in the direction of the tow to indicate its presence to an approaching vessel."
 <!-- END day2-page -->
+
+<!-- BEGIN day2-selftest-new-gate -->
+## Day 2: upload self-test under the new gate (coast_pilot4_ch1.pdf, 5 questions + 2 normal traps; hard traps reported, not a gate)
+
+**Gate: PASS**
+
+Real upload with `scripts/upload_file.py` on the public `coast_pilot4_ch1.pdf`: self-check OK (36 pages), file stored, result saved; the same file again used 0 AI calls. Normal traps were committed before the run.
+
+Not one clean run, and the code changed in between:
+
+- **Try 1 (11 AI calls):** could not finish, AI busy, nothing saved.
+- **Try 2, after 5 minutes (3 AI calls):** 4 of 5 same, p.3 AI busy again, nothing saved.
+- **Cause of p.3, a real bug:** making the cards uses no search, so the search models loaded on the first chat question's clock and left no time for the AI. Fixed in `default_searcher` (`51eff75`): models load when the search starts. No answer logic changed.
+- **Try 3 (1 AI call):** 5 of 5 same, saved. Traps: 2 AI calls. Total 17 of the 25 allowed.
+
+Limits: the times in the table are from the last try, and most of those replies came from saved ones, so they are not all live times. The questions come from the file itself, so this shows the file reads well, not that every answer will be right. The hard traps' replies were saved ones, not asked again: TRAP-SELF-01 is still answered (known limit), TRAP-SELF-02 refused.
+
+Self-test verdict: passed. Passed 5/5; 1 flashcards dropped while making the test; slowest 7.1 s; 2 AI calls in this step (self-test result saved by the upload, so its AI calls were made there).
+
+| Question | Expected (p.) | Chat's answer (p.) | Result | Time |
+|---|---|---|---|---|
+| What qualification is given to unverified information in the Coast Pilot? | reported (p.3) | Unverified information is qualified as “reported”. (p.3) | same | 3.5 s |
+| What is the assessment status of the bathymetric data? | Unassessed – The quality of the bathymetric data has yet to be assessed. (p.6) | The quality of the bathymetric data has yet to be assessed. (p.6) | same | 1.9 s |
+| What are Notices to Mariners published to advise? | operators of marine information affecting the safety of navigation (p.9) | Notices to Mariners are published to advise operators of marine information affecting the safety of navigation. (p.9) | same | 1.7 s |
+| What is the intended purpose of AIS? | To improve the safety of navigation by assisting the efficient operation of a Vessel Traffic Services (VTS), ship reporting, ship-to-ship and ship-to- shore operations. (p.12) | AIS is intended to improve the safety of navigation by assisting the efficient operation of a Vessel Traffic Services (VTS), ship reporting, ship-to-ship and ship-to- shore operations. (p.12) | same | 2.8 s |
+| What is the new international designation for US channel 05A? | 1005 (p.15) | US channel 05A is now designated and recognized internationally by the channel 1005. (p.15) | same | 5.2 s |
+
+| Trap | Kind | Outcome | What was shown | Why | Time |
+|---|---|---|---|---|---|
+| What is the capital city of Australia? | normal | refused | Not in this document | llm_not_found | 6.2 s |
+| What is the average salary of a ship's captain? | normal | refused | Not in this document | llm_not_found | 7.1 s |
+| How long does a tsunami warning stay in effect? | hard (not a gate) | trap_answered | several hours | answered from coast_pilot4_ch1.pdf p.20 | 2.2 s |
+| How many yards from a wreck must a buoy marking it be placed? | hard (not a gate) | refused | Not in this document | llm_not_found | 1.8 s |
+<!-- END day2-selftest-new-gate -->
