@@ -9,7 +9,7 @@ Only an answer that passes the proof check (learnbot.proof) is shown. Anything e
 import json
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from learnbot import config, proof
 from learnbot.baseline import NOT_FOUND
@@ -17,6 +17,7 @@ from learnbot.llm import AI_BUSY, AllProvidersFailed
 from learnbot.reserved import RESERVED_ANSWER, reserved_source
 
 ANSWERED, REFUSED, AI_BUSY_STATUS = "answered", "not_found", "ai_busy"
+AI_BUSY_SCOPED = "The AI is busy right now. Please try again in a minute."
 
 PROMPT = """You answer a question using ONLY the numbered pieces of text below, taken from the user's documents.
 
@@ -80,6 +81,17 @@ class Answer:
 
 def attempts_text(attempts):
     return " -> ".join(f"{label} {kind} {seconds:.1f} s" for label, kind, seconds in attempts)
+
+
+def answer_within(question, searcher, chain, refusal):
+    """answer_question for a limited scope (a notebook, one page), with that scope's refusal.
+    The AI busy note has no pieces to offer, because the scope may be very small."""
+    ans = answer_question(question, searcher, chain)
+    if ans.status == REFUSED:
+        return replace(ans, text=refusal)
+    if ans.status == AI_BUSY_STATUS:
+        return replace(ans, text=AI_BUSY_SCOPED)
+    return ans
 
 
 def answer_question(question, searcher, chain, prompt=None):

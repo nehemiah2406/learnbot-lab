@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from learnbot.flashcards import make_cards  # noqa: E402
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
+from learnbot.notebook import Notebook  # noqa: E402
 from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
 from learnbot.study import AI_BUSY_ITEM, nothing_kept  # noqa: E402
@@ -27,6 +28,7 @@ def main():
     parser.add_argument("document", help="file name in data/uploads or data/raw")
     parser.add_argument("--topic", help="what the cards are about (default: facts from across the document)")
     parser.add_argument("--count", type=int, default=5)
+    parser.add_argument("--save", action="store_true", help="save what is kept in your notebook")
     args = parser.parse_args()
 
     path = find_document(args.document)
@@ -50,6 +52,11 @@ def main():
         print(nothing_kept(args.topic, dropped, "card"))
     if busy:
         print(AI_BUSY_ITEM)
+    if args.save:
+        notebook = Notebook()
+        for item in cards:
+            notebook.save("card", item)
+        print(f"Saved {len(cards)} in your notebook.")
     print(f"\n{len(cards)} cards kept, {dropped} dropped by the checks, {chain.calls} AI calls.")
     return 0
 

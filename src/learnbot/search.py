@@ -42,6 +42,21 @@ class CrossEncoderReranker:
         return list(self._model.predict([(question, t) for t in texts]))
 
 
+class ScopedSearcher:
+    """Keyword search over given pieces only (a notebook, one page), for answer_question.
+    Also its own library: page_text(doc, page) -> the text the proof check may look in."""
+
+    def __init__(self, pieces, page_text, rule_sets):
+        self.chunks = list(pieces)
+        self.page_text = page_text
+        self.rule_sets = rule_sets
+        self.library = self
+        self.bm25 = BM25Index(self.chunks)
+
+    def search(self, question, k=None):
+        return [hit.chunk for hit in self.bm25.search(question, k=k or config.PIECES_TO_LLM)]
+
+
 class Searcher:
     def __init__(self, library, method=None, use_rule_sets=True, reranker=None):
         self.library = library

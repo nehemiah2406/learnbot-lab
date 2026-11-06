@@ -1,0 +1,3 @@
+doc,id,question,type,expected_answer,rule,rule_set,page,source_quote,accepted_sources,other_answers,typed_note
+boaters_guide.pdf,TRAP-NB-01,What signals are recreational boats less than 16 feet in length not required to carry?,fact,Day signals.,Visual Distress Signals,N/A,16,The following vessels are not required to carry day signals,boaters_guide.pdf:16,,
+boaters_guide.pdf,TRAP-NB-02,What is the minimum height of the lettering characters?,number,Not less than 3 inches.,Display of Numbers,N/A,9,"Lettering must be in plain, vertical block characters of not less than 3 inches in height.",boaters_guide.pdf:9,,Lettering characters must be not less than 3 inches in height
