@@ -1,4 +1,4 @@
-"""Upload one file (PDF, .txt, .md, .csv, .html): self-check, then the automatic self-test, once per file.
+"""Upload one file (PDF, .txt, .md, .csv, .html, .docx, .pptx, .xlsx): self-check, then the automatic self-test, once per file.
 
 Run:  .venv\\Scripts\\python scripts\\upload_file.py C:\\path\\to\\file.pdf
 

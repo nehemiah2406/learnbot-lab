@@ -304,3 +304,110 @@ def test_type_gate_needs_two_of_three():
     assert feature_gate(["right", "right", "missed", "refused"], 1, config.FILE_TYPE_MIN_KEPT) == []
     assert feature_gate(["right", "missed", "missed", "refused"], 1, config.FILE_TYPE_MIN_KEPT) == ["only 1 kept (at least 2 needed)"]
     assert feature_gate(["right", "right", "right", "trap_answered"], 1, config.FILE_TYPE_MIN_KEPT) == ["traps answered 1"]
+# --- Word, PowerPoint, Excel ----------------------------------------------------------
+def make_docx(path):
+    from docx import Document
+
+    doc = Document()
+    doc.add_paragraph("Before any heading.")
+    doc.add_heading("Locks", level=1)
+    doc.add_paragraph("First   paragraph.")
+    doc.add_paragraph("")
+    table = doc.add_table(rows=2, cols=2)
+    table.rows[0].cells[0].text, table.rows[0].cells[1].text = "Item", "Limit"
+    table.rows[1].cells[0].text, table.rows[1].cells[1].text = "Line", "50 feet"
+    doc.add_heading("Fines", level=2)
+    doc.add_paragraph("Second paragraph.")
+    doc.save(path)
+    return path
+
+
+def test_docx_parts_have_heading_and_paragraph_number_in_order(tmp_path):
+    parts = read_file(make_docx(tmp_path / "a.docx"))
+    assert [(p.text, p.label, p.title) for p in parts] == [
+        ("Before any heading.", "Paragraph 1", ""), ("First paragraph.", "Locks, paragraph 1", "Locks"),
+        ("Item | Limit", "Locks, paragraph 2", "Locks"), ("Line | 50 feet", "Locks, paragraph 3", "Locks"),
+        ("Second paragraph.", "Fines, paragraph 1", "Fines"),
+    ]
+
+
+def make_pptx(path):
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    deck = Presentation()
+    first = deck.slides.add_slide(deck.slide_layouts[1])
+    first.shapes.title.text = "Safety"
+    first.placeholders[1].text = "Carry a whistle."
+    first.notes_slide.notes_text_frame.text = "Secret speaker note."
+    deck.slides.add_slide(deck.slide_layouts[6])  # a blank slide has no part, and keeps its number free
+    third = deck.slides.add_slide(deck.slide_layouts[6])
+    table = third.shapes.add_table(1, 2, Inches(1), Inches(1), Inches(4), Inches(1)).table
+    table.cell(0, 0).text, table.cell(0, 1).text = "Flares", "42 months"
+    deck.save(path)
+    return path
+
+
+def test_pptx_parts_are_slides_with_their_real_numbers(tmp_path):
+    parts = read_file(make_pptx(tmp_path / "a.pptx"))
+    assert [(p.text, p.label, p.title) for p in parts] == [
+        ("Safety\nCarry a whistle.", "Slide 1", "Safety"), ("Flares | 42 months", "Slide 3", "")]
+
+
+def test_pptx_speaker_notes_are_not_read(tmp_path):
+    assert "Secret" not in " ".join(p.text for p in read_file(make_pptx(tmp_path / "a.pptx")))
+
+
+def make_xlsx(path):
+    from datetime import date
+
+    from openpyxl import Workbook
+
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "Lights"
+    sheet.append(["Light", "Range", "Share", "Date", "Note"])
+    sheet.append(["masthead", 6.0, 0.5, date(2026, 11, 6), None])
+    sheet.append([None, None, None, None, None])
+    sheet.append(["side", 2.5, 0.125, None, "ok"])
+    sheet["C2"].number_format = "0%"
+    sheet["C4"].number_format = "0.0%"
+    other = book.create_sheet("Empty")
+    other.append([None])
+    third = book.create_sheet("Stairs")
+    third.append(["Item"])
+    third.append(["Landing"])
+    book.save(path)
+    return path
+
+
+def test_xlsx_parts_have_sheet_row_and_column_names_as_the_user_sees_them(tmp_path):
+    parts = read_file(make_xlsx(tmp_path / "a.xlsx"))
+    assert [(p.text, p.label, p.title) for p in parts] == [
+        ("Light: masthead; Range: 6; Share: 50%; Date: 2026-11-06", "Lights, row 2", "Lights"),
+        ("Light: side; Range: 2.5; Share: 12.5%; Note: ok", "Lights, row 4", "Lights"),
+        ("Item: Landing", "Stairs, row 2", "Stairs"),
+    ]
+
+
+@pytest.mark.parametrize("name, inside", [
+    ("a.docx", "word/document.xml"), ("a.pptx", "ppt/presentation.xml"), ("a.xlsx", "xl/workbook.xml"),
+])
+def test_damaged_office_file_fails_cleanly(tmp_path, name, inside):
+    result = check_file(make_zip(tmp_path / name, "[Content_Types].xml", inside))
+    assert result.verdict == FAIL and result.reasons == [readers.CORRUPTED]
+
+
+@pytest.mark.parametrize("maker, name", [(make_docx, "a.docx"), (make_pptx, "a.pptx"), (make_xlsx, "a.xlsx")])
+def test_office_files_pass_the_self_check_and_load(tmp_path, maker, name):
+    path = maker(tmp_path / name)
+    assert detect_type(path) == name.split(".")[1]
+    assert check_file(path).verdict in (OK, WARNING)
+    assert load_document(path, tmp_path / "store").labels
+
+
+def test_office_file_with_no_text_fails(tmp_path):
+    from docx import Document
+
+    Document().save(tmp_path / "a.docx")
+    assert check_file(tmp_path / "a.docx").reasons == [readers.NO_TEXT]

@@ -186,8 +186,103 @@ def read_html(path):
     return parts
 
 
+def table_row_text(row):
+    """A Word or PowerPoint table row, with merged cells read once."""
+    cells = []
+    for cell in row.cells:
+        text = " ".join(cell.text.split())
+        if text and (not cells or cells[-1] != text):
+            cells.append(text)
+    return " | ".join(cells)
+
+
+def read_docx(path):
+    """One part per paragraph or table row, under its heading."""
+    from docx import Document
+
+    parts, heading, number = [], "", 0
+    for block in Document(str(path)).iter_inner_content():
+        if hasattr(block, "rows"):
+            texts = [table_row_text(row) for row in block.rows]
+        else:
+            text = " ".join(block.text.split())
+            style = block.style.name if block.style is not None else ""
+            if text and style and (style.startswith("Heading") or style == "Title"):
+                heading, number = text, 0
+                continue
+            texts = [text]
+        for text in texts:
+            if text:
+                number += 1
+                parts.append(Part(text, tree_label(heading, number), heading))
+    return parts
+
+
+def shape_lines(shape):
+    """The visible text of one shape: text boxes, tables, and shapes inside a group."""
+    if hasattr(shape, "shapes"):
+        return [line for inner in shape.shapes for line in shape_lines(inner)]
+    if getattr(shape, "has_table", False):
+        return [table_row_text(row) for row in shape.table.rows]
+    if getattr(shape, "has_text_frame", False):
+        return [" ".join(p.text.split()) for p in shape.text_frame.paragraphs]
+    return []
+
+
+def read_pptx(path):
+    """One part per slide that has text. Speaker notes are not on the slide, so they are left out."""
+    from pptx import Presentation
+
+    parts = []
+    for number, slide in enumerate(Presentation(str(path)).slides, start=1):
+        lines = [line for shape in slide.shapes for line in shape_lines(shape) if line]
+        title = slide.shapes.title.text.strip() if slide.shapes.title is not None else ""
+        if lines:
+            parts.append(Part("\n".join(lines), f"Slide {number}", title))
+    return parts
+
+
+def cell_text(cell):
+    """A cell as the user sees it: 12.0 as 12, 0.5 with a percent format as 50%, a date as a date."""
+    value = cell.value
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):  # a date with no time of day shows only the date
+        return value.isoformat().removesuffix("T00:00:00")
+    if isinstance(value, bool):
+        return str(value).upper()
+    if isinstance(value, (int, float)):
+        form = cell.number_format or ""
+        if "%" in form:
+            decimals = len(form.split(".")[1].split("%")[0]) if "." in form else 0
+            return f"{value * 100:.{decimals}f}%"
+        return str(int(value)) if value == int(value) else str(value)
+    return str(value)
+
+
+def read_xlsx(path):
+    """One part per row after each sheet's header row. Formulas show their last saved value."""
+    from openpyxl import load_workbook
+
+    parts = []
+    book = load_workbook(path, read_only=True, data_only=True)
+    for sheet in book.worksheets:
+        headers = None
+        for number, row in enumerate(sheet.iter_rows(min_row=1), start=1):
+            cells = [cell_text(cell) for cell in row]
+            if not any(cell.strip() for cell in cells):
+                continue
+            if headers is None:
+                headers = cells
+                continue
+            parts.append(Part(row_text(headers, cells), f"{sheet.title}, row {number}", sheet.title))
+    book.close()
+    return parts
+
+
 def read_parts(path, kind):
-    readers = {TXT: read_plain, MD: lambda p: read_plain(p, markdown=True), CSV: read_csv, HTML: read_html}
+    readers = {TXT: read_plain, MD: lambda p: read_plain(p, markdown=True), CSV: read_csv, HTML: read_html,
+               DOCX: read_docx, PPTX: read_pptx, XLSX: read_xlsx}
     return readers[kind](path)
 
 
