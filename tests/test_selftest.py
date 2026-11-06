@@ -1,5 +1,6 @@
 """Upload self-test and upload steps, with a fake AI (no network, no PDF reading)."""
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from test_quiz import FakeSearcher
 from learnbot import config, selftest, upload
 from learnbot.answer import Answer
 from learnbot.chunking import Chunk
-from learnbot.llm import AllProvidersFailed
+from learnbot.llm import AllProvidersFailed, CallLimitReached
 from learnbot.pdf_check import FAIL, OK, WARNING, PdfCheckResult
 from learnbot.selftest import (
     BUSY, DIFFERENT, NOT_FINISHED, OTHER_PAGE, PASSED, REFUSED, SAME, SelfTest, compare, run_self_test, self_test_once,
@@ -199,6 +200,40 @@ def test_same_file_again_is_fine(monkeypatch, tmp_path, file):
     fake_check(monkeypatch, OK)
     upload.upload_file(file, lambda p: "tested", tmp_path / "up")
     assert upload.upload_file(file, lambda p: "again", tmp_path / "up").self_test == "again"
+
+
+def load_script(name, monkeypatch):
+    scripts = Path(__file__).resolve().parents[1] / "scripts"
+    monkeypatch.syspath_prepend(str(scripts))
+    spec = importlib.util.spec_from_file_location(name, scripts / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_upload_command_stops_clearly_at_the_call_limit(monkeypatch, capsys, file):
+    script = load_script("upload_file", monkeypatch)
+
+    def limit(*args):
+        raise CallLimitReached(3)
+    monkeypatch.setattr(script, "upload_file", limit)
+    monkeypatch.setattr(script, "default_chain", lambda: ScriptedChain())
+    monkeypatch.setattr("sys.argv", ["upload_file.py", str(file), "--max-calls", "3"])
+    assert script.main() == 2
+    assert "limit of 3 AI calls" in capsys.readouterr().out
+
+
+def test_hard_traps_are_reported_but_not_in_the_gate(monkeypatch):
+    script = load_script("run_selftest_eval", monkeypatch)
+    test = run_self_test("f.pdf", searcher(), ScriptedChain())
+    refused = Answer("not_found", "Not in this document", [], seconds=1.0)
+    answered = Answer("answered", "several hours", [], seconds=2.0)
+    traps = [{"row": {"question": "Normal?"}, "hard": False, "item": refused, "outcome": "refused", "reason": ""},
+             {"row": {"question": "Hard?"}, "hard": True, "item": answered, "outcome": "trap_answered", "reason": ""},
+             {"row": {"question": "Late?"}, "hard": True, "item": None, "outcome": "not asked", "reason": ""}]
+    report = script.build_report("f.pdf", test, traps, [], 3)
+    assert "hard (not a gate) | trap_answered | several hours" in report and "not asked (call limit)" in report
+    assert "1 normal traps" in report and "Gate: PASS" in report
 
 
 def test_find_document_looks_in_uploads_then_test_documents(monkeypatch, tmp_path):
