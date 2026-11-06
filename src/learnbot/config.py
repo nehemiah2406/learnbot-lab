@@ -56,7 +56,7 @@ MAX_FAILURES_IN_A_ROW = 2
 # A switched-off AI (not a daily limit) is tried again once every this many questions;
 # if it answers, it is used again.
 RETRY_SWITCHED_OFF_EVERY = 5
-PROMPT_VERSION = 4  # raise when the prompt changes, so cached answers are not reused
+PROMPT_VERSION = 5  # raise when the prompt changes, so cached answers are not reused
 # A quote must have at least this many words (a 2-word quote proves nothing).
 MIN_QUOTE_WORDS = 4
 # A paraphrased question that shares no word with the quote passes the topic check only if

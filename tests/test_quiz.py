@@ -2,13 +2,16 @@
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED
+from learnbot.answer import build_prompt as chat_prompt
 from learnbot.baseline import NOT_FOUND
 from learnbot.chunking import Chunk
+from learnbot.flashcards import build_prompt as flashcard_prompt
 from learnbot.evaluate import CORRECT_OTHER, MISSED, NOT_TESTED, RIGHT, TRAP_ANSWERED, WRONG, feature_gate, score_answer
 from learnbot.index import Document, Library
 from learnbot.llm import AllProvidersFailed, CallLimitReached
@@ -86,6 +89,20 @@ def test_ai_gets_a_time_budget():
     chain = FakeChain(reply())
     make_question(TOPIC, FakeSearcher([PIECE]), chain)
     assert 0 < chain.budget_s <= 9
+
+
+@pytest.mark.parametrize("prompt", [
+    build_prompt(TOPIC, [PIECE]), flashcard_prompt(TOPIC, [PIECE]), chat_prompt("How far?", [PIECE]),
+], ids=["quiz", "flashcard", "chat"])
+def test_every_prompt_has_the_exact_thing_rule(prompt):
+    # Real case: flooding "may continue for several hours" was answered as the warning doing so.
+    assert "about the exact thing" in prompt and "even something closely related" in prompt
+
+
+def test_rule_numbers_are_in_order_in_every_prompt():
+    for prompt in (build_prompt(TOPIC, [PIECE]), flashcard_prompt(TOPIC, [PIECE]), chat_prompt("How far?", [PIECE])):
+        numbers = [int(n) for n in re.findall(r"^(\d+)\. ", prompt.split("Reply with JSON")[0], re.MULTILINE)]
+        assert numbers == list(range(1, len(numbers) + 1))
 
 
 def test_prompt_has_topic_and_pieces():

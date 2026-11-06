@@ -26,8 +26,8 @@ PROMPT = """You write ONE multiple-choice question using ONLY the numbered piece
 
 Rules:
 """ + study.SOURCE_RULES + """
-9. "answer" is the one correct option, short, in simple English.
-10. "wrong" has exactly 3 options that are clearly wrong according to the pieces, not just less good, and similar in form to the answer. None may be partly correct. Do not write "all of the above" or "none of the above".
+10. "answer" is the one correct option, short, in simple English.
+11. "wrong" has exactly 3 options that are clearly wrong according to the pieces, not just less good, and similar in form to the answer. None may be partly correct. Do not write "all of the above" or "none of the above".
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "question": "...", "answer": "...", "wrong": ["...", "...", "..."], "source": {{"doc": "file.pdf", "page": 12, "quote": "..."}}}}

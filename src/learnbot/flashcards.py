@@ -11,8 +11,8 @@ PROMPT = """You write ONE flashcard using ONLY the numbered pieces of text below
 
 Rules:
 """ + study.SOURCE_RULES + """
-9. "question" is the front of the card: one short question about the topic.
-10. "answer" is the back of the card: the short exact answer, in simple English. Add no other facts.
+10. "question" is the front of the card: one short question about the topic.
+11. "answer" is the back of the card: the short exact answer, in simple English. Add no other facts.
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "question": "...", "answer": "...", "source": {{"doc": "file.pdf", "page": 12, "quote": "..."}}}}

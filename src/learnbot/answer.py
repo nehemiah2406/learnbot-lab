@@ -31,6 +31,7 @@ Rules:
 8. In "answer", write numbers and number words exactly as they are written in your quote (if the quote says "one", write "one"; if it says "4", write "4"). Do not add rule or section numbers to the answer.
 9. If a piece shows that a rule or paragraph is "[Reserved]", that is what the document says about it: answer that it is reserved, and quote it.
 10. If the question compares two things, give one source for each. Otherwise give exactly one source.
+11. The quote must say the answer about the exact thing the question asks. If it says it about something else, even something closely related, reply {{"found": false}}.
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "answer": "...", "sources": [{{"doc": "file.pdf", "page": 12, "quote": "..."}}]}}

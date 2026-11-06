@@ -38,7 +38,8 @@ SOURCE_RULES = """1. Use only the pieces. Do not use your own knowledge.
 5. "doc" and "page" must be those of the piece you quote.
 6. In "answer", write numbers and number words exactly as they are written in your quote, and include every number of the quote that is not already in "question".
 7. If the piece title names a rule set (for example International or Inland), "question" must name that rule set.
-8. "question" must not contain the answer."""
+8. "question" must not contain the answer.
+9. The quote must say the answer about the exact thing "question" asks. If it says it about something else, even something closely related, do not use it; if no quote fits, reply {{"found": false}}."""
 
 
 @dataclass
