@@ -873,20 +873,22 @@ Web text changes, so these numbers are for this run only. "Wrong" means the numb
 <!-- BEGIN prompt5-answers -->
 ## Re-tests with the "exact thing" rule (prompt version 5, 6 Nov 2026)
 
-**Chat eval is NOT complete:** the 60-call limit Hari set was reached with 2 items not tested (BG-03 AI busy; TRAP-CP-02 not asked). No tuning during the run. Calls: quiz 5, flashcards 7, chat 46, tsunami trap 2; 60 in total.
+**Chat eval completed in two parts.** The 60-call limit Hari set was reached with 2 items not tested (BG-03 AI busy; TRAP-CP-02 not asked). With Hari's OK those 2 were asked again with the same code (3 AI calls). No tuning. Calls: quiz 5, flashcards 7, chat 46 + 3, tsunami trap 2; 63 in total.
+
+**Decisions (Hari):** the rule stays. QUIZ-02 does not count, so the quiz is 2/5, **not passed**. Notebook and reading mode wait for the tsunami decision.
 
 Old = prompt version 4 (29 + 8, 3 PDFs loaded; NAV-02 and NAV-08 asked again 3 Nov). New = prompt version 5, 4 PDFs loaded, Groq answered about half because Gemini was often slow. So not only the rule changed.
 
 | Chat eval | Old | New |
 |---|---|---|
-| Right | 22/29 | 21/29 |
+| Right | 22/29 | 22/29 |
 | Wrong | 0 | 0 |
 | Missed | 7 | 7 |
-| Traps refused | 8/8 | 7/7 tested (1 not asked) |
-| Not tested | 0 | 2 |
-| Slowest | 9.0 s | 9.0 s (BG-03, AI busy); slowest answer shown 7.2 s |
+| Traps refused | 8/8 | 8/8 |
+| Not tested | 0 | 0 (2 asked again) |
+| Slowest | 9.0 s | 7.5 s (BG-03's first ask took 9.0 s and got "AI busy") |
 
-Changed: NAV-08 right -> missed (`quote_not_focused`: a good answer lost). NAV-11 missed -> right. BG-03 right -> not tested. TRAP-CP-02 refused -> not asked. Every other item has the same outcome.
+Changed: NAV-08 right -> missed (`quote_not_focused`: a good answer lost). NAV-11 missed -> right. Every other item has the same outcome.
 
 | Id | Old | New | Time | New reason |
 |---|---|---|---|---|
@@ -905,7 +907,7 @@ Changed: NAV-08 right -> missed (`quote_not_focused`: a good answer lost). NAV-1
 | NAV-13 | right | right | 1.6 s |  |
 | BG-01 | right | right | 1.5 s |  |
 | BG-02 | right | right | 1.9 s |  |
-| BG-03 | right | not_tested | 9.0 s | call limit: not asked |
+| BG-03 | right | right | 7.1 s (first ask 9.0 s, AI busy) |  |
 | BG-04 | right | right | 2.0 s |  |
 | BG-05 | right | right | 1.5 s |  |
 | BG-06 | right | right | 1.8 s |  |
@@ -926,11 +928,11 @@ Changed: NAV-08 right -> missed (`quote_not_focused`: a good answer lost). NAV-1
 | TRAP-BG-02 | refused | refused | 2.4 s | llm_not_found |
 | TRAP-BG-03 | refused | refused | 7.5 s | llm_not_found |
 | TRAP-CP-01 | refused | refused | 6.6 s | llm_not_found |
-| TRAP-CP-02 | refused | not_tested | - | call limit: not asked |
+| TRAP-CP-02 | refused | refused | 1.0 s (asked after the limit) | llm_not_found |
 
 | Quiz | Old (after post-run fixes) | New |
 |---|---|---|
-| Kept | 3/5 (QUIZ-01, 04, 05) | 3/5 by the script (QUIZ-01, 02, 05); 2/5 if QUIZ-02 is not counted |
+| Kept | 3/5 (QUIZ-01, 04, 05) | **2/5, not passed** (QUIZ-01, 05; the script's 3/5 counted QUIZ-02, which Hari ruled out) |
 | Wrong | 0 | 0 |
 | Traps refused | 2/2 (no AI) | 2/2 (no AI) |
 | Slowest | 7.5 s | 5.2 s |
@@ -951,6 +953,9 @@ CARD-04 lost (`quote_not_focused`: the quote also had the bell's 5 seconds). CAR
 Asked fresh once more with the rule: **answered again**, "several hours", Gemini 503 then Groq, 3.4 s. Same quote from p.20, which says the flooding may continue for several hours, not the warning. Three asks so far: Gemini before the rule, Groq twice with the rule. Gemini has not been seen answering it with the rule.
 
 ### Chat answers shown, for a person to read
+
+- **BG-03** (second ask): U.S. Coast Guard-approved, not expired, in serviceable condition, and readily accessible.  
+  boaters_guide.pdf p.16: "Pyrotechnic visual distress signals must be U.S. Coast Guard-approved, not expired, in serviceable condition, and readily accessible."
 
 - **NAV-01**: A vessel restricted in her ability to maneuver is a vessel which from the nature of her work is restricted in her ability to maneuver as required by these Rules and is therefore unable to keep out of the way of another vessel.  
   nav_rules.pdf p.15: "(g) The term vessel restricted in her ability to maneuver means a vessel which from the nature of her work is restricted in her ability to maneuver as required by these Rules and is therefore unable to keep out of the way of another vessel."
