@@ -18,21 +18,20 @@ from learnbot.llm import default_chain  # noqa: E402
 from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
 from learnbot.study import AI_BUSY_ITEM, nothing_kept  # noqa: E402
-
-DATA_DIR = Path("data/raw")
+from learnbot.upload import find_document  # noqa: E402
 
 
 def main():
     sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser()
-    parser.add_argument("document", help="file name in data/raw")
+    parser.add_argument("document", help="file name in data/uploads or data/raw")
     parser.add_argument("--topic", help="what the cards are about (default: facts from across the document)")
     parser.add_argument("--count", type=int, default=5)
     args = parser.parse_args()
 
-    path = DATA_DIR / args.document
-    if not path.is_file():
-        print(f"{args.document} is not in data/raw.")
+    path = find_document(args.document)
+    if path is None:
+        print(f"{args.document} was not found in data/uploads or data/raw.")
         return 1
     searcher = default_searcher(Library.load([path], VectorStore(Embedder())))
     chain = default_chain()

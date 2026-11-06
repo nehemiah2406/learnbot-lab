@@ -72,3 +72,9 @@ MAX_LLM_CALLS_WITHOUT_ASKING = 50
 STUDY_MIN_KEPT = 3  # a feature must keep at least this many of its 5 test items
 STUDY_TRIES_PER_ITEM = 2  # pieces tried per wanted item, so dropped items can be replaced
 STUDY_MIN_PIECE_WORDS = 25  # a shorter piece is not used for a quiz with no topic
+
+# --- Day 2: upload self-test, notebook, reading mode ----------------------------------
+UPLOAD_DIR = "data/uploads"  # uploaded files (gitignored)
+TEST_DOCS_DIR = "data/raw"  # the public test documents (gitignored)
+SELF_TEST_QUESTIONS = 5
+SELF_TEST_MIN_PASS = 3  # below this the user sees a warning but can still use the file
