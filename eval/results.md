@@ -1053,3 +1053,28 @@ Run once on 5 new topics, committed before the run; nothing changed after it. Re
   - No MSD required
   Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "Vessels 65 feet and under may use a Type I, II, or III MSD."
 <!-- END quiz-partly-right-fix -->
+
+<!-- BEGIN hard-traps-2-groq -->
+## The same 10 hard traps, Groq only (prompt version 5, run once)
+
+Committed before the run; nothing changed after it. HARD2-08 is a real wrong answer: on p.29 two columns are mixed in the page text, so the "quote" joins a small craft advisory line (20 to 33 knots) with "ricane Watch" from the next column. Gemini refused all 10 in its own run.
+
+Refused 9/10; answered 1; not tested (AI busy) 0; 10 AI calls; slowest 2.0 s.
+
+| Trap | Question | Outcome | Why refused | AI calls | Time |
+|---|---|---|---|---|---|
+| HARD2-01 | Under the International Rules, how far away must the bell of a vessel be audible? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 1.4 s | 1.7 s |
+| HARD2-02 | Under the Inland Rules, what is the minimum range of visibility of a diamond shape? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.8 s | 1.2 s |
+| HARD2-03 | Under the International Rules, what is the minimum height above the hull of a sternlight? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.7 s | 1.2 s |
+| HARD2-04 | How many years is a life jacket good for after the date of manufacture? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.7 s | 1.2 s |
+| HARD2-05 | How many inches wide must a capacity plate be? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.7 s | 1.3 s |
+| HARD2-06 | What is the amount of the civil penalty for not carrying a fire extinguisher? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 1.1 s | 1.7 s |
+| HARD2-07 | How fast does a storm surge travel in the deep ocean? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.6 s | 1.1 s |
+| HARD2-08 | What wind speed in knots defines a hurricane watch? | trap_answered |  | groq:openai/gpt-oss-120b ok 1.5 s | 2.0 s |
+| HARD2-09 | How many pounds must a landing platform be able to support? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 1.1 s | 1.6 s |
+| HARD2-10 | What is the maximum length of a portable ladder? | refused | llm_not_found | groq:openai/gpt-oss-120b ok 0.9 s | 1.4 s |
+
+### Traps that got an answer
+
+- **HARD2-08**: "20 to 33 knots" from coast_pilot4_ch1.pdf p.29; quote: "Southern (GA to TX and Caribbean) – Sustained winds of 20 to 33 knots, ricane Watch"
+<!-- END hard-traps-2-groq -->

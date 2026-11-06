@@ -115,7 +115,13 @@ A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mo
 
 Everything else from DeepTutor is dropped.
 
-**UI decisions for the UI step (Hari, 6 Nov 2026):** an answer shows the answer and its page; the quote opens with a "Show quote" button (it stays available, not removed); research answers no longer show the "Web pages can be wrong or out of date" line (they keep "From the web" and the source link). To be built in the UI step, not before.
+**UI decisions for the UI step (Hari, 6 Nov 2026), to be built in the UI step, not before:**
+
+- Colours "Study Teal": main #0F766E, accent amber #F59E0B, background #F8FAFC, text #0F172A. Green label = from your document, red = "Not in this document", orange label = "From the web".
+- Same layout as InfoDeck.
+- Header shows only the logo and "LearnBot", no tagline under it.
+- An answer shows the answer and its page; the quote opens with a "Show quote" button (it stays available, not removed).
+- Research answers no longer show the "Web pages can be wrong or out of date" line (they keep the "From the web" label and the link).
 
 **Decisions on the older items (Hari, 4 Nov 2026):**
 
@@ -179,3 +185,4 @@ Everything else from DeepTutor is dropped.
 | 6 Nov 2026 | Re-tests with the new rule, stopped at Hari's limit of 60 AI calls, no tuning. **Chat eval NOT complete:** right 21/29 (old 22), **wrong 0**, missed 7, traps 7/7 tested, 2 not tested (BG-03 AI busy; TRAP-CP-02 not asked), slowest 9.0 s. Lost: NAV-08. Gained: NAV-11. Quiz: kept 3/5 by the script, but QUIZ-02 has partly right wrong options (rule 3), so 2/5 if not counted; wrong 0. Flashcards: kept 3/5 (old 4/5), lost CARD-04, wrong 0. Tsunami trap answered again ("several hours", Groq). Not only the rule changed: 4 PDFs loaded and Groq answered about half. Waiting for Hari's decision. 544 tests pass |
 | 6 Nov 2026 | Chat eval finished with Hari's OK: BG-03 and TRAP-CP-02 asked again with the same code (3 AI calls; 63 in total). **Chat eval with the new prompt: right 22/29 (old 22), wrong 0, traps 8/8, not tested 0, slowest 7.5 s** (BG-03's first ask got "AI busy" at 9.0 s). Lost NAV-08, gained NAV-11. Hari's decisions: the rule stays. **QUIZ-02 does not count (partly right wrong options, rule 3), so the quiz is 2/5, NOT passed.** Next session: 10 new hard traps (max 20 AI calls); fix the quiz to avoid partly right options, tested on new topics (max 10 AI calls). Notebook and reading mode wait until Hari decides on the tsunami trap. Self-test gate still NOT passed. 544 tests pass |
 | 6 Nov 2026 | **10 new hard traps (`eval/hard_traps_2.csv`, committed before the run; 10 AI calls): refused 10/10, slowest 4.6 s, all by Gemini, so Groq was not tested on them.** All 17 hard traps so far: 16 refused; the tsunami trap gets through. **Quiz fix (code check `partly_right_option` + prompt; 5 new topics + 2 traps committed before the run; 7 AI calls): gate NOT passed: kept 1/5, wrong 0, traps 2/2 (without the AI), slowest 7.4 s.** One drop was a mistake by the new check (QUIZ2-04: "separate and distinct" read as a list). Not fixed: no tuning, waiting for Hari. Waiting for Hari's tsunami decision; notebook and reading mode wait. 552 tests pass |
+| 6 Nov 2026 | **Same 10 hard traps, Groq only (10 AI calls): refused 9/10, answered 1, slowest 2.0 s.** HARD2-08 (hurricane watch wind speed): Groq answered "20 to 33 knots" from p.29, where two columns are mixed in the page text, so the quote joins a small craft advisory line with "ricane Watch". The proof check found those words on the page. Gemini refused all 10 in its run. Waiting for Hari's tsunami decision |
