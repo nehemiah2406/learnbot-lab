@@ -1414,3 +1414,60 @@ Run once on new topics, committed before the run; nothing changed after it. **In
   Variations in riser height or stair tread depth must not exceed 1/4 inch.  
   sample_stairs.html, Stairways, paragraph 1: "Variations in riser height or stair tread depth must not exceed 1/4 inch in any stairway system."
 <!-- END filetypes-group1 -->
+
+<!-- BEGIN filetypes-group2 -->
+## File types, group 2 (.docx, .pptx, .xlsx): 3 questions + 1 trap per type, run once
+
+| Type | Right | Wrong | Trap refused | Missed | Not tested | Slowest | Gate |
+|---|---|---|---|---|---|---|---|
+| .docx | 3/3 | 0 | 1/1 | 0 | 0 | 1.4 s | PASS |
+| .pptx | 3/3 | 0 | 1/1 | 0 | 0 | 1.8 s | PASS |
+| .xlsx | 3/3 | 0 | 1/1 | 0 | 0 | 1.2 s | PASS |
+
+12 AI calls.
+
+| Id | Outcome | Location | AI | Time | Reason |
+|---|---|---|---|---|---|
+| DOCX-01 | right | Locks, paragraph 1 | gemini:gemini-3.1-flash-lite | 1.2 s |  |
+| DOCX-02 | right | Termination of Use, paragraph 1 | gemini:gemini-3.1-flash-lite | 1.1 s |  |
+| DOCX-03 | right | Naval Vessel Protection Zone, paragraph 1 | gemini:gemini-3.1-flash-lite | 1.4 s |  |
+| TRAP-DOCX | refused |  | gemini:gemini-3.1-flash-lite | 1.2 s | llm_not_found |
+| PPTX-01 | right | Slide 1 | gemini:gemini-3.1-flash-lite | 1.8 s |  |
+| PPTX-02 | right | Slide 2 | gemini:gemini-3.1-flash-lite | 1.0 s |  |
+| PPTX-03 | right | Slide 3 | gemini:gemini-3.1-flash-lite | 1.7 s |  |
+| TRAP-PPTX | refused |  | gemini:gemini-3.1-flash-lite | 1.4 s | llm_not_found |
+| XLSX-01 | right | Sound signals, row 3 | gemini:gemini-3.1-flash-lite | 1.2 s |  |
+| XLSX-02 | right | Sound signals, row 4 | gemini:gemini-3.1-flash-lite | 1.2 s |  |
+| XLSX-03 | right | Stairways, row 2 | gemini:gemini-3.1-flash-lite | 0.8 s |  |
+| TRAP-XLSX | refused |  | gemini:gemini-3.1-flash-lite | 0.7 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **DOCX-01** What minimum length of line is recommended when tying to the mooring devices in a lock?  
+  The recommended minimum length of line for tying to mooring devices in a lock is 50 feet.  
+  sample_locks.docx, Locks, paragraph 1: "Tie your craft to the mooring devices after entering; a minimum of 50 feet of line is recommended."
+- **DOCX-02** What penalties can violators of a termination order face?  
+  Violators may be fined up to $1,000, or imprisoned for up to one year, or both.  
+  sample_locks.docx, Termination of Use, paragraph 1: "Violators may be fined up to $1,000, or imprisoned for up to one year, or both."
+- **DOCX-03** What is the punishment for violations of the Naval Vessel Protection Zone?  
+  Violations of the Naval Vessel Protection Zone are a felony offense punishable by up to 6 years in prison and/or up to $250,000 in fines.  
+  sample_locks.docx, Naval Vessel Protection Zone, paragraph 1: "Violations of the Naval Vessel Protection Zone are a felony offense punishable by up to 6 years in prison and/or up to $250,000 in fines."
+- **PPTX-01** When do non-rechargeable extinguishers expire?  
+  Non-rechargeable extinguishers expire 12 years from the date stamped on the bottom.  
+  sample_safety.pptx, Slide 1: "The extinguisher is not expired (for non-rechargeable extinguishers, 12 years from date stamped on bottom)."
+- **PPTX-02** What is the expiration date of pyrotechnic devices?  
+  The expiration date is 42 months after the date of manufacture.  
+  sample_safety.pptx, Slide 2: "Check the expiration date (42 months after the date of manufacture)."
+- **PPTX-03** What must any boat 16 feet and longer also carry?  
+  Any boat 16 feet and longer must carry one throwable PFD (Type IV).  
+  sample_safety.pptx, Slide 3: "Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV)."
+- **XLSX-01** What does the signal of two short blasts mean?  
+  I am altering my course to port  
+  sample_signals.xlsx, Sound signals, row 3: "Signal: Two short blasts; Meaning: I am altering my course to port"
+- **XLSX-02** What does the signal of three short blasts mean?  
+  I am operating astern propulsion  
+  sample_signals.xlsx, Sound signals, row 4: "Signal: Three short blasts; Meaning: I am operating astern propulsion"
+- **XLSX-03** What is the limit for landing depth?  
+  at least 30 inches  
+  sample_signals.xlsx, Stairways, row 2: "Item: Landing depth; Limit: at least 30 inches"
+<!-- END filetypes-group2 -->
