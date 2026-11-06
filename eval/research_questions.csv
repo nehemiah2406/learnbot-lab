@@ -1,0 +1,6 @@
+id,question,expected_answer
+WEB-01,What range of wind speeds in knots does a gale warning from the US National Weather Service indicate?,34 to 47 knots
+WEB-02,How many seconds does a prolonged blast last under the COLREGs?,four to six seconds
+WEB-03,How many meters are in one international nautical mile?,"1,852 meters"
+WEB-04,What is the frequency in MHz of marine VHF channel 16?,156.8 MHz
+WEB-05,"Under COLREGs Rule 34(d), how many short and rapid blasts must a vessel at least give when in doubt?",five

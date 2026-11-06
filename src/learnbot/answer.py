@@ -82,8 +82,9 @@ def attempts_text(attempts):
     return " -> ".join(f"{label} {kind} {seconds:.1f} s" for label, kind, seconds in attempts)
 
 
-def answer_question(question, searcher, chain):
-    """Search, ask the AI, check the proof. Returns an Answer (never raises for AI errors)."""
+def answer_question(question, searcher, chain, prompt=None):
+    """Search, ask the AI, check the proof. Returns an Answer (never raises for AI errors).
+    prompt(question, pieces) -> text; default: the document prompt."""
     start = time.perf_counter()
     pieces = searcher.search(question)
 
@@ -98,7 +99,7 @@ def answer_question(question, searcher, chain):
             return done(ANSWERED, RESERVED_ANSWER, sources=[reserved], provider="code:reserved")
     budget = config.QUESTION_TIME_BUDGET_S - (time.perf_counter() - start)
     try:
-        text, provider, cached = chain.ask(build_prompt(question, pieces), budget_s=budget)
+        text, provider, cached = chain.ask((prompt or build_prompt)(question, pieces), budget_s=budget)
     except AllProvidersFailed as failed:
         return done(AI_BUSY_STATUS, AI_BUSY, reason="ai_busy", detail=attempts_text(failed.attempts))
     info = {"provider": provider, "cached": cached, "attempts": attempts_text(getattr(chain, "last_attempts", []))}

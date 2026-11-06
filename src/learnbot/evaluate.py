@@ -129,6 +129,21 @@ def score_answer(row, is_trap, ans):
     return WRONG, "answer shown is not supported by the expected source"
 
 
+def score_web(row, is_trap, ans):
+    """(outcome, reason) for one research answer. Web sources cannot be listed in advance, so
+    a real question is right if the numbers match the expected answer."""
+    if ans.status == "ai_busy":
+        return NOT_TESTED, ans.reason
+    if is_trap:
+        return (TRAP_ANSWERED, f"answered from {ans.sources[0]['doc']}") if ans.status == "answered" else (REFUSED, "")
+    if ans.status != "answered":
+        return MISSED, ans.reason + (f" ({ans.detail})" if ans.detail else "")
+    if numbers_differ(row["expected_answer"], ans.text, row["question"]):
+        expected, shown = sorted(same_numbers(row["expected_answer"])), sorted(same_numbers(ans.text))
+        return WRONG, f"numbers differ: expected {expected}, shown {shown}"
+    return RIGHT, ""
+
+
 def feature_gate(outcomes, slowest_s):
     """Failures of one feature's test run ([] = passed), PLAN.md feature gate. outcomes:
     one per question and trap; slowest_s: the slowest item, in seconds."""

@@ -107,7 +107,7 @@ A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mo
 |---|---|---|
 | 1 | Quiz + flashcards | Feature gate (below) |
 | 2 | Upload self-test + notebook + reading mode | Feature gate (below) |
-| 3 | Book maker + research | Feature gate (below) |
+| 3 | Book maker (research mode was moved up and built first, 6 Nov) | Feature gate (below) |
 | 4 | All file types | 3 questions + 1 trap per file type, wrong 0, under 10 s |
 | 5 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
 
@@ -119,7 +119,7 @@ Everything else from DeepTutor is dropped.
 
 - **Upload self-test: kept, Day 2.** When a new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page. If the self-test fails, the user sees a warning. It runs automatically on every new file upload, once per file: the result is saved by file content and never repeated for the same file. A file passes with at least 3 of 5; below that the user sees a warning but can still use the file.
 - **All file types (old Part B): kept, Day 4.** One upload entry point; the real type is detected from the file content. Supported: PDF with text; scanned PDF and images (.png, .jpg, .jpeg) via OCR; .docx; .pptx; .xlsx and .csv; .txt and .md; .html. Old formats (.doc, .xls, .ppt): convert if a converter is available, else a clear message asking the user to save in the new format. Anything else: a clear "This file type can't be read", never a crash or a guess. Every type gets an exact location label, the same proof rules and the same OK / WARNING / FAIL self-check. Plan + Hari's OK before installing any library or OCR tool.
-- **Research: web search with Tavily (`TAVILY_API_KEY`).** A separate mode. Every web answer is labelled "From the web" with the source link and is never mixed into document answers. Document answers keep the main product rule (only from uploaded files). Timeout + friendly message if Tavily fails.
+- **Research: web search with Tavily (`TAVILY_API_KEY`).** A separate mode. Every web answer is labelled "From the web" with the source link and is never mixed into document answers. Document answers keep the main product rule (only from uploaded files). Timeout + friendly message if Tavily fails. Any website is searched, with the link and a warning to check it; only the question is sent to Tavily; refusal "Not found on the web pages checked"; at most 50 searches a day; only the page text Tavily returns is used; no Exa backup.
 - **Notebook (Day 2):** saved chat answers, quiz questions and flashcards keep their page and quote; answers come only from saved items; a question with no saved answer gets "Not in your notebook". Typed notes are labelled "Your note", shown and listed, and never used in answers (they have no page to prove them against).
 - **Reading mode (Day 2):** exact page text, page by page, with no AI to read; a question about the page is answered only from that page, otherwise "Not on this page". No AI summaries or simple-English explanations for now: code cannot prove them.
 - **Dropped:** weak-topic re-quiz; all of old Part C except web research (website URLs, YouTube links, GitHub repos, code files, `.svg`).

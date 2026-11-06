@@ -35,7 +35,7 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 
 ## Definition of done
 - A feature is done only when ALL tests pass (.venv\Scripts\python -m pytest).
-- Each feature also needs its own 5 questions + 2 traps: 0 wrong answers, "Not in this document" for every trap question ("Not in your notebook" in the notebook, "Not on this page" in reading mode), every answer, question or card under 10 s by itself, at least 3 of the 5 kept. All file types (PLAN.md Day 4): 3 questions + 1 trap per type instead. Right source (rule/page) is reported honestly every run but is not a gate (reason: PLAN.md Success metrics).
+- Each feature also needs its own 5 questions + 2 traps: 0 wrong answers, "Not in this document" for every trap question ("Not in your notebook" in the notebook, "Not on this page" in reading mode, "Not found on the web pages checked" in research), every answer, question or card under 10 s by itself, at least 3 of the 5 kept. All file types (PLAN.md Day 4): 3 questions + 1 trap per type instead. Right source (rule/page) is reported honestly every run but is not a gate (reason: PLAN.md Success metrics).
 - Never say "done" with a failing test or a missed metric. Fix it first, then show the real numbers.
 
 ## Git rules

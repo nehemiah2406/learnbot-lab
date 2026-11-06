@@ -6,3 +6,4 @@ chromadb==1.5.9
 google-genai==2.34.0
 groq==1.7.0
 python-dotenv==1.2.4
+httpx==0.28.1
