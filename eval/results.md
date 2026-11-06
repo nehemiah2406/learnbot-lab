@@ -1132,3 +1132,41 @@ Hard traps with the rule: 17 different traps with Gemini first, 16 refused. The 
 
 **Gate from now:** wrong 0 on normal questions and normal traps; hard traps reported honestly.
 <!-- END known-limit -->
+
+<!-- BEGIN day2-notebook -->
+## Day 2: Notebook (5 questions + 2 traps, run once)
+
+**Gate: PASS**
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|
+| 5/5 | 0 | 2/2 | 0 | 0 | 6.5 s | 9 |
+
+| Id | Outcome | Shown | AI | Time | Reason |
+|---|---|---|---|---|---|
+| NB-01 | right | The CON remains valid for 60 days. | gemini:gemini-3.1-flash-lite | 1.3 s |  |
+| NB-02 | right | within 15 days | groq:openai/gpt-oss-120b | 6.5 s |  |
+| NB-03 | right | Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV). | gemini:gemini-3.1-flash-lite | 4.3 s |  |
+| NB-04 | right | 74 percent | gemini:gemini-3.1-flash-lite | 1.2 s |  |
+| NB-05 | right | about 50 percent | groq:openai/gpt-oss-120b | 5.8 s |  |
+| TRAP-NB-01 | refused | Not in your notebook | groq:openai/gpt-oss-120b | 5.6 s | llm_not_found |
+| TRAP-NB-02 | refused | Not in your notebook | none | 0.0 s | no_pieces |
+
+### Answers shown, for a person to read
+
+- **NB-01** When a vessel is moved to a new state of principal use, how long does the CON remain valid?  
+  The CON remains valid for 60 days.  
+  boaters_guide.pdf p.8: "When a vessel is moved to a new state of principal use, the CON remains valid for 60 days."
+- **NB-02** If the CON becomes invalid, within how many days must it be surrendered to the issuing authority?  
+  within 15 days  
+  boaters_guide.pdf p.8: "If the CON becomes invalid for any reason, it must be surrendered to the issuing authority within 15 days."
+- **NB-03** What must any boat 16 feet and longer also carry?  
+  Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV).  
+  boaters_guide.pdf p.13: "Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV)."
+- **NB-04** What percent of boating incidents involving fatalities occur on boats where the operator has had no formal instruction?  
+  74 percent  
+  boaters_guide.pdf p.38: "On average, 74 percent of boating incidents involving fatalities occur on boats where the boat operator has had no formal instruction on how to operate the vessel."
+- **NB-05** About what percent of body heat loss is from the head?  
+  about 50 percent  
+  boaters_guide.pdf p.42: "This is important because about 50 percent of body heat loss is from the head."
+<!-- END day2-notebook -->
