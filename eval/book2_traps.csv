@@ -1,0 +1,3 @@
+doc,id,question,type,expected_answer,keywords
+boaters_guide.pdf,TRAP-BK2-01,submarine periscope height,maritime_outside,Not in this document,periscope;submarine
+nav_rules.pdf,TRAP-BK2-02,wedding ceremony music,off_topic,Not in this document,wedding;ceremony
