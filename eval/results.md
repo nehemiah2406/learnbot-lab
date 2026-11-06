@@ -704,3 +704,24 @@ Clean first run: topics committed before the run (`aea8693`), nothing changed af
   A: within 3 nautical miles of shore
   Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "The discharge of treated sewage is allowed within 3 nautical miles of shore except in designated “No Discharge Zone” areas."
 <!-- END day1-cards -->
+
+<!-- BEGIN day2-selftest -->
+## Day 2: upload self-test (coast_pilot4_ch1.pdf, 5 questions + 2 hard traps)
+
+**Gate: NOT PASSED: traps answered 1**
+
+Self-test verdict: passed. Passed 4/5; 1 flashcards dropped while making the test; slowest 7.3 s; 14 AI calls.
+
+| Question | Expected (p.) | Chat's answer (p.) | Result | Time |
+|---|---|---|---|---|
+| How should information qualified as "reported" in the Coast Pilot be regarded? | It should be regarded with caution. (p.3) | It should be regarded with caution. (p.3) | same | 7.3 s |
+| In the context of ENC data, what does the category U represent? | Unassessed – The quality of the bathymetric data has yet to be assessed. (p.6) | Not in this document (p.None) | refused | 1.9 s |
+| What is the purpose of Notices to Mariners? | They are published to advise operators of marine information affecting the safety of navigation. (p.9) | Notices to Mariners are published to advise operators of marine information affecting the safety of navigation. (p.9) | same | 1.4 s |
+| What is AIS intended to improve? | the safety of navigation (p.12) | AIS is intended to improve the safety of navigation by assisting the efficient operation of a Vessel Traffic Services (VTS), ship reporting, ship-to-ship and ship-to- shore operations. (p.12) | same | 2.4 s |
+| What is the new international channel designation for US channel 05A? | 1005 (p.15) | The new international channel designation for US channel 05A is 1005. (p.15) | same | 4.6 s |
+
+| Trap | Outcome | What was shown | Why | Time |
+|---|---|---|---|---|
+| How long does a tsunami warning stay in effect? | trap_answered | A tsunami warning may continue for several hours after the arrival of the initial wave. | answered from coast_pilot4_ch1.pdf p.20 | 1.7 s |
+| How many yards from a wreck must a buoy marking it be placed? | refused | Not in this document | llm_not_found | 1.3 s |
+<!-- END day2-selftest -->
