@@ -71,7 +71,6 @@ def main():
         print(f"SKIPPED: PDF(s) not in data/raw: {', '.join(missing)} (see PLAN.md Data section)")
         return 0
     searcher = default_searcher(Library.load([DATA_DIR / d for d in docs], VectorStore(Embedder())))
-    searcher.search("warm up")  # loads the models now, so no trap pays for the loading
     chain = default_chain()
     chain.max_calls = args.max_calls  # checked before every real call
     if args.provider:

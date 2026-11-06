@@ -104,7 +104,6 @@ def main():
         return 0
     pdfs = sorted(p for p in DATA_DIR.iterdir() if p.suffix.lower() == ".pdf")
     searcher = default_searcher(Library.load(pdfs, VectorStore(Embedder())))
-    searcher.search("warm up")  # loads the models now, so no item pays for the loading
     chain = default_chain()
     chain.max_calls = args.max_calls  # checked before every real call
     if not chain.providers:

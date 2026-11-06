@@ -101,6 +101,10 @@ class Searcher:
 
 
 def default_searcher(library):
-    """The search chosen by eval (config.SEARCH_METHOD, rule sets on, optional re-ranker)."""
+    """The search chosen by eval (config.SEARCH_METHOD, rule sets on, optional re-ranker).
+    The models load here, not on the first question's clock: loading takes a minute or more,
+    which left no time for the AI, so the first question always got "AI busy"."""
     reranker = CrossEncoderReranker(config.RERANK_MODEL) if config.RERANK_MODEL else None
-    return Searcher(library, config.SEARCH_METHOD, use_rule_sets=True, reranker=reranker)
+    searcher = Searcher(library, config.SEARCH_METHOD, use_rule_sets=True, reranker=reranker)
+    searcher.search("load the models")
+    return searcher

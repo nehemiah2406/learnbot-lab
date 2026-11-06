@@ -89,7 +89,6 @@ def main():
         print(f"SKIPPED: {args.document} not in data/raw (see PLAN.md Data section)")
         return 0
     searcher = default_searcher(Library.load([path], VectorStore(Embedder())))
-    searcher.search("warm up")  # loads the models now, so no item pays for the loading
     chain = default_chain()
     chain.max_calls = args.max_calls  # checked before every real call
     if not chain.providers:

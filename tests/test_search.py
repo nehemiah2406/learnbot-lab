@@ -7,7 +7,8 @@ from learnbot.chunking import Chunk
 from learnbot.index import Document, Library, VectorStore, collection_name, load_document
 from learnbot.report import replace_section
 from learnbot.rule_sets import RuleSets
-from learnbot.search import Searcher, rrf
+from learnbot import search as search_module
+from learnbot.search import Searcher, default_searcher, rrf
 
 INTL = Chunk("rules.pdf", 45, "—INTERNATIONAL— Rule 22", "(a) masthead light range 6 miles for vessels of 50 meters.")
 INLAND = Chunk("rules.pdf", 46, "—INLAND— Rule 22", "(a) masthead light range 6 miles for a vessel of 50 meters.")
@@ -156,3 +157,13 @@ def test_replace_section_keeps_other_sections(tmp_path):
     text = path.read_text(encoding="utf-8")
     assert text.startswith("# Results") and "new" in text and "old" not in text
     assert text.index("## A") < text.index("## B")
+
+
+def test_models_load_when_the_search_starts_not_on_the_first_question(monkeypatch):
+    # Real case: the first chat question of a self-test got "AI busy" on every try.
+    searches = []
+    monkeypatch.setattr(search_module.config, "RERANK_MODEL", None)
+    monkeypatch.setattr(search_module.config, "SEARCH_METHOD", "bm25")
+    monkeypatch.setattr(Searcher, "search", lambda self, question, k=None: searches.append(question) or [])
+    default_searcher(Library([Document("a.pdf", "h", {1: "text"}, [Chunk("a.pdf", 1, "T", "text")])]))
+    assert len(searches) == 1
