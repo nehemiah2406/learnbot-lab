@@ -390,6 +390,34 @@ def test_xlsx_parts_have_sheet_row_and_column_names_as_the_user_sees_them(tmp_pa
     ]
 
 
+@pytest.mark.parametrize("state", ["hidden", "veryHidden"])
+def test_xlsx_hidden_sheets_are_not_read(tmp_path, state):
+    from openpyxl import Workbook
+
+    book = Workbook()
+    book.active.append(["Item", "Limit"])
+    book.active.append(["Landing", "30 inches"])
+    secret = book.create_sheet("Secret")
+    secret.append(["Item", "Limit"])
+    secret.append(["Landing", "99 inches"])
+    secret.sheet_state = state
+    book.save(tmp_path / "a.xlsx")
+    assert [p.text for p in read_file(tmp_path / "a.xlsx")] == ["Item: Landing; Limit: 30 inches"]
+
+
+def test_xlsx_with_only_hidden_sheets_has_no_text(tmp_path):
+    from openpyxl import Workbook
+
+    book = Workbook()
+    book.active.append(["Item"])
+    book.active.append(["Landing"])
+    visible = book.create_sheet("Empty")
+    book.active.sheet_state = "hidden"
+    book.active = book.index(visible)
+    book.save(tmp_path / "a.xlsx")
+    assert check_file(tmp_path / "a.xlsx").reasons == [readers.NO_TEXT]
+
+
 @pytest.mark.parametrize("name, inside", [
     ("a.docx", "word/document.xml"), ("a.pptx", "ppt/presentation.xml"), ("a.xlsx", "xl/workbook.xml"),
 ])

@@ -261,12 +261,15 @@ def cell_text(cell):
 
 
 def read_xlsx(path):
-    """One part per row after each sheet's header row. Formulas show their last saved value."""
+    """One part per row after each visible sheet's header row, so an answer never comes from a
+    sheet the user cannot see. Formulas show their last saved value."""
     from openpyxl import load_workbook
 
     parts = []
     book = load_workbook(path, read_only=True, data_only=True)
     for sheet in book.worksheets:
+        if sheet.sheet_state != "visible":
+            continue
         headers = None
         for number, row in enumerate(sheet.iter_rows(min_row=1), start=1):
             cells = [cell_text(cell) for cell in row]
