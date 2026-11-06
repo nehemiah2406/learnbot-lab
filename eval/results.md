@@ -1343,3 +1343,74 @@ Run once on new topics, committed before the run; nothing changed after it. **In
   A: several hours
   coast_pilot4_ch1.pdf p.20: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
 <!-- END day3-book-clean -->
+
+<!-- BEGIN filetypes-group1 -->
+## File types, group 1 (.csv, .html, .md, .txt): 3 questions + 1 trap per type, run once
+
+| Type | Right | Wrong | Trap refused | Missed | Not tested | Slowest | Gate |
+|---|---|---|---|---|---|---|---|
+| .csv | 3/3 | 0 | 1/1 | 0 | 0 | 2.8 s | PASS |
+| .html | 3/3 | 0 | 1/1 | 0 | 0 | 1.3 s | PASS |
+| .md | 3/3 | 0 | 1/1 | 0 | 0 | 6.9 s | PASS |
+| .txt | 3/3 | 0 | 1/1 | 0 | 0 | 4.7 s | PASS |
+
+17 AI calls.
+
+| Id | Outcome | Location | AI | Time | Reason |
+|---|---|---|---|---|---|
+| TXT-01 | right | Line 3 | gemini:gemini-3.1-flash-lite | 3.2 s |  |
+| TXT-02 | right | Lines 5-6 | gemini:gemini-3.1-flash-lite | 2.4 s |  |
+| TXT-03 | right | Line 8 | gemini:gemini-3.1-flash-lite | 4.7 s |  |
+| TRAP-TXT | refused |  | gemini:gemini-3.1-flash-lite | 1.9 s | llm_not_found |
+| CSV-01 | right | Row 2 | gemini:gemini-3.1-flash-lite | 2.5 s |  |
+| CSV-02 | right | Row 3 | gemini:gemini-3.1-flash-lite | 2.8 s |  |
+| CSV-03 | right | Row 4 | gemini:gemini-3.1-flash-lite | 1.9 s |  |
+| TRAP-CSV | refused |  | gemini:gemini-3.1-flash-lite | 0.9 s | llm_not_found |
+| MD-01 | right | Lines 3-4 | groq:openai/gpt-oss-120b | 6.9 s |  |
+| MD-02 | right | Lines 8-9 | gemini:gemini-3.1-flash-lite | 1.1 s |  |
+| MD-03 | right | Line 13 | gemini:gemini-3.1-flash-lite | 1.6 s |  |
+| TRAP-MD | refused |  | gemini:gemini-3.1-flash-lite | 4.0 s | llm_not_found |
+| HTML-01 | right | Handrails, paragraph 1 | gemini:gemini-3.1-flash-lite | 0.9 s |  |
+| HTML-02 | right | Cages for Fixed Ladders, paragraph 1 | gemini:gemini-3.1-flash-lite | 1.0 s |  |
+| HTML-03 | right | Stairways, paragraph 1 | gemini:gemini-3.1-flash-lite | 1.3 s |  |
+| TRAP-HTML | refused |  | gemini:gemini-3.1-flash-lite | 1.1 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **TXT-01** When a vessel is moved to a new state of principal use, how long does the CON remain valid?  
+  The CON remains valid for 60 days.  
+  sample_boating.txt, Line 3: "When a vessel is moved to a new state of principal use, the CON remains valid for 60 days."
+- **TXT-02** If the CON becomes invalid, within how many days must it be surrendered?  
+  It must be surrendered within 15 days.  
+  sample_boating.txt, Lines 5-6: "If the CON becomes invalid for any reason, it must be surrendered to the issuing authority within 15 days."
+- **TXT-03** How long does cold shock take to pass?  
+  Cold shock will pass in about one minute.  
+  sample_boating.txt, Line 8: "Cold shock will pass in about one minute."
+- **CSV-01** What is the minimum range of the masthead light on a vessel of 50 meters or more?  
+  6 miles  
+  sample_lights.csv, Row 2: "Vessel length: 50 meters or more; Light: masthead light; Minimum range: 6 miles"
+- **CSV-02** What is the minimum range of the sidelight on a vessel of 50 meters or more?  
+  3 miles  
+  sample_lights.csv, Row 3: "Vessel length: 50 meters or more; Light: sidelight; Minimum range: 3 miles"
+- **CSV-03** What is the minimum range of the towing light on a vessel of less than 12 meters?  
+  2 miles  
+  sample_lights.csv, Row 4: "Vessel length: less than 12 meters; Light: towing light; Minimum range: 2 miles"
+- **MD-01** For what velocity of sound in water are most echo sounders factory calibrated?  
+  800 fathoms per second  
+  sample_navigation.md, Lines 3-4: "Most types of echo sounders are factory calibrated for a velocity of sound in water of 800 fathoms per second."
+- **MD-02** At what speeds do large vessels actually transit?  
+  Large vessels actually transit at speeds in excess of 12 knots.  
+  sample_navigation.md, Lines 8-9: "Large vessels may appear to move slowly due to their large size but actually transit at speeds in excess of 12 knots."
+- **MD-03** How long is a statute mile?  
+  A statute mile is 5,280 feet or about 0.87 nautical mile.  
+  sample_navigation.md, Line 13: "A statute mile is 5,280 feet or about 0.87 nautical mile."
+- **HTML-01** What minimum clearance must temporary handrails have?  
+  Temporary handrails must have a minimum clearance of 3 inches (8 cm) between the handrail and walls.  
+  sample_stairs.html, Handrails, paragraph 1: "Temporary handrails must have a minimum clearance of 3 inches (8 cm) between the handrail and walls."
+- **HTML-02** How far apart must the horizontal bands of cages be spaced?  
+  not more than 4 feet (1.2 m) apart  
+  sample_stairs.html, Cages for Fixed Ladders, paragraph 1: "Horizontal bands must be spaced at intervals not more than 4 feet (1.2 m) apart measured from centerline to centerline."
+- **HTML-03** How much may riser height or stair tread depth vary in a stairway system?  
+  Variations in riser height or stair tread depth must not exceed 1/4 inch.  
+  sample_stairs.html, Stairways, paragraph 1: "Variations in riser height or stair tread depth must not exceed 1/4 inch in any stairway system."
+<!-- END filetypes-group1 -->
