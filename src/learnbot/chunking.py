@@ -38,6 +38,7 @@ class Chunk:
     page: int
     title: str
     text: str
+    where: str = ""  # location shown to the user if the file has no pages ("Row 4", "Line 2")
 
     @property
     def search_text(self):

@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from learnbot.index import load_document  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
-from learnbot.proof import shown_quote  # noqa: E402
+from learnbot.proof import shown_quote, shown_where  # noqa: E402
 from learnbot.reading import ask_page, view_page  # noqa: E402
 from learnbot.upload import find_document  # noqa: E402
 
@@ -38,7 +38,7 @@ def main():
             ans = ask_page(args.ask, document, args.page, default_chain())
             print(ans.text)
             for s in ans.sources:
-                print(f"Source: {s['doc']} p.{s['page']} ({s['title'][:60]})")
+                print(f"Source: {s['doc']}, {shown_where(s)} ({s['title'][:60]})")
                 print(f"Quote: \"{shown_quote(s)}\"")
             if view.warning:
                 print(view.warning)
@@ -46,7 +46,7 @@ def main():
     except ValueError as problem:
         print(problem)
         return 1
-    print(f"{view.doc}, page {view.page} of {view.total}")
+    print(f"{view.doc}, {view.where + ', part' if view.where else 'page'} {view.page} of {view.total}")
     if view.warning:
         print(view.warning)
     print()

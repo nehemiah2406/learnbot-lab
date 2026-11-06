@@ -159,7 +159,7 @@ def render(doc, chapters):
             lines += [f"**{fact.question}**", "", fact.text, ""]
             for s in fact.sources:
                 section = f" ({s['title']})" if s.get("title") else ""
-                lines += [f"Page {s['page']}{section}", ""]
+                lines += [f"{s.get('where') or 'Page ' + str(s['page'])}{section}", ""]
                 if normalize(fact.text) != normalize(s["quote"]):  # the answer may be the sentence itself
                     lines += [f"> \"{shown_quote(s)}\"", ""]
     return "\n".join(lines)

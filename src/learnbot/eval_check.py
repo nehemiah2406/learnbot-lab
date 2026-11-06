@@ -16,6 +16,7 @@ from learnbot.pdf_text import read_page_text
 from learnbot.units import measurements
 
 DATA_DIR = Path("data/raw")
+DOC_SUFFIXES = {".pdf", ".txt", ".md", ".csv", ".html", ".htm", ".docx", ".pptx", ".xlsx"}
 EXPLAIN_COLUMNS = [
     "doc", "id", "question", "type", "expected_answer",
     "rule", "rule_set", "page", "source_quote", "accepted_sources", "other_answers",
@@ -108,7 +109,7 @@ def duplicate_ids(rows):
 
 
 def is_plain_filename(doc):
-    return doc == Path(doc).name and doc.lower().endswith(".pdf")
+    return doc == Path(doc).name and Path(doc).suffix.lower() in DOC_SUFFIXES
 
 
 def row_pages(row):
@@ -126,7 +127,7 @@ def check_explain_row(row):
     if problems:
         return problems
     if not is_plain_filename(row["doc"]):
-        problems.append(f"doc must be a PDF file name in data/raw: {row['doc']}")
+        problems.append(f"doc must be a supported file name in data/raw: {row['doc']}")
     if parse_other_answers(row.get("other_answers", "")) is None:
         problems.append(f"other_answers must be 'doc.pdf:N=exact text': {row['other_answers']}")
     if row["type"] not in EXPLAIN_TYPES:
@@ -193,7 +194,7 @@ def check_trap_row(row):
     if problems:
         return problems
     if not is_plain_filename(row["doc"]):
-        problems.append(f"doc must be a PDF file name in data/raw: {row['doc']}")
+        problems.append(f"doc must be a supported file name in data/raw: {row['doc']}")
     if row["type"] not in TRAP_TYPES:
         problems.append(f"unknown type: {row['type']}")
     if row["expected_answer"] != NOT_FOUND:
@@ -226,7 +227,17 @@ class DocumentPages:
     def exists(self, doc):
         return self.path(doc).is_file()
 
+    def parts(self, doc):
+        """{part number: text} of a non-PDF file, or None for a PDF."""
+        if Path(doc).suffix.lower() == ".pdf":
+            return None
+        from learnbot.readers import read_file
+
+        return dict(enumerate((part.text for part in read_file(self.path(doc))), start=1))
+
     def page_count(self, doc):
+        if doc not in self._counts and self.parts(doc) is not None:
+            self._counts[doc] = len(self.parts(doc))
         if doc not in self._counts:
             with pdfplumber.open(self.path(doc)) as pdf:
                 self._counts[doc] = len(pdf.pages)
@@ -236,7 +247,10 @@ class DocumentPages:
         """{n: text} for the given 1-based page numbers (missing pages -> None)."""
         cache = self._pages.setdefault(doc, {})
         todo = [n for n in numbers if n not in cache]
-        if todo:
+        parts = self.parts(doc) if todo else None
+        if parts is not None:
+            cache.update({n: parts.get(n) for n in todo})
+        elif todo:
             with pdfplumber.open(self.path(doc)) as pdf:
                 for n in todo:
                     cache[n] = read_page_text(pdf.pages[n - 1]) if 1 <= n <= len(pdf.pages) else None

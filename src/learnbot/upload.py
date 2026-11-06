@@ -1,6 +1,6 @@
 """Upload one file: self-check, copy, index, then the automatic self-test (once per file).
 
-A file that fails the self-check is not added. Any file; PDF only until PLAN.md Day 4.
+A file that fails the self-check is not added. Any supported type (learnbot.readers).
 """
 
 import shutil
@@ -9,7 +9,8 @@ from pathlib import Path
 
 from learnbot import config
 from learnbot.index import file_hash
-from learnbot.pdf_check import FAIL, check_pdf
+from learnbot.pdf_check import FAIL
+from learnbot.readers import check_file
 
 
 def find_document(name):
@@ -22,7 +23,7 @@ def find_document(name):
 
 @dataclass
 class Upload:
-    check: object  # PdfCheckResult
+    check: object  # PdfCheckResult or FileCheck
     path: Path = None  # the stored file; None if the file was not added
     self_test: object = None  # learnbot.selftest.SelfTest
     problem: str = ""  # why the file was not added
@@ -43,7 +44,7 @@ def store_file(path, upload_dir=None):
 
 def upload_file(path, run_test, upload_dir=None):
     """Check the file; if it may be used, store it and run run_test(stored path) -> SelfTest."""
-    check = check_pdf(path)
+    check = check_file(path)
     if check.verdict == FAIL:
         return Upload(check, problem="This file cannot be used: " + "; ".join(check.reasons))
     stored, problem = store_file(path, upload_dir)

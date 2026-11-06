@@ -73,6 +73,7 @@ def spread_pieces(chunks, n):
     """n pieces evenly spread over the document, for a quiz with no topic. Short pieces and
     contents pages are skipped: they have no fact to ask about."""
     usable = [c for c in chunks if len(c.text.split()) >= config.STUDY_MIN_PIECE_WORDS and "...." not in c.text]
+    usable = usable or [c for c in chunks if len(c.text.split()) >= config.STUDY_MIN_ROW_WORDS and "...." not in c.text]
     step = max(len(usable) / n, 1) if n else 1
     return [usable[int(i * step)] for i in range(min(n, len(usable)))]
 
@@ -129,7 +130,8 @@ def check_reply(topic, reply, pieces, searcher, extra_check=None):
     result = proof.check(reply["question"], reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
     if not result.ok:
         return None, f"proof:{result.reason}", result.detail
-    return [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in result.sources], "", ""
+    return [{**s, "title": proof.quoted_pieces(s, pieces)[0].title, "where": proof.quoted_pieces(s, pieces)[0].where}
+            for s in result.sources], "", ""
 
 
 def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, budget_s=None):

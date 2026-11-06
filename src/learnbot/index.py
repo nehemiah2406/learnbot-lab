@@ -1,17 +1,19 @@
-"""Index for uploaded PDFs: pieces + page texts (cached as JSON) and embeddings (ChromaDB).
+"""Index for uploaded files: pieces + page texts (cached as JSON) and embeddings (ChromaDB).
 
 Everything is cached by the file's SHA-256 hash, so an unchanged file is not read or
-embedded again. Works for any PDF; storage is local (config.STORAGE_DIR, gitignored).
+embedded again. Works for any supported file; a part of a non-PDF file plays the role of a
+page (learnbot.readers). Storage is local (config.STORAGE_DIR, gitignored).
 """
 
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from learnbot import config
 from learnbot.chunking import chunk_pages, read_pdf_pages
+from learnbot.readers import PDF, Part, detect_type, part_chunks, read_file
 
 EMBED_BATCH = 256
 # Some models want a short instruction before the question (not before the pieces).
@@ -34,13 +36,16 @@ class Document:
     file_hash: str
     pages: dict  # {page number: text}
     chunks: list
+    labels: dict = field(default_factory=dict)  # {part number: location}, empty for a PDF
 
 
 def load_document(path, storage_dir=None):
-    """Pieces and page texts of one PDF; read from the cache if the file is unchanged."""
+    """Pieces and page texts of one file; read from the cache if the file is unchanged."""
     path = Path(path)
     digest = file_hash(path)
     cache = Path(storage_dir or config.STORAGE_DIR) / "pieces" / f"{digest}-v{config.PIECES_VERSION}.json"
+    if path.suffix.lower() != ".pdf" and detect_type(path) != PDF:
+        return load_parts(path, digest, cache)
     if cache.is_file():
         data = json.loads(cache.read_text(encoding="utf-8"))
         pages = {int(n): text for n, text in data["pages"].items()}
@@ -50,6 +55,19 @@ def load_document(path, storage_dir=None):
         cache.write_text(json.dumps({"pages": pages}, ensure_ascii=False), encoding="utf-8")
     # Pieces are rebuilt from the cached pages (fast) and use the current file name.
     return Document(path.name, digest, pages, chunk_pages(path.name, pages))
+
+
+def load_parts(path, digest, cache):
+    """load_document for a non-PDF file. Raises readers.ReadError."""
+    if cache.is_file():
+        parts = [Part(**part) for part in json.loads(cache.read_text(encoding="utf-8"))["parts"]]
+    else:
+        parts = read_file(path)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps({"parts": [vars(part) for part in parts]}, ensure_ascii=False), encoding="utf-8")
+    pages = {number: part.text for number, part in enumerate(parts, start=1)}
+    labels = {number: part.label for number, part in enumerate(parts, start=1)}
+    return Document(path.name, digest, pages, part_chunks(path.name, parts), labels)
 
 
 # --- Embeddings ---------------------------------------------------------------------

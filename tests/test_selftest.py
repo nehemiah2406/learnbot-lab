@@ -154,7 +154,7 @@ def test_saved_result_has_only_the_expected_fields(tmp_path):
 def fake_check(monkeypatch, verdict):
     result = PdfCheckResult(path="f.pdf")
     result.verdict, result.reasons = verdict, ["too many blank pages"] if verdict != OK else []
-    monkeypatch.setattr(upload, "check_pdf", lambda path: result)
+    monkeypatch.setattr(upload, "check_file", lambda path: result)
 
 
 @pytest.fixture

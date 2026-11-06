@@ -19,13 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from learnbot.answer import ANSWERED, answer_question  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
 from learnbot.notebook import Notebook  # noqa: E402
-from learnbot.proof import shown_quote  # noqa: E402
+from learnbot.proof import shown_quote, shown_where  # noqa: E402
 from learnbot.upload import find_document  # noqa: E402
 
 
 def show_sources(sources):
     for s in sources:
-        print(f"   Source: {s['doc']} p.{s['page']} ({s.get('title', '')[:60]})")
+        print(f"   Source: {s['doc']}, {shown_where(s)} ({s.get('title', '')[:60]})")
         print(f"   Quote: \"{shown_quote(s)}\"")
 
 

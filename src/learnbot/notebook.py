@@ -49,7 +49,7 @@ class Notebook:
             raise ValueError("Only an answer with a page and quote can be saved.")
         if any(str(s["doc"]).startswith(("http://", "https://")) for s in ans.sources):
             raise ValueError("Web answers are not saved in the notebook.")
-        sources = [{key: s[key] for key in ("doc", "page", "quote", "title", "lead", "full_quote") if key in s}
+        sources = [{key: s[key] for key in ("doc", "page", "quote", "title", "where", "lead", "full_quote") if key in s}
                    for s in ans.sources]
         extra = {"options": ans.options, "correct": ans.correct} if getattr(ans, "options", None) else {}
         return self.add(kind=kind, question=question or getattr(ans, "question", ""), text=ans.text,
@@ -76,7 +76,7 @@ class Notebook:
         for item in self.items:
             for s in item.get("sources", []):
                 text = s.get("full_quote") or s["quote"]
-                found[(s["doc"], s["page"], text)] = Chunk(s["doc"], s["page"], s.get("title", ""), text)
+                found[(s["doc"], s["page"], text)] = Chunk(s["doc"], s["page"], s.get("title", ""), text, s.get("where", ""))
         return list(found.values())
 
     def searcher(self):

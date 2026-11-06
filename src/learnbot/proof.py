@@ -85,6 +85,11 @@ def quote_text(source):
     return f"{source.get('lead', '')} {source['quote']}".strip()
 
 
+def shown_where(source):
+    """The location as shown to the user: "p.12", or "Row 4" in a file with no pages."""
+    return source.get("where") or f"p.{source['page']}"
+
+
 def shown_quote(source):
     """The quote as shown to the user: "lead-in ... item" when narrowed to one list item."""
     return f"{source['lead']} … {source['quote']}" if source.get("lead") else source["quote"]

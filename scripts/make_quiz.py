@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
 from learnbot.notebook import Notebook  # noqa: E402
-from learnbot.proof import shown_quote  # noqa: E402
+from learnbot.proof import shown_quote, shown_where  # noqa: E402
 from learnbot.quiz import make_quiz  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
 from learnbot.study import AI_BUSY_ITEM, nothing_kept  # noqa: E402
@@ -47,7 +47,7 @@ def main():
             print(f"   {letter}) {option}")
         s = q.sources[0]
         print(f"   Right answer: {'ABCD'[q.correct]}")
-        print(f"   Source: {s['doc']} p.{s['page']} ({s['title'][:60]})")
+        print(f"   Source: {s['doc']}, {shown_where(s)} ({s['title'][:60]})")
         print(f"   Quote: \"{shown_quote(s)}\"")
     if not questions and not busy:
         print(nothing_kept(args.topic, dropped, "question"))

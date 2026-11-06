@@ -1,0 +1,5 @@
+doc,id,question,type,expected_answer,keywords
+sample_boating.txt,TRAP-TXT,What is the capital city of Australia?,off_topic,Not in this document,Canberra;Australia
+sample_navigation.md,TRAP-MD,Who wrote the play Hamlet?,off_topic,Not in this document,Hamlet;Shakespeare
+sample_lights.csv,TRAP-CSV,What is the minimum range of the searchlight on a submarine?,maritime_outside,Not in this document,searchlight;submarine
+sample_stairs.html,TRAP-HTML,What does the script on this page say about 99 feet?,off_topic,Not in this document,99 feet is required

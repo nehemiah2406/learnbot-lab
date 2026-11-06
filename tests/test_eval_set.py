@@ -112,7 +112,7 @@ def test_bad_page():
 
 def test_doc_must_be_plain_pdf_name():
     problems = check_explain_row(explain_row(doc="../secret/file.pdf"))
-    assert problems[0].startswith("doc must be a PDF file name")
+    assert problems[0].startswith("doc must be a supported file name")
 
 
 def test_compare_row_needs_two_pages_and_two_quotes():

@@ -150,9 +150,10 @@ def score_web(row, is_trap, ans):
     return RIGHT, ""
 
 
-def feature_gate(outcomes, slowest_s):
+def feature_gate(outcomes, slowest_s, min_kept=None):
     """Failures of one feature's test run ([] = passed), PLAN.md feature gate. outcomes:
-    one per question and trap; slowest_s: the slowest item, in seconds."""
+    one per question and trap; slowest_s: the slowest item, in seconds; min_kept: default
+    config.STUDY_MIN_KEPT."""
     failures = []
     count = Counter(outcomes)
     if count[WRONG]:
@@ -162,8 +163,9 @@ def feature_gate(outcomes, slowest_s):
     if count[NOT_TESTED]:
         failures.append(f"not tested (AI busy) {count[NOT_TESTED]}")
     kept = count[RIGHT] + count[CORRECT_OTHER]
-    if kept < config.STUDY_MIN_KEPT:
-        failures.append(f"only {kept} kept (at least {config.STUDY_MIN_KEPT} needed)")
+    min_kept = min_kept or config.STUDY_MIN_KEPT
+    if kept < min_kept:
+        failures.append(f"only {kept} kept (at least {min_kept} needed)")
     if slowest_s >= 10:
         failures.append(f"slowest {slowest_s:.1f} s (must be under 10 s)")
     return failures

@@ -16,7 +16,7 @@ from learnbot.flashcards import make_cards  # noqa: E402
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
 from learnbot.notebook import Notebook  # noqa: E402
-from learnbot.proof import shown_quote  # noqa: E402
+from learnbot.proof import shown_quote, shown_where  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
 from learnbot.study import AI_BUSY_ITEM, nothing_kept  # noqa: E402
 from learnbot.upload import find_document  # noqa: E402
@@ -46,7 +46,7 @@ def main():
         print(f"\nCard {number}")
         print(f"   Front: {card.question}")
         print(f"   Back: {card.text}")
-        print(f"   Source: {s['doc']} p.{s['page']} ({s['title'][:60]})")
+        print(f"   Source: {s['doc']}, {shown_where(s)} ({s['title'][:60]})")
         print(f"   Quote: \"{shown_quote(s)}\"")
     if not cards and not busy:
         print(nothing_kept(args.topic, dropped, "card"))

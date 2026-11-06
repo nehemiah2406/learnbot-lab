@@ -27,6 +27,7 @@ class PageView:
     previous: int = None  # page number, None on the first page
     next: int = None  # page number, None on the last page
     warning: str = ""
+    where: str = ""  # location in a file with no pages ("Row 4")
 
 
 def check_page(document, page):
@@ -35,13 +36,16 @@ def check_page(document, page):
 
 
 def view_page(document, path, page):
-    """The page's exact text. path: the file itself, for the layout check. Raises ValueError."""
+    """The page's exact text. path: the file itself, for the layout check (PDFs only).
+    Raises ValueError."""
     check_page(document, page)
-    with pdfplumber.open(path) as pdf:
-        mixed = page_is_mixed(pdf.pages[page - 1])
+    mixed = False
+    if not document.labels:
+        with pdfplumber.open(path) as pdf:
+            mixed = page_is_mixed(pdf.pages[page - 1])
     total = len(document.pages)
     return PageView(document.name, page, total, document.pages[page], page - 1 if page > 1 else None,
-                    page + 1 if page < total else None, MIXED_WARNING if mixed else "")
+                    page + 1 if page < total else None, MIXED_WARNING if mixed else "", document.labels.get(page, ""))
 
 
 def page_searcher(document, page):

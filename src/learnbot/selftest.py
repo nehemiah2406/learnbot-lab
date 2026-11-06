@@ -21,6 +21,7 @@ from learnbot import config
 from learnbot.answer import AI_BUSY_STATUS, ANSWERED, answer_question
 from learnbot.evaluate import numbers_differ
 from learnbot.flashcards import make_cards
+from learnbot.proof import shown_where
 
 PASSED, WARNING, NOT_FINISHED = "passed", "warning", "not_finished"
 # One question's result. Only SAME counts as a pass.
@@ -67,7 +68,7 @@ def run_self_test(name, searcher, chain):
     for card in cards:
         ans = answer_question(card.question, searcher, chain)
         source = ans.sources[0] if ans.sources else {}
-        questions.append({"question": card.question, "expected": card.text, "page": card.sources[0]["page"],
+        questions.append({"question": card.question, "expected": card.text, "page": card.sources[0]["page"], "where": shown_where(card.sources[0]),
                           "answer": ans.text, "answer_page": source.get("page"), "result": compare(card, ans),
                           "seconds": round(max(card.seconds, ans.seconds), 1)})
     passed = sum(q["result"] == SAME for q in questions)

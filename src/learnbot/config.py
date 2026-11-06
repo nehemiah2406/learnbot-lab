@@ -82,6 +82,11 @@ TEST_DOCS_DIR = "data/raw"  # the public test documents (gitignored)
 SELF_TEST_QUESTIONS = 5
 SELF_TEST_MIN_PASS = 3  # below this the user sees a warning but can still use the file
 
+# --- File types ------------------------------------------------------------------------
+LOW_TEXT_WORDS = 20  # a non-PDF file with fewer words gets a WARNING
+FILE_TYPE_MIN_KEPT = 2  # of the 3 test questions per file type
+STUDY_MIN_ROW_WORDS = 5  # table files have short rows: used if no piece has STUDY_MIN_PIECE_WORDS
+
 # --- Day 3: book maker -----------------------------------------------------------------
 BOOK_FACTS_PER_CHAPTER = 5
 BOOK_MAX_TOPICS = 8

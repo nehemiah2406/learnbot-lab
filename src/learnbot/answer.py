@@ -128,5 +128,6 @@ def answer_question(question, searcher, chain, prompt=None):
         return done(REFUSED, NOT_FOUND, reason=f"proof:{result.reason}", detail=result.detail, **info)
     # The source title (rule / section) comes from our piece, not from the AI. A list quote
     # may have been narrowed to its one answering item (proof.shown_quote shows it).
-    sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in result.sources]
+    sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title, "where": proof.quoted_pieces(s, pieces)[0].where}
+               for s in result.sources]
     return done(ANSWERED, reply["answer"], sources=sources, **info)

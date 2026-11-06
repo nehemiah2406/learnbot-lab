@@ -1,4 +1,4 @@
-"""Upload one PDF: self-check, then the automatic self-test (once per file).
+"""Upload one file (PDF, .txt, .md, .csv, .html): self-check, then the automatic self-test, once per file.
 
 Run:  .venv\\Scripts\\python scripts\\upload_file.py C:\\path\\to\\file.pdf
 
@@ -45,7 +45,7 @@ def main():
         print(f"STOPPED: limit of {args.max_calls} AI calls reached. No self-test result was saved; "
               "replies so far are kept, so a new try does not pay for them again.")
         return 2
-    print(f"Self-check: {result.check.verdict} ({result.check.page_count} pages)")
+    print(f"Self-check: {result.check.verdict} ({result.check.page_count} pages or parts)")
     for reason in result.check.reasons:
         print(f"  - {reason}")
     if result.problem:
@@ -55,7 +55,7 @@ def main():
     print(f"Stored as {result.path.as_posix()}")
     print(test.message + (" (saved result, no AI calls)" if test.from_saved else ""))
     for q in test.questions:
-        print(f"  [{q['result']}] p.{q['page']} {q['question']}")
+        print(f"  [{q['result']}] {q.get('where') or 'p.' + str(q['page'])} {q['question']}")
     print(f"AI calls this run: {chain.calls}")
     return 0
 
