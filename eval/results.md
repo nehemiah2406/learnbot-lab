@@ -1000,3 +1000,56 @@ Asked fresh once more with the rule: **answered again**, "several hours", Gemini
 - **CP-08**: Squat is a change in trim of a ship underway compared to when it is stopped.  
   coast_pilot4_ch1.pdf p.2: "(36) Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
 <!-- END prompt5-answers -->
+
+<!-- BEGIN hard-traps-2 -->
+## 10 new hard traps in chat (prompt version 5, run once)
+
+Committed before the run; nothing changed after it. All 10 were answered by Gemini, so Groq was not tested on these. With the earlier 7 hard traps: 16 of 17 different traps refused. The one that gets through is the tsunami trap (TRAP-SELF-01), 3 wrong answers in 3 asks (Gemini before the rule, Groq twice with it). Groq has seen only 2 of the 17 hard traps with the rule: it refused HARD-04 and answered the tsunami trap.
+
+Refused 10/10; answered 0; not tested (AI busy) 0; 10 AI calls; slowest 4.6 s.
+
+| Trap | Question | Outcome | Why refused | AI calls | Time |
+|---|---|---|---|---|---|
+| HARD2-01 | Under the International Rules, how far away must the bell of a vessel be audible? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 2.5 s | 2.9 s |
+| HARD2-02 | Under the Inland Rules, what is the minimum range of visibility of a diamond shape? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.2 s | 1.5 s |
+| HARD2-03 | Under the International Rules, what is the minimum height above the hull of a sternlight? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 2.4 s | 2.8 s |
+| HARD2-04 | How many years is a life jacket good for after the date of manufacture? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 2.9 s | 3.4 s |
+| HARD2-05 | How many inches wide must a capacity plate be? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.4 s | 1.9 s |
+| HARD2-06 | What is the amount of the civil penalty for not carrying a fire extinguisher? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 0.8 s | 1.5 s |
+| HARD2-07 | How fast does a storm surge travel in the deep ocean? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.1 s | 1.6 s |
+| HARD2-08 | What wind speed in knots defines a hurricane watch? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.5 s | 2.0 s |
+| HARD2-09 | How many pounds must a landing platform be able to support? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.2 s | 1.6 s |
+| HARD2-10 | What is the maximum length of a portable ladder? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 4.1 s | 4.6 s |
+<!-- END hard-traps-2 -->
+
+<!-- BEGIN quiz-partly-right-fix -->
+## Day 1: Quiz with the partly-right fix, new topics (5 topics + 2 traps)
+
+**Gate: NOT PASSED: only 1 kept (at least 3 needed)**
+
+Run once on 5 new topics, committed before the run; nothing changed after it. Read by a person: the kept question (QUIZ2-01) has a right answer and clearly wrong options. Why the others were dropped: QUIZ2-02: the AI's question named "OSHA 3124", a number not in the quote. QUIZ2-03: wrong option "30 degrees" is in the quote and is part of the answer (correct drop). QUIZ2-04: **a mistake by the new check**: "two separate and distinct strokes" was treated as a list because of "and"; it is a fair wrong option. QUIZ2-05: wrong option "directly over a wreck" is in the quote, which says "not directly over" (a safe drop of a fair option). Both traps were refused by the topic-word check, without the AI.
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 1/5 | 1/5 | 0 | 2/2 | 4 | 0 | 7.4 s | 7 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| QUIZ2-01 | right | groq:openai/gpt-oss-120b | 7.4 s |  |
+| QUIZ2-02 | missed | gemini:gemini-3.1-flash-lite | 5.3 s | proof:off_topic (question numbers not in the quote: 3124) |
+| QUIZ2-03 | missed | gemini:gemini-3.1-flash-lite | 4.5 s | wrong_in_quote (30 degrees) |
+| QUIZ2-04 | missed | groq:openai/gpt-oss-120b | 7.3 s | partly_right_option (two separate and distinct strokes) |
+| QUIZ2-05 | missed | gemini:gemini-3.1-flash-lite | 4.2 s | wrong_in_quote (directly over a wreck) |
+| TRAP-QUIZ2-01 | refused | none | 0.5 s | no_topic_words |
+| TRAP-QUIZ2-02 | refused | none | 1.0 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **QUIZ2-01** (right), topic: marine sanitation device vessels 65 feet and under
+  Q: What types of marine sanitation devices (MSDs) may vessels 65 feet and under use?
+  - Type V
+  - Type IV
+  * Type I, II, or III
+  - No MSD required
+  Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "Vessels 65 feet and under may use a Type I, II, or III MSD."
+<!-- END quiz-partly-right-fix -->
