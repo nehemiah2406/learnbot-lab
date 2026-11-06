@@ -1293,3 +1293,53 @@ Self-test verdict: passed. Passed 5/5; 1 flashcards dropped while making the tes
   A: several hours
   coast_pilot4_ch1.pdf p.20: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
 <!-- END day3-book -->
+
+<!-- BEGIN day3-book-clean -->
+## Day 3: book maker, new topics (5 topics + 2 normal traps, run once; hard traps reported, not a gate)
+
+**Gate: NOT PASSED: not tested (AI busy) 1**
+
+Run once on new topics, committed before the run; nothing changed after it. **Incomplete, not a pass:** BK2-02 got "AI busy" (Gemini timeout 5.0 s, Groq timeout 2.5 s, 9.0 s in total). The other 4 topics are right, wrong 0, normal traps 2/2 (without the AI). Slowest chapter with an answer: 8.6 s. Read by a person (Claude): all kept facts match their quotes. Dropped facts: BK2-04 lost 2 facts because their questions did not name the rule set; BK2-05 lost 1 with no topic word in its quote. The hard traps' replies were saved ones, not asked again. `scripts/make_book.py` not run yet: stopped first, as Hari asked.
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest chapter | AI calls |
+|---|---|---|---|---|---|---|
+| 4/5 | 0 | 2/2 | 0 | 1 | 9.0 s | 7 |
+
+| Id | Kind | Outcome | Facts kept | Dropped | AI | Time | Reason |
+|---|---|---|---|---|---|---|---|
+| BK2-01 | topic | right | 2 | 0 | gemini:gemini-3.1-flash-lite | 5.9 s |  |
+| BK2-02 | topic | not_tested | 0 | 0 | none | 9.0 s | gemini:gemini-3.1-flash-lite timeout 5.0 s -> groq:openai/gpt-oss-120b timeout 2.5 s |
+| BK2-03 | topic | right | 1 | 1 | groq:openai/gpt-oss-120b | 8.6 s | same_quote |
+| BK2-04 | topic | right | 1 | 2 | groq:openai/gpt-oss-120b | 3.2 s | rule_set_not_named, rule_set_not_named |
+| BK2-05 | topic | right | 1 | 1 | groq:openai/gpt-oss-120b | 4.1 s | topic_not_in_quote |
+| TRAP-BK2-01 | trap | refused | 0 | 0 | none | 1.3 s | no_topic_words |
+| TRAP-BK2-02 | trap | refused | 0 | 0 | none | 0.7 s | no_topic_words |
+| HARD-BK-01 | hard trap | trap_answered | 1 | 0 | gemini:gemini-3.1-flash-lite | 2.5 s | 1 facts |
+| HARD-BK-02 | hard trap | refused | 0 | 0 | gemini:gemini-3.1-flash-lite | 4.2 s | llm_not_found |
+
+### Facts kept, for a person to read
+
+- **BK2-01** topic: cold shock hyperventilation
+  Q: What happens during the cold shock phase of cold water immersion?
+  A: an initial deep and sudden gasp followed by hyperventilation
+  boaters_guide.pdf p.42: "Cold Shock: an initial deep and sudden gasp followed by hyperventilation."
+  Q: How long does cold shock last?
+  A: about one minute
+  boaters_guide.pdf p.42: "Cold shock will pass in about one minute."
+- **BK2-03** topic: blood alcohol content civil penalty
+  Q: What is the maximum civil penalty for a recreational boat operator with a blood alcohol content of .08 or greater?
+  A: If an operator of a recreational boat has a blood alcohol content of .08 (.10 in some states) or greater, the operator is subject to a civil penalty not to exceed $1,000 a criminal penalty not to exceed $5,000, or a one-year imprisonment, or both.
+  boaters_guide.pdf p.35: "If an operator of a recreational boat has a blood alcohol content of .08 (.10 in some states) or greater, the operator is subject to a civil penalty not to exceed $1,000 a criminal penalty not to exceed $5,000, or a one-year imprisonment, or both."
+- **BK2-04** topic: vessel towed manned four blasts International
+  Q: What signal must a manned towed vessel give under International rules?
+  A: A vessel towed or if more than one vessel is towed the last vessel of the tow, if manned, shall at intervals of not more than 2 minutes sound four blasts in succession, namely one prolonged followed by three short blasts.
+  nav_rules.pdf p.111: "A vessel towed or if more than one vessel is towed the last vessel of the tow, if manned, shall at intervals of not more than 2 minutes sound four blasts in succession, namely one prolonged followed by three short blasts."
+- **BK2-05** topic: open sailboats propulsion machinery
+  Q: Which open sailboats are not required to carry day visual distress signals?
+  A: Open sailboats less than 26 feet in length that are not equipped with propulsion machinery.
+  boaters_guide.pdf p.16: "Open sailboats less than 26 feet in length that are not equipped with propulsion machinery."
+- **HARD-BK-01** topic: tsunami warning hours
+  Q: How long may dangerous coastal flooding continue after the arrival of the initial tsunami wave?
+  A: several hours
+  coast_pilot4_ch1.pdf p.20: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
+<!-- END day3-book-clean -->
