@@ -15,7 +15,7 @@ from learnbot.llm import AllProvidersFailed, CallLimitReached
 from learnbot.quiz import build_prompt, make_question, make_quiz, options_problem
 from learnbot.rule_sets import RuleSets
 from learnbot.search import Searcher
-from learnbot.study import AI_BUSY_ITEM, parse_item, spread_pieces, topic_pieces
+from learnbot.study import AI_BUSY_ITEM, nothing_kept, parse_item, spread_pieces, topic_pieces
 
 QUOTE = "The ladder rungs must be spaced 12 inches apart along the side rails."
 PIECE = Chunk("guide.pdf", 5, "Portable Ladders", QUOTE)
@@ -260,6 +260,13 @@ def test_quiz_on_a_missing_topic_asks_no_ai():
     chain = FakeChain()
     assert make_quiz("ladder color", FakeSearcher([PIECE]), chain, 3) == ([], 0, False)
     assert chain.prompts == []
+
+
+def test_message_when_nothing_is_kept():
+    assert nothing_kept("ladder color", 0, "question") == NOT_FOUND  # the words are not in the document
+    found = nothing_kept("ladder", 4, "question")
+    assert found != NOT_FOUND and "found these words" in found and "question" in found
+    assert "this document" in nothing_kept(None, 2, "card") and "found these words" not in nothing_kept(None, 2, "card")
 
 
 def test_quiz_with_no_topic_uses_pieces_from_across_the_document():

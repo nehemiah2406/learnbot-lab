@@ -12,13 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from learnbot.baseline import NOT_FOUND  # noqa: E402
 from learnbot.index import Embedder, Library, VectorStore  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
 from learnbot.proof import shown_quote  # noqa: E402
 from learnbot.quiz import make_quiz  # noqa: E402
 from learnbot.search import default_searcher  # noqa: E402
-from learnbot.study import AI_BUSY_ITEM  # noqa: E402
+from learnbot.study import AI_BUSY_ITEM, nothing_kept  # noqa: E402
 
 DATA_DIR = Path("data/raw")
 
@@ -50,7 +49,7 @@ def main():
         print(f"   Source: {s['doc']} p.{s['page']} ({s['title'][:60]})")
         print(f"   Quote: \"{shown_quote(s)}\"")
     if not questions and not busy:
-        print(NOT_FOUND)
+        print(nothing_kept(args.topic, dropped, "question"))
     if busy:
         print(AI_BUSY_ITEM)
     print(f"\n{len(questions)} questions kept, {dropped} dropped by the checks, {chain.calls} AI calls.")

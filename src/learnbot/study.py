@@ -154,6 +154,15 @@ def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None):
     return done(ANSWERED, reply["answer"], sources=sources, question=reply["question"], wrong=reply["wrong"], **info)
 
 
+def nothing_kept(topic, dropped, noun):
+    """What the user sees when a set has no items. dropped 0: no piece had the topic's words."""
+    if not dropped:
+        return NOT_FOUND
+    if topic:
+        return f"I found these words in the document, but could not make a {noun} I can prove from them. Try another topic."
+    return f"I could not make a {noun} I can prove from this document."
+
+
 def make_set(make_one, topic, searcher, count):
     """(kept items, items dropped, AI busy?). One piece per item, so items differ; at most
     config.STUDY_TRIES_PER_ITEM tries per item. Stops when the AI is busy."""
