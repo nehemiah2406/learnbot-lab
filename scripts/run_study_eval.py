@@ -91,11 +91,13 @@ def main():
     parser.add_argument("--no-warm-up", action="store_true", help="skip the 1-call check of the main AI")
     parser.add_argument("--section", help="results.md section to write (default: the feature's own, day1-...)")
     parser.add_argument("--label", default="", help="added to the report's name")
+    parser.add_argument("--questions", help="topics CSV (default: the feature's own)")
+    parser.add_argument("--traps", help="traps CSV (default: the feature's own)")
     args = parser.parse_args()
 
     module, function, questions, traps, name = FEATURES[args.feature]
     make_one = getattr(importlib.import_module(module), function)
-    rows = [(r, False) for r in load_rows(questions)] + [(r, True) for r in load_rows(traps)]
+    rows = [(r, False) for r in load_rows(args.questions or questions)] + [(r, True) for r in load_rows(args.traps or traps)]
     missing = sorted({r["doc"] for r, _ in rows if not (DATA_DIR / r["doc"]).is_file()})
     if missing:
         print(f"SKIPPED: PDF(s) not in data/raw: {', '.join(missing)} (see PLAN.md Data section)")

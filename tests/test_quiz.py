@@ -160,6 +160,34 @@ def test_options_are_compared_as_whole_words():
     assert options_problem(in_quote)[0] == "wrong_in_quote"
 
 
+def options(answer, *wrong, quote="Some quote with nothing else in it."):
+    return {"answer": answer, "wrong": list(wrong), "sources": [{"quote": quote}]}
+
+
+def test_real_case_quiz_02_partly_right_options_are_dropped():
+    data = options("Type II or III MSD", "Type I or II MSD", "Type I or III MSD", "Type I, II, or III MSD")
+    assert options_problem(data) == ("partly_right_option", "Type I or II MSD")
+
+
+@pytest.mark.parametrize("answer, wrong", [
+    ("12 years", ("10 or 12 years", "5 years", "15 years")),
+    ("a sternlight", ("a sternlight and a sidelight!", "a gong", "a bell")),
+    ("seaward or channelward side", ("seaward or landward side", "north side", "south side")),
+])
+def test_wrong_option_listing_part_of_the_answer_is_dropped(answer, wrong):
+    assert options_problem(options(answer, *wrong))[0] in ("partly_right_option", "same_options")
+
+
+@pytest.mark.parametrize("answer, wrong", [
+    ("12 inches", ("12 feet", "8 inches", "20 inches")),  # no list: another unit is simply wrong
+    ("Type II MSD", ("Type I MSD", "Type III MSD", "Type IV MSD")),
+    ("a red or green light", ("a white or yellow light", "a blue or white light", "a yellow light")),  # "light" is in all
+    ("seaward side", ("landward or inner side", "north or south side", "upper side")),  # "side" is in all
+])
+def test_fair_wrong_options_are_kept(answer, wrong):
+    assert options_problem(options(answer, *wrong)) is None
+
+
 def test_answer_inside_a_longer_number_is_not_given_away():
     page = Chunk("guide.pdf", 5, "Ladder rungs", "Ladder rungs last 5 years in 15 years of service.")
     q = ask(reply(question="In 15 years of service, how long do ladder rungs last?", answer="5 years",

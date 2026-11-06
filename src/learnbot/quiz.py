@@ -6,6 +6,7 @@ a question that fails any check is dropped, never shown:
   bad_options     not exactly 3 wrong options + the right one; an empty option
   same_options    two options are the same, or one contains another
   banned_option   "all of the above", "none of the above", "both A and B" style
+  partly_right_option  a wrong option lists several things and one is in the right answer
   wrong_in_quote  a wrong option is in the source quote, or all its number + unit pairs are:
                   the document may say it is right
 
@@ -21,13 +22,16 @@ from learnbot.proof import number_units
 
 BANNED_OPTION = re.compile(r"\b(all|none) of (the above|these|the options|the answers)\b"
                            r"|\b(both|either|neither) [a-d]\b|\b[a-d] (and|or) [a-d]\b", re.IGNORECASE)
+LIST_MARK = re.compile(r",|\b(and|or)\b", re.IGNORECASE)
+LIST_WORDS = {"and", "or", "a", "an", "the"}
+WORD = re.compile(r"[a-z0-9]+(?:[.,][0-9]+)*")
 
 PROMPT = """You write ONE multiple-choice question using ONLY the numbered pieces of text below, taken from the user's document.
 
 Rules:
 """ + study.SOURCE_RULES + """
 10. "answer" is the one correct option, short, in simple English.
-11. "wrong" has exactly 3 options that are clearly wrong according to the pieces, not just less good, and similar in form to the answer. None may be partly correct. Do not write "all of the above" or "none of the above".
+11. "wrong" has exactly 3 options that are clearly wrong according to the pieces, not just less good, and similar in form to the answer. None may be partly correct: a wrong option must not list several things if any of them is in the answer (if the answer is "B or C", do not write "A or B"). Do not write "all of the above" or "none of the above".
 
 Reply with JSON only, in one of these two forms:
 {{"found": true, "question": "...", "answer": "...", "wrong": ["...", "...", "..."], "source": {{"doc": "file.pdf", "page": 12, "quote": "..."}}}}
@@ -46,6 +50,20 @@ def build_prompt(topic, pieces):
     return PROMPT.format(topic=(topic or "any clear fact in the pieces").strip(), pieces="\n\n".join(blocks))
 
 
+def option_words(text):
+    return set(WORD.findall(text.lower())) - LIST_WORDS
+
+
+def is_partly_right(option, options, answer):
+    """True if a wrong option lists several things and one of them is in the right answer
+    ("Type I or II" when the answer is "Type II or III"). Words every option has ("Type") do
+    not count. Real case: QUIZ-02."""
+    if not LIST_MARK.search(option):
+        return False
+    shared = set.intersection(*(option_words(o) for o in options))
+    return bool((option_words(option) & option_words(answer)) - shared)
+
+
 def options_problem(reply):
     """(check, detail) of the first failed option check, or None."""
     answer, wrong = reply["answer"], reply["wrong"]
@@ -58,6 +76,9 @@ def options_problem(reply):
     for option in options:
         if BANNED_OPTION.search(option):
             return "banned_option", option
+    for option in wrong:
+        if is_partly_right(option, options, answer):
+            return "partly_right_option", option
     quote = reply["sources"][0]["quote"]
     for option in wrong:
         pairs = number_units(option)
