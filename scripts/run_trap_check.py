@@ -60,6 +60,7 @@ def main():
     parser.add_argument("--traps", nargs="+", default=TRAP_FILES, help="trap CSV files")
     parser.add_argument("--section", default="day2-hard-traps", help="results.md section to write")
     parser.add_argument("--title", default="## Hard traps in chat, with the \"exact thing\" rule (prompt version 5)")
+    parser.add_argument("--provider", help="ask only this AI (gemini or groq)")
     parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each trap")
     args = parser.parse_args()
 
@@ -73,6 +74,8 @@ def main():
     searcher.search("warm up")  # loads the models now, so no trap pays for the loading
     chain = default_chain()
     chain.max_calls = args.max_calls  # checked before every real call
+    if args.provider:
+        chain.providers = [p for p in chain.providers if p.name == args.provider]
     if not chain.providers:
         print("No AI key set (GEMINI_API_KEY / GROQ_API_KEY in .env). Nothing to run.")
         return 1

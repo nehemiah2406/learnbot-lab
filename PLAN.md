@@ -115,6 +115,8 @@ A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mo
 
 Everything else from DeepTutor is dropped.
 
+**UI decisions for the UI step (Hari, 6 Nov 2026):** an answer shows the answer and its page; the quote opens with a "Show quote" button (it stays available, not removed); research answers no longer show the "Web pages can be wrong or out of date" line (they keep "From the web" and the source link). To be built in the UI step, not before.
+
 **Decisions on the older items (Hari, 4 Nov 2026):**
 
 - **Upload self-test: kept, Day 2.** When a new file is uploaded, LearnBot makes 5 questions with quotes from that file and checks that it answers them exactly from the right page. If the self-test fails, the user sees a warning. It runs automatically on every new file upload, once per file: the result is saved by file content and never repeated for the same file. A file passes with at least 3 of 5; below that the user sees a warning but can still use the file.
