@@ -119,6 +119,19 @@ def item_problem(topic, reply, rule_sets):
     return None
 
 
+def check_reply(topic, reply, pieces, searcher, extra_check=None):
+    """(checked sources, "", "") if every check passes, else (None, failed check, detail)."""
+    problem = item_problem(topic, reply, searcher.rule_sets) or (extra_check(reply) if extra_check else None)
+    if problem:
+        return None, problem[0], problem[1]
+    reranker = getattr(searcher, "reranker", None)
+    topic_score = (lambda q, t: float(reranker.scores(q, [t])[0])) if reranker else None
+    result = proof.check(reply["question"], reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
+    if not result.ok:
+        return None, f"proof:{result.reason}", result.detail
+    return [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in result.sources], "", ""
+
+
 def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, budget_s=None):
     """One checked StudyItem (never raises for AI errors). prompt(topic, pieces) -> text.
     topic None = any fact of the pieces given. extra_check(reply) -> (check, detail) or None.
@@ -144,15 +157,9 @@ def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, bud
         return done(REFUSED, NOT_FOUND, reason="bad_json", **info)
     if not reply["found"]:
         return done(REFUSED, NOT_FOUND, reason="llm_not_found", **info)
-    problem = item_problem(topic, reply, searcher.rule_sets) or (extra_check(reply) if extra_check else None)
-    if problem:
-        return done(REFUSED, NOT_FOUND, reason=problem[0], detail=problem[1], **info)
-    reranker = getattr(searcher, "reranker", None)
-    topic_score = (lambda q, t: float(reranker.scores(q, [t])[0])) if reranker else None
-    result = proof.check(reply["question"], reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
-    if not result.ok:
-        return done(REFUSED, NOT_FOUND, reason=f"proof:{result.reason}", detail=result.detail, **info)
-    sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title} for s in result.sources]
+    sources, reason, detail = check_reply(topic, reply, pieces, searcher, extra_check)
+    if reason:
+        return done(REFUSED, NOT_FOUND, reason=reason, detail=detail, **info)
     return done(ANSWERED, reply["answer"], sources=sources, question=reply["question"], wrong=reply["wrong"], **info)
 
 

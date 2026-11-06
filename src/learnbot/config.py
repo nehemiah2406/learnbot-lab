@@ -82,6 +82,10 @@ TEST_DOCS_DIR = "data/raw"  # the public test documents (gitignored)
 SELF_TEST_QUESTIONS = 5
 SELF_TEST_MIN_PASS = 3  # below this the user sees a warning but can still use the file
 
+# --- Day 3: book maker -----------------------------------------------------------------
+BOOK_FACTS_PER_CHAPTER = 5
+BOOK_MAX_TOPICS = 8
+
 # --- Research mode (web search; never used for document answers) ----------------------
 TAVILY_URL = "https://api.tavily.com/search"
 TAVILY_TIMEOUT_S = 3  # the AI gets what is left of QUESTION_TIME_BUDGET_S

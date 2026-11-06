@@ -1,0 +1,3 @@
+doc,id,question,type,expected_answer,keywords
+coast_pilot4_ch1.pdf,HARD-BK-01,tsunami warning hours,maritime_outside,Not in this document,warning stays;warning remains;warning lasts;warning is in effect
+coast_pilot4_ch1.pdf,HARD-BK-02,hurricane watch knots,maritime_outside,Not in this document,watch to indicate winds;watch indicates winds
