@@ -1242,3 +1242,40 @@ Self-test verdict: passed. Passed 5/5; 1 flashcards dropped while making the tes
 | How long does a tsunami warning stay in effect? | hard (not a gate) | trap_answered | several hours | answered from coast_pilot4_ch1.pdf p.20 | 2.2 s |
 | How many yards from a wreck must a buoy marking it be placed? | hard (not a gate) | refused | Not in this document | llm_not_found | 1.8 s |
 <!-- END day2-selftest-new-gate -->
+
+<!-- BEGIN day3-book -->
+## Day 3: book maker (5 topics + 2 normal traps, run once; hard traps reported, not a gate)
+
+**Gate: NOT PASSED: only 2 kept (at least 3 needed)**
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest chapter | AI calls |
+|---|---|---|---|---|---|---|
+| 2/5 | 0 | 2/2 | 3 | 0 | 8.2 s | 8 |
+
+| Id | Kind | Outcome | Facts kept | Dropped | AI | Time | Reason |
+|---|---|---|---|---|---|---|---|
+| BK-01 | topic | right | 1 | 0 | gemini:gemini-3.1-flash-lite | 5.7 s |  |
+| BK-02 | topic | missed | 0 | 2 | gemini:gemini-3.1-flash-lite | 4.9 s | proof:quote_not_focused, proof:quote_not_focused |
+| BK-03 | topic | missed | 0 | 2 | gemini:gemini-3.1-flash-lite | 3.9 s | proof:quote_not_focused, proof:quote_not_focused |
+| BK-04 | topic | right | 1 | 0 | groq:openai/gpt-oss-120b | 8.2 s |  |
+| BK-05 | topic | missed | 0 | 2 | gemini:gemini-3.1-flash-lite | 2.0 s | proof:quote_not_focused, proof:quote_not_focused |
+| TRAP-BK-01 | trap | refused | 0 | 0 | none | 0.9 s | no_topic_words |
+| TRAP-BK-02 | trap | refused | 0 | 0 | none | 0.4 s | no_topic_words |
+| HARD-BK-01 | hard trap | trap_answered | 1 | 0 | gemini:gemini-3.1-flash-lite | 4.1 s | 1 facts |
+| HARD-BK-02 | hard trap | refused | 0 | 0 | gemini:gemini-3.1-flash-lite | 4.1 s | llm_not_found |
+
+### Facts kept, for a person to read
+
+- **BK-01** topic: lock mooring devices line
+  Q: What is the recommended minimum length of line for tying a craft to mooring devices inside a lock?
+  A: 50 feet
+  boaters_guide.pdf p.34: "Tie your craft to the mooring devices after entering; a minimum of 50 feet of line is recommended."
+- **BK-04** topic: copy of the Navigation Rules on board
+  Q: Who must have a copy of the Navigation Rules on board on U.S. inland waters?
+  A: The operator of a vessel 39.4 feet (12 meters) or greater
+  boaters_guide.pdf p.29: "The operator of a vessel 39.4 feet (12 meters) or greater is responsible for having and maintaining a copy of the Navigation Rules on board while operating on U.S. inland waters."
+- **HARD-BK-01** topic: tsunami warning hours
+  Q: How long may dangerous coastal flooding continue after the arrival of the initial tsunami wave?
+  A: several hours
+  coast_pilot4_ch1.pdf p.20: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
+<!-- END day3-book -->
