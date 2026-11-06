@@ -16,13 +16,15 @@ report prints every kept question, for a person to read.
 
 import random
 import re
+from time import perf_counter
 
-from learnbot import study
+from learnbot import config, study
 from learnbot.proof import number_units
 
 BANNED_OPTION = re.compile(r"\b(all|none) of (the above|these|the options|the answers)\b"
                            r"|\b(both|either|neither) [a-d]\b|\b[a-d] (and|or) [a-d]\b", re.IGNORECASE)
 LIST_MARK = re.compile(r",|\b(and|or)\b", re.IGNORECASE)
+AND_PAIR = re.compile(r"\b(\w+) and \w+\b", re.IGNORECASE)
 LIST_WORDS = {"and", "or", "a", "an", "the"}
 WORD = re.compile(r"[a-z0-9]+(?:[.,][0-9]+)*")
 
@@ -58,7 +60,10 @@ def is_partly_right(option, options, answer):
     """True if a wrong option lists several things and one of them is in the right answer
     ("Type I or II" when the answer is "Type II or III"). Words every option has ("Type") do
     not count. Real case: QUIZ-02."""
-    if not LIST_MARK.search(option):
+    # A pair the right answer has too is wording, not a list: "two separate and distinct
+    # strokes" when the answer is "three separate and distinct strokes". Real case: QUIZ2-04.
+    wording = AND_PAIR.sub(lambda m: m.group(1) if study.has_words(answer, m.group(0)) else m.group(0), option)
+    if not LIST_MARK.search(wording):
         return False
     shared = set.intersection(*(option_words(o) for o in options))
     return bool((option_words(option) & option_words(answer)) - shared)
@@ -88,8 +93,12 @@ def options_problem(reply):
 
 
 def make_question(topic, searcher, chain, pieces=None):
-    """One checked quiz question as a StudyItem, or "Not in this document"."""
-    item = study.make_item(topic, searcher, chain, build_prompt, options_problem, pieces)
+    """One checked quiz question as a StudyItem, or "Not in this document". With no pieces
+    given, a dropped question is tried again from other pieces, inside one time budget."""
+    if pieces is not None:
+        item = study.make_item(topic, searcher, chain, build_prompt, options_problem, pieces)
+    else:
+        item = question_with_retry(topic, searcher, chain)
     if item.status == study.ANSWERED:
         item.options = [item.text, *item.wrong]
         random.Random(item.question).shuffle(item.options)  # same question, same order
@@ -97,7 +106,38 @@ def make_question(topic, searcher, chain, pieces=None):
     return item
 
 
+def retry_pieces(found):
+    """Other pieces for a second try: the next ones, or the second best alone. None if the
+    topic has only one piece (the same prompt would get the same reply)."""
+    first = config.PIECES_TO_LLM
+    if len(found) > first:
+        return found[first:first * 2]
+    return [found[1]] if len(found) > 1 else None
+
+
+def question_with_retry(topic, searcher, chain):
+    """Up to config.QUIZ_TRIES_PER_QUESTION tries. A dropped question stays dropped if the AI
+    is busy or no time is left for the next try."""
+    start = perf_counter()
+    found = study.topic_pieces(topic, searcher, config.QUIZ_SEARCH_PIECES)
+    tries = [found[:config.PIECES_TO_LLM], retry_pieces(found)][:config.QUIZ_TRIES_PER_QUESTION]
+    item = None
+    for pieces in tries:
+        left = config.QUESTION_TIME_BUDGET_S - (perf_counter() - start)
+        if pieces is None or (item is not None and left < config.MIN_AI_TIME_S):
+            break
+        attempt = study.make_item(topic, searcher, chain, build_prompt, options_problem, pieces, left)
+        if item is not None and attempt.status == study.AI_BUSY_STATUS:
+            break
+        item = attempt
+        if item.status in (study.ANSWERED, study.AI_BUSY_STATUS):
+            break
+    item.seconds = perf_counter() - start
+    return item
+
+
 def make_quiz(topic, searcher, chain, count):
     """(questions, dropped, AI busy?): up to count different questions on the topic, or from
     across the document if topic is None."""
-    return study.make_set(lambda t, s, pieces: make_question(t, s, chain, pieces), topic, searcher, count)
+    return study.make_set(lambda t, s, pieces: make_question(t, s, chain, pieces), topic, searcher, count,
+                          config.QUIZ_SET_TRIES_PER_QUESTION)

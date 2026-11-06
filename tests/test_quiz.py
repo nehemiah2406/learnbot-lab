@@ -3,10 +3,12 @@
 import importlib.util
 import json
 import re
+import time
 from pathlib import Path
 
 import pytest
 
+from learnbot import config
 from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED
 from learnbot.answer import build_prompt as chat_prompt
 from learnbot.baseline import NOT_FOUND
@@ -58,7 +60,8 @@ class FakeChain:
             raise CallLimitReached(4)
         if self.fail:
             raise AllProvidersFailed([("gemini:x", "timeout", 5.0)])
-        return self.replies.pop(0), "gemini:x", False
+        # The last reply repeats, so a second try gets an answer too.
+        return (self.replies.pop(0) if len(self.replies) > 1 else self.replies[0]), "gemini:x", False
 
 
 def reply(question="How far apart must ladder rungs be?", answer="12 inches apart", doc="guide.pdf", page=5,
@@ -186,6 +189,79 @@ def test_wrong_option_listing_part_of_the_answer_is_dropped(answer, wrong):
 ])
 def test_fair_wrong_options_are_kept(answer, wrong):
     assert options_problem(options(answer, *wrong)) is None
+
+
+def test_pair_the_answer_also_has_is_wording_not_a_list():
+    # Real case QUIZ2-04: this fair option was dropped as partly right.
+    data = options("three separate and distinct strokes", "two separate and distinct strokes",
+                   "four separate and distinct strokes", "one short blast")
+    assert options_problem(data) is None
+
+
+def test_real_list_with_and_is_still_partly_right():
+    data = options("a red and white light", "a red and green light", "a blue light", "a yellow light")
+    assert options_problem(data) == ("partly_right_option", "a red and green light")
+
+
+# --- A second try from other pieces ---------------------------------------------------
+def test_dropped_question_is_tried_again_from_other_pieces():
+    bad = reply(wrong=("the side rails", "8 inches apart", "20 inches apart"))
+    chain = FakeChain(bad, second_reply())
+    q = make_question("ladder", FakeSearcher([PIECE, SECOND]), chain)
+    assert q.status == ANSWERED and q.text == "40 inches" and len(chain.prompts) == 2
+    assert QUOTE in chain.prompts[0] and QUOTE not in chain.prompts[1] and SECOND_QUOTE in chain.prompts[1]
+
+
+def test_kept_question_makes_no_second_try():
+    chain = FakeChain(reply())
+    assert make_question(TOPIC, FakeSearcher([PIECE, SECOND]), chain).status == ANSWERED and len(chain.prompts) == 1
+
+
+def test_topic_with_one_piece_is_not_asked_twice():
+    chain = FakeChain('{"found": false}')
+    assert make_question(TOPIC, FakeSearcher([PIECE]), chain).reason == "llm_not_found" and len(chain.prompts) == 1
+
+
+def test_at_most_two_tries():
+    chain = FakeChain('{"found": false}')
+    assert make_question("ladder", FakeSearcher([PIECE, SECOND]), chain).status == REFUSED and len(chain.prompts) == 2
+
+
+def test_second_try_gets_only_the_time_left():
+    budgets = []
+
+    class Chain(FakeChain):
+        def ask(self, prompt, budget_s=None):
+            budgets.append(budget_s)
+            time.sleep(0.05)
+            return super().ask(prompt, budget_s)
+    make_question("ladder", FakeSearcher([PIECE, SECOND]), Chain('{"found": false}'))
+    assert budgets[1] <= budgets[0] - 0.05
+
+
+def test_no_time_left_means_no_second_try(monkeypatch):
+    monkeypatch.setattr(config, "QUESTION_TIME_BUDGET_S", 0.5)
+    monkeypatch.setattr(config, "MIN_AI_TIME_S", 1)
+    chain = FakeChain('{"found": false}')
+    assert make_question("ladder", FakeSearcher([PIECE, SECOND]), chain).status == REFUSED and len(chain.prompts) == 1
+
+
+def test_busy_ai_on_the_second_try_keeps_the_real_drop():
+    class Chain(FakeChain):
+        def ask(self, prompt, budget_s=None):
+            if self.prompts:
+                raise AllProvidersFailed([("gemini:x", "timeout", 5.0)])
+            return super().ask(prompt, budget_s)
+    q = make_question("ladder", FakeSearcher([PIECE, SECOND]), Chain('{"found": false}'))
+    assert (q.status, q.reason) == (REFUSED, "llm_not_found")
+
+
+def test_next_pieces_are_used_when_there_are_many():
+    pieces = [Chunk("g.pdf", n, "T", f"ladder fact number {n}") for n in range(1, 8)]
+    chain = FakeChain('{"found": false}')
+    make_question("ladder", FakeSearcher(pieces), chain)
+    assert "fact number 5" in chain.prompts[0] and "fact number 6" not in chain.prompts[0]
+    assert "fact number 6" in chain.prompts[1] and "fact number 5" not in chain.prompts[1]
 
 
 def test_answer_inside_a_longer_number_is_not_given_away():

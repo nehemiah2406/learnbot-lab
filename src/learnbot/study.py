@@ -119,9 +119,10 @@ def item_problem(topic, reply, rule_sets):
     return None
 
 
-def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None):
+def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, budget_s=None):
     """One checked StudyItem (never raises for AI errors). prompt(topic, pieces) -> text.
-    topic None = any fact of the pieces given. extra_check(reply) -> (check, detail) or None."""
+    topic None = any fact of the pieces given. extra_check(reply) -> (check, detail) or None.
+    budget_s: seconds for this item (default config.QUESTION_TIME_BUDGET_S)."""
     start = perf_counter()
     if pieces is None:
         pieces = topic_pieces(topic, searcher)
@@ -131,7 +132,7 @@ def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None):
 
     if not pieces:
         return done(REFUSED, NOT_FOUND, reason="no_topic_words")
-    budget = config.QUESTION_TIME_BUDGET_S - (perf_counter() - start)
+    budget = (config.QUESTION_TIME_BUDGET_S if budget_s is None else budget_s) - (perf_counter() - start)
     try:
         text, provider, cached = chain.ask(prompt(topic, pieces), budget_s=budget)
     except AllProvidersFailed as failed:
@@ -164,10 +165,10 @@ def nothing_kept(topic, dropped, noun):
     return f"I could not make a {noun} I can prove from this document."
 
 
-def make_set(make_one, topic, searcher, count):
+def make_set(make_one, topic, searcher, count, tries_per_item=None):
     """(kept items, items dropped, AI busy?). One piece per item, so items differ; at most
-    config.STUDY_TRIES_PER_ITEM tries per item. Stops when the AI is busy."""
-    tries = count * config.STUDY_TRIES_PER_ITEM
+    tries_per_item (default config.STUDY_TRIES_PER_ITEM) tries per item. Stops when the AI is busy."""
+    tries = count * (tries_per_item or config.STUDY_TRIES_PER_ITEM)
     pieces = topic_pieces(topic, searcher, tries) if topic else spread_pieces(searcher.chunks, tries)
     kept, dropped, seen = [], 0, set()
     for piece in pieces:

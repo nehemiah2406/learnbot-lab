@@ -71,6 +71,9 @@ MAX_LLM_CALLS_WITHOUT_ASKING = 50
 # --- Day 1: quiz + flashcards ---------------------------------------------------------
 STUDY_MIN_KEPT = 3  # a feature must keep at least this many of its 5 test items
 STUDY_TRIES_PER_ITEM = 2  # pieces tried per wanted item, so dropped items can be replaced
+QUIZ_TRIES_PER_QUESTION = 2  # a dropped question is tried once more, from other pieces, within its time budget
+QUIZ_SEARCH_PIECES = 20  # pieces searched for those other pieces
+QUIZ_SET_TRIES_PER_QUESTION = 3  # pieces tried per wanted question in a whole quiz
 STUDY_MIN_PIECE_WORDS = 25  # a shorter piece is not used for a quiz with no topic
 
 # --- Day 2: upload self-test, notebook, reading mode ----------------------------------
