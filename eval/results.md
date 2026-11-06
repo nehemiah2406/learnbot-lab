@@ -725,3 +725,23 @@ Self-test verdict: passed. Passed 4/5; 1 flashcards dropped while making the tes
 | How long does a tsunami warning stay in effect? | trap_answered | A tsunami warning may continue for several hours after the arrival of the initial wave. | answered from coast_pilot4_ch1.pdf p.20 | 1.7 s |
 | How many yards from a wreck must a buoy marking it be placed? | refused | Not in this document | llm_not_found | 1.3 s |
 <!-- END day2-selftest -->
+
+<!-- BEGIN day2-hard-traps -->
+## Hard traps in chat, with the "exact thing" rule (prompt version 5)
+
+Refused 6/7; answered 1; not tested (AI busy) 0; 9 AI calls; slowest 7.1 s.
+
+| Trap | Question | Outcome | Why refused | AI calls | Time |
+|---|---|---|---|---|---|
+| TRAP-SELF-01 | How long does a tsunami warning stay in effect? | trap_answered |  | gemini:gemini-3.1-flash-lite timeout 5.0 s -> groq:openai/gpt-oss-120b ok 1.6 s | 7.1 s |
+| TRAP-SELF-02 | How many yards from a wreck must a buoy marking it be placed? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.3 s | 1.7 s |
+| HARD-01 | Under the International Rules, what is the minimum range of visibility of the searchlight of a towing vessel? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 4.6 s | 5.0 s |
+| HARD-02 | Under the International Rules, how many strokes must the bell of a vessel at anchor give each minute? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 0.9 s | 1.2 s |
+| HARD-03 | How long must the owner keep a copy of a Boating Accident Report? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 1.9 s | 2.5 s |
+| HARD-04 | What is the speed limit for large vessels in a channel? | refused | llm_not_found | gemini:gemini-3.1-flash-lite timeout 5.0 s -> groq:openai/gpt-oss-120b ok 0.7 s | 6.5 s |
+| HARD-05 | What weight must a ladder cage be able to support? | refused | llm_not_found | gemini:gemini-3.1-flash-lite ok 0.9 s | 1.5 s |
+
+### Traps that got an answer
+
+- **TRAP-SELF-01**: "several hours" from coast_pilot4_ch1.pdf p.20; quote: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
+<!-- END day2-hard-traps -->
