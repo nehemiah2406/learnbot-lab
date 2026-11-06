@@ -8,10 +8,12 @@ import pytest
 from test_quiz import PIECE, QUOTE, SECOND, SECOND_QUOTE, FakeChain, FakeSearcher
 
 from learnbot import config
-from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED
+from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED, answer_question
 from learnbot.baseline import NOT_FOUND
 from learnbot.book import build_prompt, make_book, make_chapter, render, save_book
+from learnbot.chunking import Chunk
 from learnbot.evaluate import MISSED, NOT_TESTED, REFUSED as TRAP_REFUSED, RIGHT, TRAP_ANSWERED
+from learnbot.flashcards import make_card
 
 TOPIC = "ladder"
 
@@ -50,6 +52,61 @@ def test_chapter_keeps_proved_facts_with_page_and_quote():
 def test_one_bad_fact_is_dropped_and_the_good_one_stays(bad, reason):
     c = chapter(reply(bad, SECOND_FACT))
     assert [f.text for f in c.facts] == ["40 inches"] and c.dropped == 1 and reason in c.reason
+
+
+TWO_NUMBERS = "Violators may be fined up to $1,000, or imprisoned for up to 2 years, or both."
+FINES = Chunk("guide.pdf", 7, "Violators", TWO_NUMBERS)
+
+
+def test_answer_with_only_some_numbers_shows_the_documents_sentence():
+    # Real case BK-02: one sentence split into "$1,000" and "one year"; both were dropped.
+    bad = fact("What is the maximum fine for violators?", "$1,000", 7, TWO_NUMBERS)
+    c = chapter(reply(bad), "violators", [FINES])
+    assert c.status == ANSWERED and c.facts[0].text == TWO_NUMBERS and c.dropped == 0
+    assert c.facts[0].sources[0]["quote"] == TWO_NUMBERS
+
+
+def test_split_sentence_is_shown_once():
+    first = fact("What is the maximum fine for violators?", "$1,000", 7, TWO_NUMBERS)
+    second = fact("How long can violators be imprisoned?", "2 years", 7, TWO_NUMBERS)
+    c = chapter(reply(first, second), "violators", [FINES])
+    assert [f.text for f in c.facts] == [TWO_NUMBERS] and c.dropped == 1 and c.reason == "same_quote"
+
+
+def test_wrong_number_is_still_dropped_not_replaced():
+    bad = fact("What is the maximum fine for violators?", "$9,000", 7, TWO_NUMBERS)
+    c = chapter(reply(bad), "violators", [FINES])
+    assert not c.facts and "number_not_in_quote" in c.reason
+
+
+def test_invented_quote_is_still_dropped_not_replaced():
+    made_up = "Violators may be fined up to $9,000, or imprisoned for up to 2 years, or both."
+    c = chapter(reply(fact("What is the fine for violators?", "$9,000", 7, made_up)), "violators", [FINES])
+    assert not c.facts and "quote_not_on_page" in c.reason
+
+
+def test_very_long_quote_is_not_pasted_as_the_answer(monkeypatch):
+    monkeypatch.setattr(config, "BOOK_MAX_QUOTE_WORDS", 5)
+    bad = fact("What is the maximum fine for violators?", "$1,000", 7, TWO_NUMBERS)
+    c = chapter(reply(bad), "violators", [FINES])
+    assert not c.facts and c.reason == "proof:quote_not_focused"
+
+
+def test_chat_quiz_and_flashcards_still_drop_such_an_answer():
+    # Books only: the same reply stays refused everywhere else.
+    bad = {"question": "What is the maximum fine for violators?", "answer": "$1,000",
+           "source": {"doc": "guide.pdf", "page": 7, "quote": TWO_NUMBERS}}
+    card = make_card("violators", FakeSearcher([FINES]), FakeChain(json.dumps({"found": True, **bad})))
+    assert card.status == REFUSED and card.reason == "proof:quote_not_focused"
+    chat = answer_question("What is the maximum fine for violators?", FakeSearcher([FINES]), FakeChain(json.dumps(
+        {"found": True, "answer": "$1,000", "sources": [bad["source"]]})))
+    assert chat.status == REFUSED and chat.reason == "proof:quote_not_focused"
+
+
+def test_render_does_not_repeat_a_sentence_that_is_the_answer():
+    bad = fact("What is the maximum fine for violators?", "$1,000", 7, TWO_NUMBERS)
+    text = render("guide.pdf", [chapter(reply(bad), "violators", [FINES])])
+    assert text.count(TWO_NUMBERS) == 1 and "Page 7 (Violators)" in text
 
 
 def test_same_quote_twice_is_kept_once():

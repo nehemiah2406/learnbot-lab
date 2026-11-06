@@ -4,6 +4,9 @@ Every line of a book is a fact with its page and quote; there is no free text or
 because code cannot prove it. One AI call per chapter asks for up to
 config.BOOK_FACTS_PER_CHAPTER facts. Each fact goes through the same checks as a flashcard
 (learnbot.study) one at a time; a fact that fails is dropped. A chapter with no facts says why.
+One exception, in books only: if the only failure is that the answer leaves out some of its
+quote's numbers (the AI often splits one sentence into two facts), the answer becomes the exact
+sentence, so the user sees all its numbers in the document's own words.
 Each chapter has its own time budget. Replies are saved, so the same book costs no quota twice.
 """
 
@@ -20,6 +23,8 @@ from learnbot.baseline import NOT_FOUND
 from learnbot.eval_check import normalize
 from learnbot.llm import AllProvidersFailed
 from learnbot.proof import shown_quote
+
+FOCUS_CHECK = "proof:quote_not_focused"
 
 PROMPT = """You write facts for one chapter of a study book, using ONLY the numbered pieces of text below, taken from the user's document.
 
@@ -89,6 +94,10 @@ def checked_fact(topic, raw, pieces, searcher):
     except (ValueError, KeyError, TypeError):
         return None, "bad_fact"
     sources, reason, _ = study.check_reply(topic, reply, pieces, searcher)
+    if reason == FOCUS_CHECK and len(reply["sources"][0]["quote"].split()) <= config.BOOK_MAX_QUOTE_WORDS:
+        # The AI gave only some of the sentence's numbers: show the document's sentence instead.
+        reply["answer"] = reply["sources"][0]["quote"]
+        sources, reason, _ = study.check_reply(topic, reply, pieces, searcher)
     if reason:
         return None, reason
     return Fact(reply["question"], reply["answer"], sources, pieces=pieces), ""
@@ -150,7 +159,9 @@ def render(doc, chapters):
             lines += [f"**{fact.question}**", "", fact.text, ""]
             for s in fact.sources:
                 section = f" ({s['title']})" if s.get("title") else ""
-                lines += [f"Page {s['page']}{section}", "", f"> \"{shown_quote(s)}\"", ""]
+                lines += [f"Page {s['page']}{section}", ""]
+                if normalize(fact.text) != normalize(s["quote"]):  # the answer may be the sentence itself
+                    lines += [f"> \"{shown_quote(s)}\"", ""]
     return "\n".join(lines)
 
 

@@ -85,6 +85,7 @@ SELF_TEST_MIN_PASS = 3  # below this the user sees a warning but can still use t
 # --- Day 3: book maker -----------------------------------------------------------------
 BOOK_FACTS_PER_CHAPTER = 5
 BOOK_MAX_TOPICS = 8
+BOOK_MAX_QUOTE_WORDS = 60  # a longer quote is not shown as the answer: the AI pasted a whole list
 
 # --- Research mode (web search; never used for document answers) ----------------------
 TAVILY_URL = "https://api.tavily.com/search"

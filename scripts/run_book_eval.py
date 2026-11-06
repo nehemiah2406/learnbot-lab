@@ -75,14 +75,14 @@ def fact_lines(chapter):
     return lines
 
 
-def build_report(records, calls, failures):
+def build_report(records, calls, failures, label=""):
     gated = [r for r in records if not r["hard"]]
     real = [r for r in gated if not r["trap"]]
     count = Counter(r["outcome"] for r in gated)
     traps = len(gated) - len(real)
     slowest = max(r["chapter"].seconds for r in gated)
     lines = [
-        f"## Day 3: book maker ({len(real)} topics + {traps} normal traps, run once; hard traps reported, not a gate)",
+        f"## Day 3: book maker{label} ({len(real)} topics + {traps} normal traps, run once; hard traps reported, not a gate)",
         "",
         f"**Gate: {'PASS' if not failures else 'NOT PASSED: ' + '; '.join(failures)}**",
         "",
@@ -112,9 +112,13 @@ def main():
     parser.add_argument("--max-calls", type=int, default=15)
     parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each chapter")
     parser.add_argument("--dry-run", action="store_true", help="fake replies, no AI, nothing written")
+    parser.add_argument("--questions", default=QUESTIONS)
+    parser.add_argument("--traps", default=TRAPS)
+    parser.add_argument("--section", default="day3-book", help="results.md section to write")
+    parser.add_argument("--label", default="", help="added to the report's title")
     args = parser.parse_args()
 
-    questions, traps, hard = load_rows(QUESTIONS), load_rows(TRAPS), load_rows(HARD_TRAPS)
+    questions, traps, hard = load_rows(args.questions), load_rows(args.traps), load_rows(HARD_TRAPS)
     rows = [(r, False, False) for r in questions] + [(r, True, False) for r in traps] + [(r, True, True) for r in hard]
     docs = sorted({r["doc"] for r, _, _ in rows})
     missing = [d for d in docs if not (DATA_DIR / d).is_file()]
@@ -154,7 +158,7 @@ def main():
     print(f"Real AI calls this run: {chain.calls}")
     print(("DRY RUN " if args.dry_run else "") + ("GATE: PASS" if not failures else "GATE: NOT PASSED: " + "; ".join(failures)))
     if not args.dry_run:
-        replace_section(RESULTS, "day3-book", build_report(records, chain.calls, failures))
+        replace_section(RESULTS, args.section, build_report(records, chain.calls, failures, args.label))
         print(f"Saved {RESULTS.as_posix()}")
     return 0
 
