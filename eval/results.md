@@ -749,20 +749,22 @@ Refused 6/7; answered 1; not tested (AI busy) 0; 9 AI calls; slowest 7.1 s.
 <!-- BEGIN research -->
 ## Research mode (5 questions + 2 traps)
 
-**Gate: NOT PASSED: wrong 1; only 2 kept (at least 3 needed)**
+**Gate: PASS at the minimum, after a scoring change made after the run. Original score: wrong 1 (right 2/5, gate not passed).**
+
+Hari approved the change after the run: in research scoring only, the same value written differently counts as the same number ("156.800" and "156.8"). WEB-04 was re-scored from its recorded answer (0 AI calls, 0 searches); the answer itself did not change. Document scoring stays exact, and the two refusals were not loosened. Not a clean first run.
 
 Web text changes, so these numbers are for this run only. "Wrong" means the numbers differ from the expected answer, or a trap got an answer.
 
 | Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
 |---|---|---|---|---|---|---|
-| 2/5 | 1 | 2/2 | 2 | 0 | 9.0 s | 8 |
+| 3/5 | 0 | 2/2 | 2 | 0 | 9.0 s | 8 |
 
 | Id | Outcome | AI | Time | Reason |
 |---|---|---|---|---|
 | WEB-01 | missed | gemini:gemini-3.1-flash-lite | 3.9 s | proof:quote_not_focused (quote has other measurements: 39 mph, 54 mph) |
 | WEB-02 | right | groq:openai/gpt-oss-120b | 9.0 s |  |
 | WEB-03 | missed | gemini:gemini-3.1-flash-lite | 3.2 s | proof:off_topic (question numbers not in the quote: one) |
-| WEB-04 | wrong | gemini:gemini-3.1-flash-lite | 3.0 s | numbers differ: expected ['156.8'], shown ['156.800'] |
+| WEB-04 | right (original: wrong) | gemini:gemini-3.1-flash-lite | 3.0 s | re-scored: 156.800 and 156.8 are the same value |
 | WEB-05 | right | gemini:gemini-3.1-flash-lite | 4.5 s |  |
 | TRAP-WEB-01 | refused | gemini:gemini-3.1-flash-lite | 2.8 s | llm_not_found |
 | TRAP-WEB-02 | refused | gemini:gemini-3.1-flash-lite | 3.3 s | llm_not_found |

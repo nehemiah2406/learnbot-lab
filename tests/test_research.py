@@ -11,7 +11,9 @@ from test_quiz import FakeChain
 from learnbot import config, research as research_module
 from learnbot.answer import AI_BUSY_STATUS, ANSWERED, REFUSED
 from learnbot.baseline import NOT_FOUND
-from learnbot.evaluate import MISSED, NOT_TESTED, REFUSED as TRAP_REFUSED, RIGHT, TRAP_ANSWERED, WRONG, score_web
+from learnbot.evaluate import (
+    MISSED, NOT_TESTED, REFUSED as TRAP_REFUSED, RIGHT, TRAP_ANSWERED, WRONG, numbers_differ, same_values, score_web,
+)
 from learnbot.research import (
     AI_BUSY_WEB, CHECK_THE_LINK, DAILY_LIMIT, FROM_THE_WEB, NO_KEY, NOT_FOUND_WEB, WEB_BUSY, WebSearchFailed,
     build_prompt, count_search, research, show, tavily_search,
@@ -33,6 +35,18 @@ def web(results=WEB):
 
 def ask(text, results=WEB):
     return research(QUESTION, FakeChain(text), web(results))
+
+
+@pytest.fixture(autouse=True)
+def storage(monkeypatch, tmp_path):
+    """Failures and search counts go to a temporary folder, never the real storage."""
+    monkeypatch.setattr(config, "STORAGE_DIR", str(tmp_path))
+    return tmp_path
+
+
+def failures(storage):
+    path = storage / "research" / "failures.jsonl"
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.exists() else []
 
 
 # --- Answers are labelled, linked and proved ------------------------------------------
@@ -106,6 +120,31 @@ def test_web_failure_is_a_friendly_message_and_asks_no_ai(kind, text):
 def test_busy_ai_is_a_friendly_message():
     ans = research(QUESTION, FakeChain(fail=True), web())
     assert (ans.status, ans.text) == (AI_BUSY_STATUS, AI_BUSY_WEB) and "document" not in ans.text
+
+
+def test_web_failure_type_is_recorded_without_the_question(storage):
+    research(QUESTION, FakeChain(), failing("timeout"))
+    saved = failures(storage)
+    assert [f["reason"] for f in saved] == ["web:timeout"] and saved[0]["time"]
+    assert "gale" not in json.dumps(saved)
+
+
+def test_busy_ai_failure_type_is_recorded(storage):
+    research(QUESTION, FakeChain(fail=True), web())
+    saved = failures(storage)
+    assert saved[0]["reason"] == "ai_busy" and "timeout" in saved[0]["detail"]
+
+
+def test_answers_and_refusals_record_no_failure(storage):
+    ask(reply())
+    ask('{"found": false}')
+    assert failures(storage) == []
+
+
+def test_failures_add_up_across_runs(storage):
+    research(QUESTION, FakeChain(), failing("timeout"))
+    research(QUESTION, FakeChain(), failing("error 500"))
+    assert [f["reason"] for f in failures(storage)] == ["web:timeout", "web:error 500"]
 
 
 def test_web_and_ai_share_the_time_budget():
@@ -236,6 +275,31 @@ def test_test_set_has_5_questions_and_2_traps_with_expected_answers():
 
 
 ROW = {"question": QUESTION, "expected_answer": "34 to 47 knots"}
+
+
+def test_web_scoring_counts_the_same_value_written_differently():
+    # Real case: "156.800 MHz" against the expected "156.8 MHz".
+    quote = "Channel 16 VHF (156.800 MHz) is a marine VHF radio frequency for distress calls."
+    row = {"question": "What is the frequency of channel 16?", "expected_answer": "156.8 MHz"}
+    results = [{"title": "VHF", "url": URL, "content": quote}]
+
+    def chat(answer):
+        return research(row["question"], FakeChain(reply(answer=answer, quote=quote)), web(results))
+    assert chat("156.800 MHz").status == ANSWERED and score_web(row, False, chat("156.800 MHz"))[0] == RIGHT
+    other = "Channel 16 VHF (156.85 MHz) is a marine VHF radio frequency for distress calls."
+    results2 = [{"title": "VHF", "url": URL, "content": other}]
+    wrong = research(row["question"], FakeChain(reply(answer="156.85 MHz", quote=other)), web(results2))
+    assert score_web(row, False, wrong)[0] == WRONG
+
+
+def test_only_zeros_after_a_decimal_point_are_dropped():
+    assert same_values("156.800 MHz") == {"156.8"} and same_values("2.0 miles") == {"2"}
+    assert same_values("800 feet and 100 yards") == {"800", "100"}
+    assert same_values("1,850 meters") != same_values("185 meters")
+
+
+def test_document_scoring_stays_exact():
+    assert numbers_differ("156.8 MHz", "156.800 MHz", "What is it?")
 
 
 def test_scoring():

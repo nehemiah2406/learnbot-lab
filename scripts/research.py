@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from learnbot.answer import AI_BUSY_STATUS  # noqa: E402
 from learnbot.llm import default_chain  # noqa: E402
 from learnbot.research import AI_BUSY_WEB, research, show  # noqa: E402
 
@@ -24,7 +25,10 @@ def main():
     if not chain.providers:
         print(AI_BUSY_WEB)
         return 1
-    print(show(research(args.question, chain)))
+    ans = research(args.question, chain)
+    print(show(ans))
+    if ans.status == AI_BUSY_STATUS:
+        print(f"(Failure type: {ans.reason}. Saved in storage/research/failures.jsonl)")
     return 0
 
 

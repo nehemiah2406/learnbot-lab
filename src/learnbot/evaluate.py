@@ -129,18 +129,24 @@ def score_answer(row, is_trap, ans):
     return WRONG, "answer shown is not supported by the expected source"
 
 
+def same_values(text):
+    """same_numbers, with zeros after a decimal point dropped ("156.800" -> "156.8")."""
+    return {n.rstrip("0").rstrip(".") if "." in n else n for n in same_numbers(text)}
+
+
 def score_web(row, is_trap, ans):
     """(outcome, reason) for one research answer. Web sources cannot be listed in advance, so
-    a real question is right if the numbers match the expected answer."""
+    a real question is right if the numbers match the expected answer. Web pages write the
+    same value in different forms, so "156.800" and "156.8" count as the same number here."""
     if ans.status == "ai_busy":
         return NOT_TESTED, ans.reason
     if is_trap:
         return (TRAP_ANSWERED, f"answered from {ans.sources[0]['doc']}") if ans.status == "answered" else (REFUSED, "")
     if ans.status != "answered":
         return MISSED, ans.reason + (f" ({ans.detail})" if ans.detail else "")
-    if numbers_differ(row["expected_answer"], ans.text, row["question"]):
-        expected, shown = sorted(same_numbers(row["expected_answer"])), sorted(same_numbers(ans.text))
-        return WRONG, f"numbers differ: expected {expected}, shown {shown}"
+    expected, shown = same_values(row["expected_answer"]), same_values(ans.text)
+    if not expected <= shown or not shown <= expected | same_values(row["question"]):
+        return WRONG, f"numbers differ: expected {sorted(expected)}, shown {sorted(shown)}"
     return RIGHT, ""
 
 

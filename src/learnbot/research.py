@@ -17,7 +17,7 @@ counted in config.STORAGE_DIR. Error messages never contain the key.
 import json
 import os
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from learnbot import config
@@ -133,16 +133,29 @@ class WebSearcher:
         return pieces
 
 
+def record_failure(reason, detail="", storage_dir=None):
+    """Add one failure type to config.STORAGE_DIR/research/failures.jsonl. Only the kind and
+    the AI attempt times: never the question, the error's own text or a key."""
+    path = Path(storage_dir or config.STORAGE_DIR) / "research" / "failures.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = {"time": datetime.now().isoformat(timespec="seconds"), "reason": reason, "detail": detail}
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(line) + "\n")
+
+
 def research(question, chain, search_web=tavily_search):
-    """An Answer that is safe to show: from the web, not found, or a friendly message."""
+    """An Answer that is safe to show: from the web, not found, or a friendly message.
+    The type of any web or AI failure is recorded and kept in the answer's reason."""
     try:
         ans = answer_question(question, WebSearcher(search_web), chain, build_prompt)
     except WebSearchFailed as failed:
         text = {"no_key": NO_KEY, "daily_limit": DAILY_LIMIT}.get(failed.kind, WEB_BUSY)
+        record_failure(f"web:{failed.kind}")
         return Answer(AI_BUSY_STATUS, text, [], reason=f"web:{failed.kind}")
     if ans.status == REFUSED:
         return replace(ans, text=NOT_FOUND_WEB)
     if ans.status == AI_BUSY_STATUS:
+        record_failure(ans.reason, ans.detail)
         return replace(ans, text=AI_BUSY_WEB)
     return ans
 
