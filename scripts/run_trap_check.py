@@ -8,6 +8,7 @@ answer is printed with its quote, for a person to read. The numbers go to eval/r
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -26,10 +27,10 @@ RESULTS = Path("eval/results.md")
 TRAP_FILES = ["eval/selftest_traps.csv", "eval/hard_traps.csv"]
 
 
-def build_report(records, calls):
+def build_report(records, calls, title):
     count = [r["outcome"] for r in records]
     lines = [
-        "## Hard traps in chat, with the \"exact thing\" rule (prompt version 5)",
+        title,
         "",
         f"Refused {count.count(REFUSED)}/{len(records)}; answered {count.count(TRAP_ANSWERED)}; "
         f"not tested (AI busy) {count.count(NOT_TESTED)}; {calls} AI calls; "
@@ -56,9 +57,13 @@ def main():
     sys.stdout.reconfigure(errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-calls", type=int, default=14)
+    parser.add_argument("--traps", nargs="+", default=TRAP_FILES, help="trap CSV files")
+    parser.add_argument("--section", default="day2-hard-traps", help="results.md section to write")
+    parser.add_argument("--title", default="## Hard traps in chat, with the \"exact thing\" rule (prompt version 5)")
+    parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each trap")
     args = parser.parse_args()
 
-    rows = [r for name in TRAP_FILES for r in load_rows(name)]
+    rows = [r for name in args.traps for r in load_rows(name)]
     docs = sorted({r["doc"] for r in rows})
     missing = [d for d in docs if not (DATA_DIR / d).is_file()]
     if missing:
@@ -75,6 +80,7 @@ def main():
     records = []
     try:
         for row in rows:
+            time.sleep(args.pause)  # stay under the free per-minute limits
             item = answer_question(row["question"], searcher.for_document(row["doc"]), chain)
             outcome, _ = score_answer(row, True, item)
             records.append({"row": row, "item": item, "outcome": outcome})
@@ -86,7 +92,7 @@ def main():
               "These numbers are not a valid result; results.md was not written.")
         return 2
     print(f"Real AI calls this run: {chain.calls}")
-    replace_section(RESULTS, "day2-hard-traps", build_report(records, chain.calls))
+    replace_section(RESULTS, args.section, build_report(records, chain.calls, args.title))
     print(f"Saved {RESULTS.as_posix()}")
     return 0
 

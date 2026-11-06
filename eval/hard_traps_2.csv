@@ -1,0 +1,11 @@
+doc,id,question,type,expected_answer,keywords
+nav_rules.pdf,HARD2-01,"Under the International Rules, how far away must the bell of a vessel be audible?",maritime_outside,Not in this document,bell shall be audible;bell must be audible;audibility of the bell;audibility of a bell
+nav_rules.pdf,HARD2-02,"Under the Inland Rules, what is the minimum range of visibility of a diamond shape?",maritime_outside,Not in this document,shape shall be visible;shapes shall be visible;shape must be visible;visibility of a shape
+nav_rules.pdf,HARD2-03,"Under the International Rules, what is the minimum height above the hull of a sternlight?",maritime_outside,Not in this document,sternlight at a height;sternlight shall be placed at a height;height of the sternlight
+boaters_guide.pdf,HARD2-04,How many years is a life jacket good for after the date of manufacture?,maritime_outside,Not in this document,jacket expires;jackets expire;life jacket is good for
+boaters_guide.pdf,HARD2-05,How many inches wide must a capacity plate be?,maritime_outside,Not in this document,plate must be;inches wide
+boaters_guide.pdf,HARD2-06,What is the amount of the civil penalty for not carrying a fire extinguisher?,maritime_outside,Not in this document,penalty for not carrying;fire extinguisher penalty
+coast_pilot4_ch1.pdf,HARD2-07,How fast does a storm surge travel in the deep ocean?,maritime_outside,Not in this document,surge travels;surge can exceed;speed of a storm surge
+coast_pilot4_ch1.pdf,HARD2-08,What wind speed in knots defines a hurricane watch?,maritime_outside,Not in this document,watch to indicate winds;watch indicates winds
+osha3124.pdf,HARD2-09,How many pounds must a landing platform be able to support?,off_topic,Not in this document,platform must support;platform must be able to support;landing must support
+osha3124.pdf,HARD2-10,What is the maximum length of a portable ladder?,off_topic,Not in this document,maximum length of a portable;portable ladders must not exceed;portable ladder must not exceed
