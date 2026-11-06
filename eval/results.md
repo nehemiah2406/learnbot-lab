@@ -1078,3 +1078,42 @@ Refused 9/10; answered 1; not tested (AI busy) 0; 10 AI calls; slowest 2.0 s.
 
 - **HARD2-08**: "20 to 33 knots" from coast_pilot4_ch1.pdf p.29; quote: "Southern (GA to TX and Caribbean) – Sustained winds of 20 to 33 knots, ricane Watch"
 <!-- END hard-traps-2-groq -->
+
+<!-- BEGIN quiz-retry-fix -->
+## Day 1: Quiz with the and fix and a second try, new topics (5 topics + 2 traps)
+
+**Gate: NOT PASSED: only 2 kept (at least 3 needed)**
+
+Run once on 5 new topics, committed before the run; nothing changed after it. Quote check not loosened. Read by a person: the 2 kept questions have right answers and clearly wrong options. Dropped: QUIZ3-02 (quote also had "five minutes", left out of the answer), QUIZ3-03 (quote not on the page; "right page not sent" describes only the last try's pieces), QUIZ3-04 (fair wrong option "less than 12 meters" uses a number + unit from the quote). Both traps were refused by the topic-word check, without the AI.
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 2/5 | 2/5 | 0 | 2/2 | 3 | 0 | 8.7 s | 7 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| QUIZ3-01 | right | gemini:gemini-3.1-flash-lite | 3.5 s |  |
+| QUIZ3-02 | missed | gemini:gemini-3.1-flash-lite | 1.7 s | proof:quote_not_focused (quote has numbers the answer leaves out: 5) |
+| QUIZ3-03 | missed | gemini:gemini-3.1-flash-lite | 8.7 s | search miss (right page not sent); proof:quote_not_on_page (osha3124.pdf p.6) |
+| QUIZ3-04 | missed | gemini:gemini-3.1-flash-lite | 5.0 s | wrong_in_quote (less than 12 meters) |
+| QUIZ3-05 | right | groq:openai/gpt-oss-120b | 3.9 s |  |
+| TRAP-QUIZ3-01 | refused | none | 0.2 s | no_topic_words |
+| TRAP-QUIZ3-02 | refused | none | 0.4 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **QUIZ3-01** (right), topic: maximum number of persons boat length width
+  Q: According to the Safe Loading rules, what is the formula to calculate the Maximum Number of Persons for a boat based on its dimensions?
+  - Boat Length X Boat Width/5
+  * Boat Length X Boat Width/15
+  - Boat Length X Boat Width/20
+  - Boat Length X Boat Width/10
+  Source: boaters_guide.pdf p.39 (Safe Loading (33 CFR 183, subpart C)); quote: "Maximum Number of Persons = Boat Length X Boat Width/15."
+- **QUIZ3-05** (right), topic: placard discharge restrictions vessels 26 feet
+  Q: What must United States vessels of 26 feet or longer display to inform crew and passengers of discharge restrictions?
+  - a verbal announcement
+  - no placard required
+  * a durable placard at least 4 by 9 inches
+  - a small sticker
+  Source: boaters_guide.pdf p.27 (Garbage Type Discharge); quote: "United States vessels of 26 feet or longer must display in a prominent location, a durable placard at least 4 by 9 inches notifying the crew and passengers of the discharge restrictions."
+<!-- END quiz-retry-fix -->
