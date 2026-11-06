@@ -745,3 +745,46 @@ Refused 6/7; answered 1; not tested (AI busy) 0; 9 AI calls; slowest 7.1 s.
 
 - **TRAP-SELF-01**: "several hours" from coast_pilot4_ch1.pdf p.20; quote: "Warnings alert the public that widespread, dangerous coastal flooding accompanied by powerful currents is possible and may continue for several hours after arrival of the initial wave."
 <!-- END day2-hard-traps -->
+
+<!-- BEGIN research -->
+## Research mode (5 questions + 2 traps)
+
+**Gate: NOT PASSED: wrong 1; only 2 kept (at least 3 needed)**
+
+Web text changes, so these numbers are for this run only. "Wrong" means the numbers differ from the expected answer, or a trap got an answer.
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|
+| 2/5 | 1 | 2/2 | 2 | 0 | 9.0 s | 8 |
+
+| Id | Outcome | AI | Time | Reason |
+|---|---|---|---|---|
+| WEB-01 | missed | gemini:gemini-3.1-flash-lite | 3.9 s | proof:quote_not_focused (quote has other measurements: 39 mph, 54 mph) |
+| WEB-02 | right | groq:openai/gpt-oss-120b | 9.0 s |  |
+| WEB-03 | missed | gemini:gemini-3.1-flash-lite | 3.2 s | proof:off_topic (question numbers not in the quote: one) |
+| WEB-04 | wrong | gemini:gemini-3.1-flash-lite | 3.0 s | numbers differ: expected ['156.8'], shown ['156.800'] |
+| WEB-05 | right | gemini:gemini-3.1-flash-lite | 4.5 s |  |
+| TRAP-WEB-01 | refused | gemini:gemini-3.1-flash-lite | 2.8 s | llm_not_found |
+| TRAP-WEB-02 | refused | gemini:gemini-3.1-flash-lite | 3.3 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **WEB-02** How many seconds does a prolonged blast last under the COLREGs?
+  From the web  
+  four to six seconds  
+  Source: https://ialacolreg.com/en/colreg/rule-32  
+  Quote: "The term "prolonged blast" means a blast of from four to six seconds' duration."  
+  Web pages can be wrong or out of date. Check the link.
+- **WEB-04** What is the frequency in MHz of marine VHF channel 16?
+  From the web  
+  156.800 MHz  
+  Source: https://en.wikipedia.org/wiki/Channel_16_VHF  
+  Quote: "Channel 16 VHF (156.800 MHz) is a marine VHF radio frequency designated as an international distress frequency."  
+  Web pages can be wrong or out of date. Check the link.
+- **WEB-05** Under COLREGs Rule 34(d), how many short and rapid blasts must a vessel at least give when in doubt?
+  From the web  
+  at least five short and rapid blasts  
+  Source: https://ialacolreg.com/en/colreg/rule-34  
+  Quote: "the vessel in doubt shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle."  
+  Web pages can be wrong or out of date. Check the link.
+<!-- END research -->
