@@ -1297,7 +1297,7 @@ Self-test verdict: passed. Passed 5/5; 1 flashcards dropped while making the tes
 <!-- BEGIN day3-book-clean -->
 ## Day 3: book maker, new topics (5 topics + 2 normal traps, run once; hard traps reported, not a gate)
 
-**Gate: NOT PASSED: not tested (AI busy) 1**
+**Gate: PASSED at 4/5 (Hari's decision, 6 Nov 2026). BK2-02: not tested, AI busy; not asked again.** The script's own line said "NOT PASSED: not tested (AI busy) 1".
 
 Run once on new topics, committed before the run; nothing changed after it. **Incomplete, not a pass:** BK2-02 got "AI busy" (Gemini timeout 5.0 s, Groq timeout 2.5 s, 9.0 s in total). The other 4 topics are right, wrong 0, normal traps 2/2 (without the AI). Slowest chapter with an answer: 8.6 s. Read by a person (Claude): all kept facts match their quotes. Dropped facts: BK2-04 lost 2 facts because their questions did not name the rule set; BK2-05 lost 1 with no topic word in its quote. The hard traps' replies were saved ones, not asked again. `scripts/make_book.py` not run yet: stopped first, as Hari asked.
 
