@@ -790,3 +790,208 @@ Web text changes, so these numbers are for this run only. "Wrong" means the numb
   Quote: "the vessel in doubt shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle."  
   Web pages can be wrong or out of date. Check the link.
 <!-- END research -->
+
+<!-- BEGIN prompt5-quiz -->
+## Day 1: Quiz re-test, prompt version 5 (5 topics + 2 traps)
+
+**Gate: PASS**
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 3/5 | 3/5 | 0 | 2/2 | 2 | 0 | 5.2 s | 5 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| QUIZ-01 | right | gemini:gemini-3.1-flash-lite | 5.2 s |  |
+| QUIZ-02 | right | gemini:gemini-3.1-flash-lite | 5.1 s |  |
+| QUIZ-03 | missed | gemini:gemini-3.1-flash-lite | 4.3 s | wrong_in_quote (20) |
+| QUIZ-04 | missed | gemini:gemini-3.1-flash-lite | 4.7 s | proof:quote_not_focused (quote has other measurements: 1.6093 kilometer, 1609.3 meter) |
+| QUIZ-05 | right | gemini:gemini-3.1-flash-lite | 4.2 s |  |
+| TRAP-QUIZ-01 | refused | none | 0.5 s | no_topic_words |
+| TRAP-QUIZ-02 | refused | none | 0.5 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **QUIZ-01** (right), topic: expiry of non-rechargeable extinguishers
+  Q: According to the Fire Extinguisher Maintenance guide, how many years from the date stamped on the bottom do non-rechargeable extinguishers expire?
+  * 12 years
+  - 10 years
+  - 15 years
+  - 6 years
+  Source: boaters_guide.pdf p.21 (Fire Extinguisher Maintenance); quote: "• The extinguisher is not expired (for non-rechargeable extinguishers, 12 years from date stamped on bottom)."
+- **QUIZ-02** (right), topic: marine sanitation device vessels over 65 feet
+  Q: According to the Marine Sanitation Devices (33 CFR 159) regulations, what type of marine sanitation device must a vessel over 65 feet install?
+  - Type I or II MSD
+  - Type I or III MSD
+  * Type II or III MSD
+  - Type I, II, or III MSD
+  Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "Vessels over 65 feet must install a Type II or III MSD."
+- **QUIZ-05** (right), topic: shape when the tow exceeds 200 meters International
+  Q: Under the INTERNATIONAL rules, what shape must be displayed when the length of the tow exceeds 200 meters, where it can best be seen?
+  * a diamond shape
+  - a cylinder shape
+  - a ball shape
+  - a cone shape
+  Source: nav_rules.pdf p.61 (—INTERNATIONAL— Lights and Shapes Rule 24—CONTINUED); quote: "(iii) when the length of the tow exceeds 200 meters, a diamond shape where it can best be seen."
+<!-- END prompt5-quiz -->
+
+<!-- BEGIN prompt5-cards -->
+## Day 1: Flashcards re-test, prompt version 5 (5 topics + 2 traps)
+
+**Gate: PASS**
+
+| Kept | Right page (not a gate) | Wrong | Traps refused | Missed (dropped) | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|---|
+| 3/5 | 3/5 | 0 | 2/2 | 2 | 0 | 8.0 s | 7 |
+
+| Id | Outcome | AI that answered | Time | Reason |
+|---|---|---|---|---|
+| CARD-01 | right | groq:openai/gpt-oss-120b | 8.0 s |  |
+| CARD-02 | right | groq:openai/gpt-oss-120b | 7.0 s |  |
+| CARD-03 | missed | groq:openai/gpt-oss-120b | 2.4 s | proof:quote_not_focused (quote has other measurements: 5 percent) |
+| CARD-04 | missed | groq:openai/gpt-oss-120b | 1.8 s | proof:quote_not_focused (quote has other measurements: 5 second) |
+| CARD-05 | right | groq:openai/gpt-oss-120b | 2.0 s |  |
+| TRAP-CARD-01 | refused | none | 0.9 s | no_topic_words |
+| TRAP-CARD-02 | refused | none | 1.0 s | no_topic_words |
+
+### Kept items, for a person to read
+
+- **CARD-01** (right), topic: variations in riser height stair tread depth
+  Q: What is the maximum allowed variation in riser height or stair tread depth?
+  A: No more than 1/4 inch
+  Source: osha3124.pdf p.8 (Defective Ladders); quote: "Variations in riser height or stair tread depth must not exceed 1/4 inch in any stairway system, including any foundation structure used as one or more treads of the stairs."
+- **CARD-02** (right), topic: temporary handrails clearance
+  Q: What is the minimum clearance required for temporary handrails?
+  A: 3 inches (8 cm)
+  Source: osha3124.pdf p.9 (Handrails); quote: "Temporary handrails must have a minimum clearance of 3 inches (8 cm) between the handrail and walls, stair rail systems and other objects."
+- **CARD-05** (right), topic: treated sewage discharge shore
+  Q: How far from shore is the discharge of treated sewage allowed?
+  A: within 3 nautical miles of shore except in designated “No Discharge Zone” areas.
+  Source: boaters_guide.pdf p.28 (Marine Sanitation Devices (33 CFR 159)); quote: "The discharge of treated sewage is allowed within 3 nautical miles of shore except in designated “No Discharge Zone” areas."
+<!-- END prompt5-cards -->
+
+<!-- BEGIN prompt5-answers -->
+## Re-tests with the "exact thing" rule (prompt version 5, 6 Nov 2026)
+
+**Chat eval is NOT complete:** the 60-call limit Hari set was reached with 2 items not tested (BG-03 AI busy; TRAP-CP-02 not asked). No tuning during the run. Calls: quiz 5, flashcards 7, chat 46, tsunami trap 2; 60 in total.
+
+Old = prompt version 4 (29 + 8, 3 PDFs loaded; NAV-02 and NAV-08 asked again 3 Nov). New = prompt version 5, 4 PDFs loaded, Groq answered about half because Gemini was often slow. So not only the rule changed.
+
+| Chat eval | Old | New |
+|---|---|---|
+| Right | 22/29 | 21/29 |
+| Wrong | 0 | 0 |
+| Missed | 7 | 7 |
+| Traps refused | 8/8 | 7/7 tested (1 not asked) |
+| Not tested | 0 | 2 |
+| Slowest | 9.0 s | 9.0 s (BG-03, AI busy); slowest answer shown 7.2 s |
+
+Changed: NAV-08 right -> missed (`quote_not_focused`: a good answer lost). NAV-11 missed -> right. BG-03 right -> not tested. TRAP-CP-02 refused -> not asked. Every other item has the same outcome.
+
+| Id | Old | New | Time | New reason |
+|---|---|---|---|---|
+| NAV-01 | right | right | 1.9 s |  |
+| NAV-02 | right | right | 2.1 s |  |
+| NAV-03 | right | right | 1.7 s |  |
+| NAV-04 | right | right | 2.8 s |  |
+| NAV-05 | right | right | 7.2 s |  |
+| NAV-06 | missed | missed | 6.7 s | proof:quote_not_focused (quote has other measurements: 2 second) |
+| NAV-07 | missed | missed | 1.4 s | llm_not_found |
+| NAV-08 | right | missed | 2.7 s | proof:quote_not_focused (quote has numbers the answer leaves out: 1) |
+| NAV-09 | missed | missed | 1.4 s | llm_not_found |
+| NAV-10 | missed | missed | 1.9 s | proof:quote_not_focused (quote has other measurements: 6 mile) |
+| NAV-11 | missed | right | 6.7 s |  |
+| NAV-12 | right | right | 2.1 s |  |
+| NAV-13 | right | right | 1.6 s |  |
+| BG-01 | right | right | 1.5 s |  |
+| BG-02 | right | right | 1.9 s |  |
+| BG-03 | right | not_tested | 9.0 s | call limit: not asked |
+| BG-04 | right | right | 2.0 s |  |
+| BG-05 | right | right | 1.5 s |  |
+| BG-06 | right | right | 1.8 s |  |
+| BG-07 | right | right | 2.2 s |  |
+| BG-08 | missed | missed | 2.8 s | proof:off_topic (quote has none of the question's words: Lettering must be in plain, verti |
+| CP-01 | right | right | 5.1 s |  |
+| CP-02 | right | right | 6.7 s |  |
+| CP-03 | right | right | 1.7 s |  |
+| CP-04 | right | right | 2.8 s | other answer from coast_pilot4_ch1.pdf p.34 |
+| CP-05 | right | right | 1.4 s |  |
+| CP-06 | right | right | 2.0 s |  |
+| CP-07 | missed | missed | 7.0 s | proof:quote_not_focused (quote has other measurements: 1.15 statute mile) |
+| CP-08 | right | right | 7.0 s |  |
+| TRAP-NAV-01 | refused | refused | 1.3 s | llm_not_found |
+| TRAP-NAV-02 | refused | refused | 1.0 s | llm_not_found |
+| TRAP-NAV-03 | refused | refused | 1.3 s | llm_not_found |
+| TRAP-BG-01 | refused | refused | 1.2 s | llm_not_found |
+| TRAP-BG-02 | refused | refused | 2.4 s | llm_not_found |
+| TRAP-BG-03 | refused | refused | 7.5 s | llm_not_found |
+| TRAP-CP-01 | refused | refused | 6.6 s | llm_not_found |
+| TRAP-CP-02 | refused | not_tested | - | call limit: not asked |
+
+| Quiz | Old (after post-run fixes) | New |
+|---|---|---|
+| Kept | 3/5 (QUIZ-01, 04, 05) | 3/5 by the script (QUIZ-01, 02, 05); 2/5 if QUIZ-02 is not counted |
+| Wrong | 0 | 0 |
+| Traps refused | 2/2 (no AI) | 2/2 (no AI) |
+| Slowest | 7.5 s | 5.2 s |
+
+Read by a person: QUIZ-02's wrong options "Type I or II", "Type I or III", "Type I, II, or III" are partly right, which breaks quiz rule 3. The script cannot see this. QUIZ-04 lost (`quote_not_focused`: the quote also had kilometer and meter values). Full run: section prompt5-quiz.
+
+| Flashcards | Old | New |
+|---|---|---|
+| Kept | 4/5 | 3/5 |
+| Wrong | 0 | 0 |
+| Traps refused | 2/2 (no AI) | 2/2 (no AI) |
+| Slowest | 7.3 s | 8.0 s |
+
+CARD-04 lost (`quote_not_focused`: the quote also had the bell's 5 seconds). CARD-03 dropped in both runs. Full run: section prompt5-cards.
+
+### Tsunami trap (TRAP-SELF-01)
+
+Asked fresh once more with the rule: **answered again**, "several hours", Gemini 503 then Groq, 3.4 s. Same quote from p.20, which says the flooding may continue for several hours, not the warning. Three asks so far: Gemini before the rule, Groq twice with the rule. Gemini has not been seen answering it with the rule.
+
+### Chat answers shown, for a person to read
+
+- **NAV-01**: A vessel restricted in her ability to maneuver is a vessel which from the nature of her work is restricted in her ability to maneuver as required by these Rules and is therefore unable to keep out of the way of another vessel.  
+  nav_rules.pdf p.15: "(g) The term vessel restricted in her ability to maneuver means a vessel which from the nature of her work is restricted in her ability to maneuver as required by these Rules and is therefore unable to keep out of the way of another vessel."
+- **NAV-02**: The word underway means that a vessel is not at anchor, or made fast to the shore, or aground.  
+  nav_rules.pdf p.17: "(i) The word underway means that a vessel is not at anchor, or made fast to the shore, or aground."
+- **NAV-03**: The vessel shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle.  
+  nav_rules.pdf p.109: "(d) When vessels in sight of one another are approaching each other and from any cause either vessel fails to understand the intentions or actions of the other, or is in doubt whether sufficient action is being taken by the other to avoid collision, the vessel in doubt shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle."
+- **NAV-04**: The minimum range of visibility of a masthead light on a vessel of 50 meters or more in length is 6 miles.  
+  nav_rules.pdf p.45: "(a) In vessels of 50 meters or more in length: … a masthead light, 6 miles"
+- **NAV-05**: from 4 to 6 seconds’ duration  
+  nav_rules.pdf p.106: "The term prolonged blast means a blast of from 4 to 6 seconds’ duration."
+- **NAV-11**: at least five short and rapid blasts on the whistle  
+  nav_rules.pdf p.109: "When vessels in sight of one another are approaching each other and from any cause either vessel fails to understand the intentions or actions of the other, or is in doubt whether sufficient action is being taken by the other to avoid collision, the vessel in doubt shall immediately indicate such doubt by giving at least five short and rapid blasts on the whistle."
+- **NAV-12**: 70-200 Hz  
+  nav_rules.pdf p.137: "70-200 Hz, for a vessel 200 meters or more in length;"
+- **NAV-13**: A high intensity white light flashing at regular intervals from 50 to 70 times per minute  
+  nav_rules.pdf p.116: "A high intensity white light flashing at regular intervals from 50 to 70 times per minute. Inland only."
+- **BG-01**: anchors, paddles, rearview mirrors, or diver/ski flags  
+  boaters_guide.pdf p.12: "The Coast Guard does not regulate anchors, paddles, rearview mirrors, or diver/ski flags."
+- **BG-02**: Mark the name and hailing port of the vessel together in one place on the hull (usually on the stern).  
+  boaters_guide.pdf p.10: "Mark the name and hailing port of the vessel together in one place on the hull (usually on the stern)."
+- **BG-04**: not less than 3 inches in height  
+  boaters_guide.pdf p.9: "Lettering must be in plain, vertical block characters of not less than 3 inches in height."
+- **BG-05**: 42 months after the date of manufacture  
+  boaters_guide.pdf p.16: "Check the expiration date (42 months after the date of manufacture)."
+- **BG-06**: at least 5 by 8 inches  
+  boaters_guide.pdf p.26: "Vessels 26 feet and greater in length, with machinery spaces, must display a placard at least 5 by 8 inches, made of durable material, fixed in a conspicuous place in the machinery spaces, or at the bilge pump control station, stating the following:"
+- **BG-07**: 42 months after the date of manufacture  
+  boaters_guide.pdf p.16: "Check the expiration date (42 months after the date of manufacture)."
+- **CP-01**: The controlling depth is the least known depth of a channel as determined by hydrographic surveys.  
+  coast_pilot4_ch1.pdf p.2: "(26) The controlling depth is the least known depth of a channel as determined by hydrographic surveys and restricts the safe use of the channel to drafts less than that depth."
+- **CP-02**: Squat denotes a change in trim of a ship underway, relative to her trim when stopped.  
+  coast_pilot4_ch1.pdf p.2: "Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
+- **CP-03**: Vertical clearances of bridges and overhead cables are in feet above mean high water unless otherwise stated.  
+  coast_pilot4_ch1.pdf p.1: "Vertical clearances of bridges and overhead cables are in feet above mean high water unless otherwise stated; clearances in Coast Pilot 6 are in feet above Low Water Datum unless otherwise stated."
+- **CP-04**: A nautical mile is 1,852 meters / 6,076.12 feet.  
+  coast_pilot4_ch1.pdf p.34: "nautical mile — 1,852 meters / 6,076.12 feet"
+- **CP-05**: Settlement is appreciable when the depth is less than seven times the draft of the ship and increases as the depth decreases and the speed increases.  
+  coast_pilot4_ch1.pdf p.2: "Settlement is appreciable when the depth is less than seven times the draft of the ship and increases as the depth decreases and the speed increases."
+- **CP-06**: All ships of length 20m or greater are required to guard VHF channel 13, in addition to VHF channel 16, when operating within U.S. territorial waters.  
+  coast_pilot4_ch1.pdf p.15: "All ships of length 20m or greater are required to guard VHF channel 13, in addition to VHF channel 16, when operating within U.S. territorial waters."
+- **CP-08**: Squat is a change in trim of a ship underway compared to when it is stopped.  
+  coast_pilot4_ch1.pdf p.2: "(36) Squat denotes a change in trim of a ship underway, relative to her trim when stopped."
+<!-- END prompt5-answers -->
