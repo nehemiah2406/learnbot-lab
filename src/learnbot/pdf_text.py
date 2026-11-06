@@ -26,6 +26,11 @@ MIN_WORDS_FOR_COLUMNS = 40
 MIN_WORDS_PER_COLUMN_LINE = 4
 # Words whose tops differ by less than this are on the same line (points).
 LINE_TOLERANCE = 3
+# A page read row by row is "mixed" if this many lines (and this share of its lines) have a
+# wide gap near the middle with at least MIN_WORDS_PER_SIDE words on both sides.
+MIN_WORDS_PER_SIDE = 3
+MIN_MIXED_LINES = 5
+MIN_MIXED_SHARE = 0.15
 
 
 def group_lines(words, tolerance=LINE_TOLERANCE):
@@ -139,3 +144,24 @@ def read_page(page):
 def read_page_text(page):
     """Page text in reading order (column-aware). `page` is a pdfplumber page."""
     return read_page(page)[0]
+
+
+def line_has_two_sides(line, page_width):
+    """True if a wide gap near the middle of the line has enough words on both sides."""
+    for i in range(MIN_WORDS_PER_SIDE, len(line) - MIN_WORDS_PER_SIDE + 1):
+        gap_start, gap_end = line[i - 1]["x1"], line[i]["x0"]
+        middle = GUTTER_SEARCH[0] * page_width <= gap_start <= GUTTER_SEARCH[1] * page_width
+        if middle and gap_end - gap_start >= MIN_GUTTER_WIDTH * 2:
+            return True
+    return False
+
+
+def page_is_mixed(page):
+    """True if the page looks like two columns but was read row by row, so its lines may be
+    out of order. A page read column by column is not mixed; table rows have short cells."""
+    words = page.extract_words()
+    if find_gutters(words, page.width):
+        return False
+    lines = group_lines(words)
+    sides = sum(line_has_two_sides(line, page.width) for line in lines)
+    return sides >= MIN_MIXED_LINES and sides >= MIN_MIXED_SHARE * len(lines)
