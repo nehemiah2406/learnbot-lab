@@ -53,6 +53,8 @@ Caveats:
 - **Re-ranker can be slow.** It took 1.0-3.9 s per question on battery with 2-3 GB RAM free, against about 0.5 s average on 3 Nov. The models then took 104.7 s to load (44.7 s on 3 Nov). The cause is not proven: the plugged-in repeat test was not run, and the power state on 3 Nov was not recorded. No fix was made.
 - **Missed answers remain.** Safe refusals, not gate failures: eval 7, hold-out 3, new PDF 2, most of them from the `quote_not_focused` check or paraphrased questions.
 
+**Known limit (Hari's decision, option A, 6 Nov 2026):** the proof check tests words and numbers, not what a sentence is about, so a hard trap can still get a wrong answer with a real quote. Known cases: TRAP-SELF-01 (tsunami warning: "several hours"; p.20 says the flooding may continue that long; 3 wrong answers in 3 asks, Gemini before the rule, Groq twice with it) and HARD2-08 (hurricane watch: Groq said "20 to 33 knots"; two columns are mixed on p.29). The same 10 new hard traps: Gemini refused 10/10, Groq 9/10. All 17 hard traps with Gemini first: 16 refused. Option B (show only document sentences) was planned but not built. No code change for this.
+
 ---
 
 ## 1. Data
@@ -111,7 +113,7 @@ A simple InfoDeck-like app with chat + quiz + flashcards + notebook + reading mo
 | 4 | All file types | 3 questions + 1 trap per file type, wrong 0, under 10 s |
 | 5 | Simple UI (ask Hari first) + README, GitHub, resume, LinkedIn | Hari has approved the UI; Hari pushes |
 
-**Feature gate:** 5 questions + 2 traps; wrong 0; every trap refused; every question, card or answer under 10 s (each one by itself, shown as it is ready, not a whole quiz in 10 s); at least 3 of the 5 kept, otherwise the feature is not done, because a feature that drops everything would pass "wrong 0".
+**Feature gate:** 5 questions + 2 traps; wrong 0; wrong 0 and every trap refused on normal questions and normal traps; hard traps (all the words are in the document, the answer is not) reported honestly, not a gate (Hari, 6 Nov 2026); every question, card or answer under 10 s (each one by itself, shown as it is ready, not a whole quiz in 10 s); at least 3 of the 5 kept, otherwise the feature is not done, because a feature that drops everything would pass "wrong 0".
 
 Everything else from DeepTutor is dropped.
 
@@ -187,3 +189,4 @@ Everything else from DeepTutor is dropped.
 | 6 Nov 2026 | **10 new hard traps (`eval/hard_traps_2.csv`, committed before the run; 10 AI calls): refused 10/10, slowest 4.6 s, all by Gemini, so Groq was not tested on them.** All 17 hard traps so far: 16 refused; the tsunami trap gets through. **Quiz fix (code check `partly_right_option` + prompt; 5 new topics + 2 traps committed before the run; 7 AI calls): gate NOT passed: kept 1/5, wrong 0, traps 2/2 (without the AI), slowest 7.4 s.** One drop was a mistake by the new check (QUIZ2-04: "separate and distinct" read as a list). Not fixed: no tuning, waiting for Hari. Waiting for Hari's tsunami decision; notebook and reading mode wait. 552 tests pass |
 | 6 Nov 2026 | **Same 10 hard traps, Groq only (10 AI calls): refused 9/10, answered 1, slowest 2.0 s.** HARD2-08 (hurricane watch wind speed): Groq answered "20 to 33 knots" from p.29, where two columns are mixed in the page text, so the quote joins a small craft advisory line with "ricane Watch". The proof check found those words on the page. Gemini refused all 10 in its run. Waiting for Hari's tsunami decision |
 | 6 Nov 2026 | **Quiz: "and" list bug fixed, a dropped question is tried once more from other pieces, within its time budget (5 new topics + 2 traps committed before the run; 7 AI calls): gate NOT passed: kept 2/5, wrong 0, traps 2/2 (without the AI), slowest 8.7 s.** Quote check not loosened. Waiting for Hari's tsunami and quiz decisions; notebook and reading mode wait. 562 tests pass |
+| 6 Nov 2026 | **Hari chose option A: no code change.** The tsunami trap and HARD2-08 are recorded as a known limit (section 0, `eval/results.md`). Option B not built. New gate: wrong 0 on normal questions and normal traps; hard traps reported honestly. Quiz stays at 2/5 (pending). "Show quote" button stays. Next: notebook, then reading mode. Docs only |

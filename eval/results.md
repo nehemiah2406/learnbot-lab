@@ -1117,3 +1117,18 @@ Run once on 5 new topics, committed before the run; nothing changed after it. Qu
   - a small sticker
   Source: boaters_guide.pdf p.27 (Garbage Type Discharge); quote: "United States vessels of 26 feet or longer must display in a prominent location, a durable placard at least 4 by 9 inches notifying the crew and passengers of the discharge restrictions."
 <!-- END quiz-retry-fix -->
+
+<!-- BEGIN known-limit -->
+## Known limit: hard traps (Hari's decision, option A, 6 Nov 2026)
+
+The proof check tests words and numbers, not what a sentence is about. A hard trap (all the words are in the document, the answer is not) can still get a wrong answer with a real quote. No code change was made. Option B (show only document sentences) was planned but not built.
+
+| Trap | Question | Wrong answer shown | What the page says | When |
+|---|---|---|---|---|
+| TRAP-SELF-01 | How long does a tsunami warning stay in effect? | "several hours" | p.20: the flooding may continue for several hours, not the warning | 3 of 3 asks (Gemini before the rule, Groq twice with it) |
+| HARD2-08 | What wind speed in knots defines a hurricane watch? | "20 to 33 knots" | p.29: two columns are mixed; the figure is from a small craft advisory line | Groq only; Gemini refused |
+
+Hard traps with the rule: 17 different traps with Gemini first, 16 refused. The 10 newest: Gemini 10/10, Groq 9/10.
+
+**Gate from now:** wrong 0 on normal questions and normal traps; hard traps reported honestly.
+<!-- END known-limit -->
