@@ -89,6 +89,8 @@ def main():
     parser.add_argument("--pause", type=float, default=0, help="seconds to wait before each item")
     parser.add_argument("--dry-run", action="store_true", help="only check that everything loads; call no AI")
     parser.add_argument("--no-warm-up", action="store_true", help="skip the 1-call check of the main AI")
+    parser.add_argument("--section", help="results.md section to write (default: the feature's own, day1-...)")
+    parser.add_argument("--label", default="", help="added to the report's name")
     args = parser.parse_args()
 
     module, function, questions, traps, name = FEATURES[args.feature]
@@ -133,7 +135,7 @@ def main():
     failures = feature_gate([r["outcome"] for r in records], slowest)
     print(f"Real AI calls this run: {chain.calls}")
     print("GATE: PASS" if not failures else "GATE: NOT PASSED: " + "; ".join(failures))
-    replace_section(RESULTS, f"day1-{args.feature}", build_report(name, records, chain, failures))
+    replace_section(RESULTS, args.section or f"day1-{args.feature}", build_report(name + args.label, records, chain, failures))
     print(f"Saved {RESULTS.as_posix()}")
     return 0
 
