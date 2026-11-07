@@ -14,8 +14,7 @@ from test_quiz import FakeChain
 from learnbot.answer import ANSWERED, Answer
 from learnbot.index import Library
 from learnbot.search import Searcher
-from learnbot.selftest import saved_path
-from learnbot.webapp import FROM_DOCUMENT, HOST, PAGE, App, badge, card, clean_file_name, make_server
+from learnbot.webapp import FROM_DOCUMENT, HOST, PAGE, App, card, clean_file_name, make_server
 
 QUOTE = "The ladder rungs must be spaced 12 inches apart along the side rails."
 COND = "Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV)."
@@ -40,7 +39,8 @@ class Site:
 
         def make_searcher(paths, previous=None):
             return Searcher(Library.load(paths, None, self.storage), "bm25")
-        self.app = App(self.uploads, self.storage, lambda: chain, make_searcher)
+        self.log_path = folder / "logs" / "selftest.log"
+        self.app = App(self.uploads, self.storage, lambda: chain, make_searcher, log_dir=folder / "logs")
         self.app.start()
         self.server = make_server(self.app)
         self.port = self.server.server_address[1]
@@ -276,7 +276,7 @@ def test_no_ai_key_is_a_friendly_message(make_site):
 def test_question_while_a_file_is_checked_is_a_friendly_message(make_site):
     site = make_site(chat_reply())
     with site.app.ai_lock:
-        assert "checking a new file" in site.ask()["text"]
+        assert "new file ready" in site.ask()["text"]
     assert site.app.chain.prompts == []
 
 
@@ -299,13 +299,34 @@ def test_too_long_question_is_refused(make_site):
 
 
 # --- Upload ---------------------------------------------------------------------------
-def test_upload_stores_the_file_runs_the_self_test_and_shows_a_badge(make_site):
+def test_upload_shows_only_uploaded_and_the_self_test_result_is_only_in_the_log(make_site):
     site = make_site('{"found": false}', files=False)
     assert site.upload("guide.txt", TEXT.encode())[0] == 202
     status = site.wait_until_idle()
     assert (site.uploads / "guide.txt").read_text(encoding="utf-8") == TEXT
-    assert status["documents"] == [{"name": "guide.txt", "badge": "Self-test 0/5", "badgeKind": "warn"}]
-    assert "Warning" in status["notices"][-1]["message"] and status["notices"][-1]["kind"] == "warn"
+    assert status["documents"] == [{"name": "guide.txt", "badge": "Uploaded", "badgeKind": "good"}]
+    assert status["notices"] == [] and "elf-test" not in json.dumps(status)
+    assert "guide.txt | self-test warning: 0/5" in site.log_path.read_text(encoding="utf-8")
+
+
+def test_self_check_warning_goes_to_the_log_not_the_page(make_site):
+    site = make_site('{"found": false}', files=False)
+    site.upload("short.txt", b"Only a few words in this small file.")
+    status = site.wait_until_idle()
+    assert status["documents"][0]["badge"] == "Uploaded" and status["notices"] == []
+    assert "short.txt | self-check:" in site.log_path.read_text(encoding="utf-8")
+
+
+def test_page_has_no_self_test_text_or_yellow_notice():
+    assert "Self-test" not in PAGE_TEXT and ".notice.warn" not in PAGE_TEXT and "Ready" not in PAGE_TEXT
+
+
+def test_file_being_added_shows_adding_then_uploaded(make_site):
+    site = make_site(files=False)
+    with site.app.ai_lock:
+        site.upload("guide.txt", TEXT.encode())
+        assert site.status()["documents"] == [{"name": "guide.txt", "badge": "Adding", "badgeKind": "busy"}]
+    assert site.wait_until_idle()["documents"][0]["badge"] == "Uploaded"
 
 
 def test_uploaded_file_can_be_asked_at_once(make_site):
@@ -371,12 +392,23 @@ def test_upload_that_fails_inside_shows_a_friendly_message(make_site, monkeypatc
     assert "could not be added" in status["notices"][-1]["message"] and "secret" not in json.dumps(status)
 
 
-def test_call_limit_during_upload_is_a_friendly_message(make_site):
+def test_call_limit_during_the_self_test_keeps_the_file_and_only_logs(make_site):
     site = make_site(fail="limit", files=False)
     site.upload("guide.txt", TEXT.encode())
     status = site.wait_until_idle()
-    assert "limit" in status["notices"][-1]["message"]
-    assert status["documents"][0]["badge"] == "Not tested"
+    assert status["notices"] == [] and status["documents"][0]["badge"] == "Uploaded"
+    assert "self-test not finished" in site.log_path.read_text(encoding="utf-8")
+
+
+def test_broken_self_test_keeps_the_file_and_logs_no_error_text(make_site, monkeypatch):
+    def broken(*args):
+        raise RuntimeError("secret error text")
+    monkeypatch.setattr("learnbot.webapp.self_test_once", broken)
+    site = make_site(files=False)
+    site.upload("guide.txt", TEXT.encode())
+    status = site.wait_until_idle()
+    log = site.log_path.read_text(encoding="utf-8")
+    assert status["notices"] == [] and "RuntimeError" in log and "secret" not in log
 
 
 def test_temporary_upload_folder_is_removed(make_site, monkeypatch, tmp_path):
@@ -390,31 +422,6 @@ def test_temporary_upload_folder_is_removed(make_site, monkeypatch, tmp_path):
 
 
 # --- Small parts ----------------------------------------------------------------------
-class SavedTest:
-    def __init__(self, verdict, passed, wanted=5):
-        self.verdict, self.passed, self.wanted = verdict, passed, wanted
-
-
-@pytest.mark.parametrize("test, expected", [
-    (None, ("Not tested", "plain")), (SavedTest("passed", 5), ("Ready", "good")), (SavedTest("passed", 4), ("Self-test 4/5", "good")),
-    (SavedTest("warning", 2), ("Self-test 2/5", "warn")),
-])
-def test_badge(test, expected):
-    assert badge(test) == expected
-
-
-def test_saved_self_test_gives_the_badge(make_site):
-    site = make_site()
-    path = site.uploads / "guide.txt"
-    from learnbot.index import file_hash
-
-    saved = saved_path(file_hash(path), site.storage)
-    saved.parent.mkdir(parents=True, exist_ok=True)
-    saved.write_text(json.dumps({"file": "guide.txt", "verdict": "passed", "passed": 4, "wanted": 5, "questions": [],
-                                 "dropped": 0, "from_saved": False}), encoding="utf-8")
-    assert site.status()["documents"][0]["badge"] == "Self-test 4/5"
-
-
 @pytest.mark.parametrize("name, clean", [
     ("guide.pdf", "guide.pdf"), ("my guide (2).docx", "my guide (2).docx"), ("../a.txt", ""), ("a\\b.txt", ""), ("", ""),
     (".", ""), ("con:x", ""),

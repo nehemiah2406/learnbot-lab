@@ -1,7 +1,10 @@
 """The LearnBot page: one HTML file served by Python's built-in http.server, on this laptop only.
 
 The page calls the same functions as the commands: upload_file (self-check, automatic self-test)
-and answer_within (chat pipeline + proof check). Safety:
+and answer_within (chat pipeline + proof check). Every added file shows only "Uploaded": the
+self-test still runs once per file, and its result and any self-check warning go to
+config.LOG_DIR/selftest.log, never to the page. A file that cannot be read shows a clear error.
+Safety:
 
 - The server listens on 127.0.0.1 only.
 - Requests must name this server as their Host, so a web page cannot reach it through a
@@ -16,6 +19,7 @@ import queue
 import shutil
 import tempfile
 import threading
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -25,10 +29,9 @@ from learnbot.answer import AI_BUSY_STATUS, ANSWERED, answer_is_quote, answer_wi
 from learnbot.baseline import NOT_FOUND
 from learnbot.index import Embedder, Library, VectorStore, file_hash
 from learnbot.llm import CallLimitReached, default_chain
-from learnbot.pdf_check import WARNING
 from learnbot.proof import shown_quote, shown_where
 from learnbot.search import Searcher, default_searcher
-from learnbot.selftest import NOT_FINISHED, PASSED, SelfTest, saved_path, self_test_once
+from learnbot.selftest import self_test_once
 from learnbot.upload import upload_file
 
 HOST = "127.0.0.1"
@@ -37,7 +40,8 @@ X_LEARNBOT_HEADER = "X-LearnBot"
 MAX_QUESTION_CHARS = 1000
 FROM_DOCUMENT = "From your document"
 STILL_LOADING = "LearnBot is still starting. Please try again in a minute."
-FILE_BEING_CHECKED = "LearnBot is checking a new file. Please try again in a minute."
+FILE_BEING_CHECKED = "LearnBot is getting a new file ready. Please try again in a minute."
+UPLOADED, ADDING = "Uploaded", "Adding"
 AI_NOT_SET = "The AI is not set up: no AI key was found."
 AI_LIMIT = "The AI call limit for this session is used up. Please restart LearnBot."
 UPLOAD_FAILED = "This file could not be added. Please try again."
@@ -77,27 +81,18 @@ def busy_card(text):
     return {"kind": "busy", "label": "Please try again", "text": text, "sources": [], "showQuote": False}
 
 
-def badge(test):
-    """(text, kind) of a file's status from its saved self-test."""
-    if test is None:
-        return "Not tested", "plain"
-    if test.verdict == PASSED and test.passed == test.wanted:
-        return "Ready", "good"
-    score = f"Self-test {test.passed}/{test.wanted}"
-    return (score, "good") if test.verdict == PASSED else (score, "warn")
-
-
 class App:
     def __init__(self, upload_dir=None, storage_dir=None, make_chain=default_chain, make_searcher=real_searcher,
-                 max_calls=None):
+                 max_calls=None, log_dir=None):
         self.upload_dir = Path(upload_dir or config.UPLOAD_DIR)
         self.storage_dir = storage_dir
+        self.log_path = Path(log_dir or config.LOG_DIR) / "selftest.log"
         self.make_chain, self.make_searcher, self.max_calls = make_chain, make_searcher, max_calls
         self.chain = self.searcher = None
         self.ready = threading.Event()
         self.ai_lock = threading.Lock()  # one AI job at a time: a question or a self-test
         self.jobs = queue.Queue()
-        self.active = {}  # file name -> "Waiting" or "Checking"
+        self.active = set()  # names of the files still being added or self-tested
         self.notices = []  # [{file, message, kind}], newest last
         self.state_lock = threading.Lock()
 
@@ -124,21 +119,23 @@ class App:
         with self.state_lock:
             self.notices = (self.notices + [{"file": name, "message": message, "kind": kind}])[-20:]
 
-    def saved_test(self, path):
-        saved = saved_path(file_hash(path), self.storage_dir)
-        return SelfTest(**json.loads(saved.read_text(encoding="utf-8"))) if saved.is_file() else None
+    def log(self, name, message):
+        """One line in the self-test log. A log that cannot be written never stops the page."""
+        line = f"{datetime.now().isoformat(timespec='seconds')} | {name} | {message}\n"
+        try:
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.state_lock, open(self.log_path, "a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError:
+            pass
 
     def status(self):
         """Everything the page needs to draw the sidebar."""
         with self.state_lock:
-            active, notices = dict(self.active), list(self.notices)
-        documents = []
-        for path in self.paths():
-            text, kind = (active[path.name], "busy") if path.name in active else badge(self.saved_test(path))
-            documents.append({"name": path.name, "badge": text, "badgeKind": kind})
+            active, notices = set(self.active), list(self.notices)
+        documents = [{"name": path.name, "badge": UPLOADED, "badgeKind": "good"} for path in self.paths()]
         known = {d["name"] for d in documents}
-        documents += [{"name": name, "badge": text, "badgeKind": "busy"} for name, text in sorted(active.items())
-                      if name not in known]
+        documents += [{"name": name, "badge": ADDING, "badgeKind": "busy"} for name in sorted(active - known)]
         return {"ready": self.ready.is_set(), "working": bool(active), "documents": documents, "notices": notices}
 
     def add_upload(self, name, data):
@@ -146,41 +143,45 @@ class App:
         folder = Path(tempfile.mkdtemp(prefix="learnbot-upload-"))
         (folder / name).write_bytes(data)
         with self.state_lock:
-            self.active[name] = "Waiting"
+            self.active.add(name)
         self.jobs.put((name, folder))
 
     def work(self):
         self.ready.wait()
         while True:
             name, folder = self.jobs.get()
-            with self.state_lock:
-                self.active[name] = "Checking"
             with self.ai_lock:
                 try:
                     self.process(name, folder / name)
-                except CallLimitReached:
-                    self.notify(name, AI_LIMIT, "error")
                 except Exception:  # noqa: BLE001 - a bad file must not stop the page
                     self.notify(name, UPLOAD_FAILED, "error")
             shutil.rmtree(folder, ignore_errors=True)
             with self.state_lock:
-                self.active.pop(name, None)
+                self.active.discard(name)
 
     def run_self_test(self, stored):
-        """The search now includes the stored file, then the automatic self-test (once per file)."""
+        """The search now includes the stored file, then the automatic self-test (once per file).
+        The file stays added if the test cannot finish: only the log says so."""
         self.searcher = self.make_searcher(self.paths(), self.searcher)
-        return self_test_once(stored.name, file_hash(stored), self.searcher.for_document(stored.name), self.chain,
-                              self.storage_dir)
+        try:
+            test = self_test_once(stored.name, file_hash(stored), self.searcher.for_document(stored.name), self.chain,
+                                  self.storage_dir)
+        except CallLimitReached:
+            self.log(stored.name, "self-test not finished: AI call limit used up")
+            return None
+        except Exception as problem:  # noqa: BLE001 - the error's kind only, never its text
+            self.log(stored.name, f"self-test not finished: {type(problem).__name__}")
+            return None
+        saved = ", saved result" if test.from_saved else ""
+        self.log(stored.name, f"self-test {test.verdict}: {test.passed}/{test.wanted}, dropped {test.dropped}{saved}")
+        return test
 
     def process(self, name, path):
         result = upload_file(path, self.run_self_test, self.upload_dir)
         if result.problem:
             self.notify(name, result.problem, "error")
-            return
-        if result.check.verdict == WARNING:
-            self.notify(name, "; ".join(result.check.reasons), "warn")
-        test = result.self_test
-        self.notify(name, test.message, "good" if test.verdict == PASSED else "error" if test.verdict == NOT_FINISHED else "warn")
+        elif result.check.reasons:
+            self.log(name, "self-check: " + "; ".join(result.check.reasons))
 
     def ask(self, name, question):
         """The card for one question, asked only inside the chosen file."""

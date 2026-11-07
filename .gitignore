@@ -13,6 +13,7 @@ storage/
 chroma_db/
 *.sqlite3
 cache/
+logs/
 
 # ---- Python / tools ----
 .venv/

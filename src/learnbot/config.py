@@ -22,6 +22,7 @@ SAMPLE_CHARS = 300
 BASELINE_MIN_SCORE = 11.5
 
 # --- Phase 4: search + AI answers ---------------------------------------------------
+LOG_DIR = "logs"  # the page's self-test results (gitignored)
 STORAGE_DIR = "storage"  # pieces + ChromaDB vectors, cached by file hash (gitignored)
 CACHE_DIR = "cache"  # saved AI answers (gitignored)
 PIECES_VERSION = 1  # raise when chunking changes, so cached pieces are rebuilt
