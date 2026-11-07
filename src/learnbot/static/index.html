@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LearnBot</title>
+<style>
+:root {
+  --teal: #0F766E; --teal-dark: #115E59; --teal-soft: #CCFBF1; --amber: #F59E0B; --amber-soft: #FEF3C7;
+  --page: #F8FAFC; --text: #0F172A; --muted: #475569; --line: #E2E8F0; --card: #FFFFFF;
+  --green: #15803D; --red: #B91C1C; --orange: #C2410C; --slate: #475569;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; background: var(--page); color: var(--text);
+       font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
+button, input, textarea { font: inherit; }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+
+.topbar { display: flex; align-items: center; gap: 10px; padding: 11px 20px; background: var(--teal); color: #fff; }
+.topbar svg { width: 28px; height: 28px; flex: none; }
+.topbar h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+
+.layout { flex: 1; display: flex; min-height: 0; }
+.sidebar { width: 288px; flex: none; display: flex; flex-direction: column; gap: 18px; padding: 16px;
+           background: var(--card); border-right: 1px solid var(--line); overflow-y: auto; }
+.heading { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+
+.docs { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.doc { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 9px;
+       border: 1px solid transparent; border-radius: 8px; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.doc:hover { background: var(--page); }
+.doc.selected { background: var(--teal-soft); border-color: var(--teal); }
+.doc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { flex: none; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.badge.good { background: #DCFCE7; color: #166534; }
+.badge.warn { background: var(--amber-soft); color: #92400E; }
+.badge.busy { background: #E0F2FE; color: #075985; }
+.badge.plain { background: #F1F5F9; color: var(--slate); }
+.empty-docs { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.add { width: 100%; padding: 8px; border: 1px dashed var(--teal); border-radius: 8px; background: #fff;
+       color: var(--teal-dark); font-weight: 600; cursor: pointer; }
+.add:hover { background: var(--teal-soft); }
+.notices { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.notice { padding: 7px 9px; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }
+.notice.good { background: #DCFCE7; color: #166534; }
+.notice.warn { background: var(--amber-soft); color: #92400E; }
+.notice.error { background: #FEE2E2; color: #991B1B; }
+
+.modes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.mode { display: flex; align-items: center; justify-content: space-between; padding: 7px 9px; border-radius: 8px; color: var(--muted); }
+.mode.active { background: var(--teal); color: #fff; font-weight: 600; }
+.mode small { font-size: 12px; }
+.web { padding: 1px 7px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 12px; font-weight: 600; }
+.mode-right { display: flex; align-items: center; gap: 6px; }
+
+.score { margin-top: auto; padding: 12px; border-radius: 10px; background: var(--amber-soft); border: 1px solid var(--amber); }
+.score b { display: block; color: #92400E; font-size: 13px; }
+.score span { font-size: 14px; }
+
+.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.hint { margin: auto; max-width: 420px; color: var(--muted); text-align: center; }
+.question { align-self: flex-end; max-width: 72%; padding: 9px 14px; border-radius: 14px 14px 3px 14px;
+            background: var(--teal); color: #fff; overflow-wrap: anywhere; white-space: pre-wrap; }
+.answer { align-self: flex-start; width: min(720px, 92%); padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px;
+          background: var(--card); box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
+.answer.thinking { color: var(--muted); }
+.label { display: inline-block; padding: 2px 9px; border-radius: 999px; color: #fff; font-size: 12.5px; font-weight: 600; }
+.label.document { background: var(--green); }
+.label.refused { background: var(--red); }
+.label.web { background: var(--orange); }
+.label.busy { background: var(--slate); }
+.where { margin-top: 7px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.text { margin-top: 5px; font-size: 16px; overflow-wrap: anywhere; }
+.show-quote { margin-top: 9px; padding: 3px 11px; border: 1px solid var(--teal); border-radius: 7px; background: #fff; color: var(--teal-dark); font-size: 13px; cursor: pointer; }
+.show-quote:hover { background: var(--teal-soft); }
+.quote { margin: 9px 0 0; padding: 8px 12px; border-left: 3px solid var(--teal); background: var(--page); font-size: 14px; overflow-wrap: anywhere; }
+
+.composer { display: flex; align-items: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--card); }
+.composer textarea { flex: 1; min-width: 0; height: 44px; max-height: 130px; padding: 9px 12px; border: 1px solid #94A3B8; border-radius: 10px; resize: vertical; background: #fff; color: var(--text); }
+.ask { height: 44px; padding: 0 24px; border: 0; border-radius: 10px; background: var(--amber); color: var(--text); font-weight: 700; cursor: pointer; }
+.ask:hover:not(:disabled) { background: #D97706; }
+.ask:disabled { opacity: .55; cursor: default; }
+
+@media (max-width: 760px) {
+  .layout { flex-direction: column; overflow-y: auto; }
+  .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .score { margin-top: 0; }
+  .chat { min-height: 70vh; }
+  .question { max-width: 88%; }
+  .messages, .composer { padding-left: 16px; padding-right: 16px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <svg viewBox="0 0 32 32" aria-hidden="true">
+    <rect width="32" height="32" rx="7" fill="#fff"/>
+    <path d="M16 10c-2.4-1.8-5.6-2.5-9.5-2.2v15.4c3.9-.3 7.1.4 9.5 2.2 2.4-1.8 5.6-2.5 9.5-2.2V7.800c-3.900-.3-7.100.4-9.500 2.200z" fill="#0F766E"/>
+    <path d="M16 10v15.400" stroke="#fff" stroke-width="1.600"/>
+  </svg>
+  <h1>LearnBot</h1>
+</header>
+<div class="layout">
+  <nav class="sidebar" aria-label="Documents and modes">
+    <section>
+      <h2 class="heading">DOCUMENTS</h2>
+      <ul class="docs" id="docs"></ul>
+      <p class="empty-docs" id="no-docs" hidden>No documents yet.</p>
+      <button class="add" id="add" type="button">+ Add documents</button>
+      <input id="files" type="file" multiple hidden>
+      <div class="notices" id="notices" aria-live="polite"></div>
+    </section>
+    <section>
+      <h2 class="heading">MODE</h2>
+      <ul class="modes">
+        <li class="mode active" aria-current="true"><span>Chat</span></li>
+        <li class="mode"><span>Quiz</span><small>Later</small></li>
+        <li class="mode"><span>Flashcards</span><small>Later</small></li>
+        <li class="mode"><span>Notebook</span><small>Later</small></li>
+        <li class="mode"><span>Reading mode</span><small>Later</small></li>
+        <li class="mode"><span>Book maker</span><small>Later</small></li>
+        <li class="mode"><span>Research</span><span class="mode-right"><span class="web">Web</span><small>Later</small></span></li>
+      </ul>
+    </section>
+    <section class="score"><b>Quiz score today</b><span>No quiz yet</span></section>
+  </nav>
+  <main class="chat">
+    <div class="messages" id="messages" aria-live="polite">
+      <p class="hint" id="hint">LearnBot is starting. This takes a minute or two.</p>
+    </div>
+    <form class="composer" id="composer">
+      <textarea id="question" placeholder="Ask a question about your document" aria-label="Your question" maxlength="1000"></textarea>
+      <button class="ask" id="ask" type="submit">Ask</button>
+    </form>
+  </main>
+</div>
+<script>
+"use strict";
+// Everything from the server is put on the page with textContent, never as HTML:
+// text from a document can never run as code here.
+const $ = (id) => document.getElementById(id);
+const HEADERS = {"X-LearnBot": "1"};
+const POLL_MS = 2000;
+let selected = "";
+let ready = false;
+let asking = false;
+let shownNotices = "";
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function drawDocuments(documents) {
+  const list = $("docs");
+  list.replaceChildren();
+  if (!documents.some((d) => d.name === selected)) selected = documents.length ? documents[0].name : "";
+  for (const d of documents) {
+    const button = el("button", "doc" + (d.name === selected ? " selected" : ""));
+    button.type = "button";
+    button.title = d.name;
+    if (d.name === selected) button.setAttribute("aria-current", "true");
+    button.append(el("span", "doc-name", d.name), el("span", "badge " + d.badgeKind, d.badge));
+    button.addEventListener("click", () => { selected = d.name; refresh(); updateAsk(); });
+    const item = el("li");
+    item.append(button);
+    list.append(item);
+  }
+  $("no-docs").hidden = documents.length > 0;
+}
+
+function drawNotices(notices) {
+  const key = JSON.stringify(notices);
+  if (key === shownNotices) return;
+  shownNotices = key;
+  const box = $("notices");
+  box.replaceChildren();
+  for (const n of notices.slice(-3).reverse()) {
+    box.append(el("div", "notice " + n.kind, (n.file ? n.file + ": " : "") + n.message));
+  }
+}
+
+function drawHint() {
+  const hint = $("hint");
+  if (!hint) return;
+  if (!ready) hint.textContent = "LearnBot is starting. This takes a minute or two.";
+  else if (!selected) hint.textContent = "Add a document, then ask a question about it.";
+  else hint.textContent = "Ask a question about " + selected + ". Answers come only from this document.";
+}
+
+function updateAsk() {
+  $("ask").disabled = asking || !ready || !selected;
+}
+
+async function refresh() {
+  try {
+    const reply = await fetch("/api/status");
+    const status = await reply.json();
+    ready = status.ready;
+    drawDocuments(status.documents);
+    drawNotices(status.notices);
+    drawHint();
+    updateAsk();
+    return status;
+  } catch (problem) {
+    return null;
+  }
+}
+
+async function poll() {
+  const status = await refresh();
+  if (!status || !status.ready || status.working) setTimeout(poll, POLL_MS);
+}
+
+function addMessage(node) {
+  const hint = $("hint");
+  if (hint) hint.remove();
+  const box = $("messages");
+  box.append(node);
+  box.scrollTop = box.scrollHeight;
+}
+
+function drawCard(node, card) {
+  node.className = "answer";
+  node.replaceChildren(el("span", "label " + card.kind, card.label));
+  for (const s of card.sources) {
+    const place = s.section ? s.location + " · " + s.section : s.location;
+    node.append(el("div", "where", s.doc + ", " + place));
+  }
+  if (card.text) node.append(el("div", "text", card.text));
+  if (card.showQuote) {
+    const button = el("button", "show-quote", "Show quote");
+    button.type = "button";
+    button.setAttribute("aria-expanded", "false");
+    const quotes = card.sources.map((s) => {
+      const quote = el("blockquote", "quote", "“" + s.quote + "”");
+      quote.hidden = true;
+      return quote;
+    });
+    button.addEventListener("click", () => {
+      const open = quotes[0].hidden;
+      quotes.forEach((q) => { q.hidden = !open; });
+      button.textContent = open ? "Hide quote" : "Show quote";
+      button.setAttribute("aria-expanded", String(open));
+    });
+    node.append(button, ...quotes);
+  }
+}
+
+function problemCard(text) {
+  return {kind: "busy", label: "Please try again", text: text, sources: [], showQuote: false};
+}
+
+async function ask(question) {
+  addMessage(el("div", "question", question));
+  const answer = el("div", "answer thinking", "Looking in " + selected + "…");
+  addMessage(answer);
+  asking = true;
+  updateAsk();
+  try {
+    const reply = await fetch("/api/ask", {method: "POST", headers: {...HEADERS, "Content-Type": "application/json"},
+                                           body: JSON.stringify({document: selected, question: question})});
+    const data = await reply.json();
+    drawCard(answer, reply.ok ? data : problemCard(data.error));
+  } catch (problem) {
+    drawCard(answer, problemCard("LearnBot is not answering. Please check that it is still running."));
+  }
+  asking = false;
+  updateAsk();
+  $("messages").scrollTop = $("messages").scrollHeight;
+  $("question").focus();
+}
+
+async function upload(files) {
+  for (const file of files) {
+    try {
+      const reply = await fetch("/api/upload?name=" + encodeURIComponent(file.name),
+                                {method: "POST", headers: HEADERS, body: file});
+      if (!reply.ok) {
+        const data = await reply.json();
+        shownNotices = "";
+        $("notices").prepend(el("div", "notice error", file.name + ": " + data.error));
+      }
+    } catch (problem) {
+      $("notices").prepend(el("div", "notice error", file.name + ": this file could not be sent. Please try again."));
+    }
+  }
+  poll();
+}
+
+$("add").addEventListener("click", () => $("files").click());
+$("files").addEventListener("change", (event) => {
+  upload(Array.from(event.target.files));
+  event.target.value = "";
+});
+$("composer").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const question = $("question").value.trim();
+  if (!question || $("ask").disabled) return;
+  $("question").value = "";
+  ask(question);
+});
+$("question").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    $("composer").requestSubmit();
+  }
+});
+updateAsk();
+poll();
+</script>
+</body>
+</html>

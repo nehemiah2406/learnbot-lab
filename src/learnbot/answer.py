@@ -94,7 +94,8 @@ def answer_with_conditions(question, text, sources):
 
 def answer_is_quote(ans):
     """True if the answer already is the exact sentence, so "Show quote" would repeat it."""
-    return proof.same_text(ans.text) == proof.same_text(" ".join(proof.shown_quote(s) for s in ans.sources))
+    quote = " ".join(proof.shown_quote(s) for s in ans.sources)
+    return proof.same_text(ans.text) in (proof.same_text(quote), proof.same_text(re.sub(r"^\(\d+\)\s*", "", quote)))
 
 
 def answer_within(question, searcher, chain, refusal):
