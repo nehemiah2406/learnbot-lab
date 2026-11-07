@@ -93,11 +93,8 @@ def checked_fact(topic, raw, pieces, searcher):
         reply = study.parse_item(json.dumps({"found": True, **raw}))
     except (ValueError, KeyError, TypeError):
         return None, "bad_fact"
-    sources, reason, _ = study.check_reply(topic, reply, pieces, searcher)
-    if reason == FOCUS_CHECK and len(reply["sources"][0]["quote"].split()) <= config.BOOK_MAX_QUOTE_WORDS:
-        # The AI gave only some of the sentence's numbers: show the document's sentence instead.
-        reply["answer"] = reply["sources"][0]["quote"]
-        sources, reason, _ = study.check_reply(topic, reply, pieces, searcher)
+    # The AI gave only some of the sentence's numbers or dropped a condition: show the sentence.
+    sources, reason, _ = study.check_with_sentence(topic, reply, pieces, searcher, (FOCUS_CHECK, study.CONDITION_CHECK))
     if reason:
         return None, reason
     return Fact(reply["question"], reply["answer"], sources, pieces=pieces), ""

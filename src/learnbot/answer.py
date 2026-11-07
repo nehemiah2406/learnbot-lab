@@ -83,6 +83,20 @@ def attempts_text(attempts):
     return " -> ".join(f"{label} {kind} {seconds:.1f} s" for label, kind, seconds in attempts)
 
 
+def answer_with_conditions(question, text, sources):
+    """The answer, or the document's exact sentence if the answer drops a condition of its
+    quote. None if that sentence is too long to show as an answer."""
+    if not any(proof.dropped_condition(text, question, proof.quote_text(s)) for s in sources):
+        return text
+    sentence = " ".join(proof.shown_quote(s) for s in sources)
+    return sentence if len(sentence.split()) <= config.MAX_SENTENCE_ANSWER_WORDS else None
+
+
+def answer_is_quote(ans):
+    """True if the answer already is the exact sentence, so "Show quote" would repeat it."""
+    return proof.same_text(ans.text) == proof.same_text(" ".join(proof.shown_quote(s) for s in ans.sources))
+
+
 def answer_within(question, searcher, chain, refusal):
     """answer_question for a limited scope (a notebook, one page), with that scope's refusal.
     The AI busy note has no pieces to offer, because the scope may be very small."""
@@ -130,4 +144,9 @@ def answer_question(question, searcher, chain, prompt=None):
     # may have been narrowed to its one answering item (proof.shown_quote shows it).
     sources = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title, "where": proof.quoted_pieces(s, pieces)[0].where}
                for s in result.sources]
-    return done(ANSWERED, reply["answer"], sources=sources, **info)
+    text = reply["answer"]
+    if prompt is None:  # document answers only; a web answer keeps its label and link instead
+        text = answer_with_conditions(question, text, sources)
+        if text is None:
+            return done(REFUSED, NOT_FOUND, reason="condition_dropped", **info)
+    return done(ANSWERED, text, sources=sources, **info)

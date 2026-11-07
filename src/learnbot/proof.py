@@ -51,6 +51,9 @@ BULLET = re.compile(r"^[−–•▪·-]\s+")
 ITEM_BREAK = re.compile(r"\s*(?:(?:^|\s)[−–•▪·-]\s+|;\s*|\s(?=\((?:[ivx]+|[a-z]|\d+)\)\s))")
 
 
+CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding)\b([^.;,)]*)", re.IGNORECASE)
+
+
 def same_text(text):
     return BROKEN_HYPHEN.sub(r"\1-\2", normalize(text))
 
@@ -83,6 +86,17 @@ def compares(question, rule_sets):
 def quote_text(source):
     """The text a source proves: its list lead-in (if narrowed) plus its quote."""
     return f"{source.get('lead', '')} {source['quote']}".strip()
+
+
+def dropped_condition(answer, question, quote):
+    """The condition of the quote that the answer leaves out, or "". A short answer can be
+    false without it: "any boat 16 feet and longer" drops "(except canoes and kayaks)". Only
+    conditions with these words; the key words must be in the answer or the question."""
+    have = key_words(f"{answer} {question}")
+    for match in CONDITION.finditer(same_text(quote)):
+        if not key_words(match.group(2)) <= have:
+            return match.group(0).strip()
+    return ""
 
 
 def shown_where(source):

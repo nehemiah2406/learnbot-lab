@@ -86,7 +86,7 @@ def test_invented_quote_is_still_dropped_not_replaced():
 
 
 def test_very_long_quote_is_not_pasted_as_the_answer(monkeypatch):
-    monkeypatch.setattr(config, "BOOK_MAX_QUOTE_WORDS", 5)
+    monkeypatch.setattr(config, "MAX_SENTENCE_ANSWER_WORDS", 5)
     bad = fact("What is the maximum fine for violators?", "$1,000", 7, TWO_NUMBERS)
     c = chapter(reply(bad), "violators", [FINES])
     assert not c.facts and c.reason == "proof:quote_not_focused"

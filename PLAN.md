@@ -120,9 +120,13 @@ Everything else from DeepTutor is dropped.
 **UI decisions for the UI step (Hari, 6 Nov 2026), to be built in the UI step, not before:**
 
 - Colours "Study Teal": main #0F766E, accent amber #F59E0B, background #F8FAFC, text #0F172A. Green label = from your document, red = "Not in this document", orange label = "From the web".
-- Same layout as InfoDeck.
+- **No Streamlit and nothing installed (Hari, 6 Nov 2026):** one HTML page (HTML + CSS + plain JavaScript, no CDN, no frameworks), served by Python's built-in `http.server` on localhost only, calling LearnBot's existing functions.
+- Layout, arrangement only taken from `C:\\Users\\Hari\\Desktop\\Chatbot` (read only): teal header with a book icon + "LearnBot"; left sidebar with DOCUMENTS (file list with a status badge like "Ready" or "Self-test 4/5", and a "+ Add documents" button), then MODE list (Chat, Quiz, Flashcards, Notebook, Reading mode, Book maker, Research with an orange "Web" badge), and an amber "Quiz score today" box at the bottom; right side is the chat: user question bubbles in teal on the right, answer cards with the green/red/orange label, location, answer and "Show quote" button; ask box at the bottom with an amber "Ask" button.
+- Logo: a simple teal open-book icon (inline SVG).
+- "Show quote" is hidden when the answer already is the exact sentence.
+- First build: the page with upload + chat only; the other modes come later.
 - Header shows only the logo and "LearnBot", no tagline under it.
-- An answer shows the answer and its page; the quote opens with a "Show quote" button (it stays available, not removed).
+- An answer shows the answer and its location; the quote opens with a "Show quote" button (it stays available, not removed).
 - Research answers no longer show the "Web pages can be wrong or out of date" line (they keep the "From the web" label and the link).
 
 **Decisions on the older items (Hari, 4 Nov 2026):**
@@ -200,3 +204,4 @@ Everything else from DeepTutor is dropped.
 | 6 Nov 2026 | **File types group 1 (.txt, .md, .csv, .html) meets the gate on a clean first run** (`readers.py`, `scripts/make_sample_files.py`, `scripts/run_filetype_eval.py`; test set committed before the run; dry run first; 17 AI calls): each type right 3/3, **wrong 0**, trap 1/1, slowest 6.9 s. The type comes from the file's content; every answer shows its exact location; chat, quiz, flashcards, notebook, reading and book use the same pipeline. Live self-test on `.txt` through `upload_file.py` (8 AI calls): passed 4 of 5 (the small file has 4 usable parts), saved; the same file again used 0 AI calls. Bad files fail cleanly. Sample files are short and clean. |
 | 6 Nov 2026 | **File types group 2 (.docx, .pptx, .xlsx) meets the gate on a clean first run** (test set committed before the run; dry run first; 12 AI calls): each type right 3/3, **wrong 0**, trap 1/1, slowest 1.8 s. Locations: heading + paragraph, slide number, sheet + row. Limits: the sample files are short and clean, so real files with complex layouts are not tested; Word headers, footers, footnotes and text boxes are not read; PowerPoint speaker notes are left out on purpose; Excel formulas show their last saved value; hidden sheets are read. OCR (images, scanned PDF) waits for the weekend: answers from low-confidence lines will be refused. Quiz still pending at 2/5. 722 tests pass |
 | 6 Nov 2026 | Excel: hidden sheets are no longer read, so an answer never comes from a sheet the user cannot see (hidden rows and columns are still read). File-type gate recorded (Hari): at least 2 of 3 right, wrong 0. |
+| 6 Nov 2026 | Hari's UI decisions: no Streamlit, nothing installed; one HTML page on Python's built-in server, localhost only; layout, logo and "Show quote" rule recorded in section 3. Conditions rule approved, to be built first. Docs only |

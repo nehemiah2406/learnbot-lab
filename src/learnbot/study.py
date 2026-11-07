@@ -11,6 +11,9 @@ a chat answer (learnbot.proof), with the item's question as the question. Extra 
   topic_not_in_quote the quote has none of the topic's key words
   rule_set_not_named the source page is from a rule set (International / Inland), and the
                      question does not say which one (eval/quiz_rules.md rule 8)
+  condition_dropped  the answer and question leave out a condition of the quote ("except ...",
+                     learnbot.proof.dropped_condition). A flashcard then shows the exact
+                     sentence; a quiz question is dropped
 
 Each item has its own time budget (config.QUESTION_TIME_BUDGET_S), so items can be shown
 as they are ready. Quiz rules: learnbot.quiz.
@@ -28,6 +31,7 @@ from learnbot.eval_check import normalize
 from learnbot.llm import AllProvidersFailed
 
 AI_BUSY_ITEM = "The AI is busy right now. Please try again in a minute."
+CONDITION_CHECK = "condition_dropped"
 FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
 
 # Rules shared by every item prompt. Same meaning as the chat prompt (learnbot.answer).
@@ -130,14 +134,30 @@ def check_reply(topic, reply, pieces, searcher, extra_check=None):
     result = proof.check(reply["question"], reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
     if not result.ok:
         return None, f"proof:{result.reason}", result.detail
-    return [{**s, "title": proof.quoted_pieces(s, pieces)[0].title, "where": proof.quoted_pieces(s, pieces)[0].where}
-            for s in result.sources], "", ""
+    checked = [{**s, "title": proof.quoted_pieces(s, pieces)[0].title, "where": proof.quoted_pieces(s, pieces)[0].where}
+               for s in result.sources]
+    condition = proof.dropped_condition(reply["answer"], reply["question"], proof.quote_text(checked[0]))
+    if condition:
+        return None, CONDITION_CHECK, condition
+    return checked, "", ""
 
 
-def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, budget_s=None):
+def check_with_sentence(topic, reply, pieces, searcher, sentence_checks=(), extra_check=None):
+    """check_reply; if the only failure is one of sentence_checks, the answer becomes the
+    document's exact sentence and is checked again. Changes reply["answer"]."""
+    result = check_reply(topic, reply, pieces, searcher, extra_check)
+    quote = reply["sources"][0]["quote"]
+    if result[1] in sentence_checks and len(quote.split()) <= config.MAX_SENTENCE_ANSWER_WORDS:
+        reply["answer"] = quote
+        return check_reply(topic, reply, pieces, searcher, extra_check)
+    return result
+
+
+def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, budget_s=None, sentence_checks=()):
     """One checked StudyItem (never raises for AI errors). prompt(topic, pieces) -> text.
     topic None = any fact of the pieces given. extra_check(reply) -> (check, detail) or None.
-    budget_s: seconds for this item (default config.QUESTION_TIME_BUDGET_S)."""
+    budget_s: seconds for this item (default config.QUESTION_TIME_BUDGET_S). sentence_checks:
+    failed checks that show the document's exact sentence instead of dropping the item."""
     start = perf_counter()
     if pieces is None:
         pieces = topic_pieces(topic, searcher)
@@ -159,7 +179,7 @@ def make_item(topic, searcher, chain, prompt, extra_check=None, pieces=None, bud
         return done(REFUSED, NOT_FOUND, reason="bad_json", **info)
     if not reply["found"]:
         return done(REFUSED, NOT_FOUND, reason="llm_not_found", **info)
-    sources, reason, detail = check_reply(topic, reply, pieces, searcher, extra_check)
+    sources, reason, detail = check_with_sentence(topic, reply, pieces, searcher, sentence_checks, extra_check)
     if reason:
         return done(REFUSED, NOT_FOUND, reason=reason, detail=detail, **info)
     return done(ANSWERED, reply["answer"], sources=sources, question=reply["question"], wrong=reply["wrong"], **info)

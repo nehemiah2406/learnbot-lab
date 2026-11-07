@@ -65,6 +65,8 @@ MIN_QUOTE_WORDS = 4
 # None = off: on 2 Nov 2026 no safe threshold existed (paraphrased right quotes scored
 # -11 to -8, bad quotes up to 8; see eval/results.md).
 TOPIC_MIN_SCORE = None
+# An answer that drops a condition becomes its exact sentence, if the sentence is at most this long.
+MAX_SENTENCE_ANSWER_WORDS = 60
 # Ask before an eval run that needs more AI calls than this.
 MAX_LLM_CALLS_WITHOUT_ASKING = 50
 
@@ -90,7 +92,6 @@ STUDY_MIN_ROW_WORDS = 5  # table files have short rows: used if no piece has STU
 # --- Day 3: book maker -----------------------------------------------------------------
 BOOK_FACTS_PER_CHAPTER = 5
 BOOK_MAX_TOPICS = 8
-BOOK_MAX_QUOTE_WORDS = 60  # a longer quote is not shown as the answer: the AI pasted a whole list
 
 # --- Research mode (web search; never used for document answers) ----------------------
 TAVILY_URL = "https://api.tavily.com/search"

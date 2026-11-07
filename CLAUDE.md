@@ -4,7 +4,7 @@
 LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (data science intern, beginner). Users upload a training file, ask doubts (answers with source rule/page), and use quizzes, flashcards, notebook, reading mode and book maker made from it. Research is a separate web mode. Idea inspired by HKUDS/DeepTutor; do NOT copy its code. Full plan: PLAN.md.
 
 ## Stack
-- Python 3.13, Streamlit UI, code in src/learnbot/, tests in tests/, scripts in scripts/, eval in eval/
+- Python 3.13, one HTML page served by Python's built-in http.server on localhost (no frameworks, nothing extra installed), code in src/learnbot/, tests in tests/, scripts in scripts/, eval in eval/
 - PDF reading: pdfplumber
 - Embeddings: local sentence-transformers; vector store: ChromaDB (local, storage/)
 - LLM: Gemini (main) + Groq (fallback). Keys and model names in .env (template .env.example)
