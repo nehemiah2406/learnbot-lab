@@ -1471,3 +1471,38 @@ Run once on new topics, committed before the run; nothing changed after it. **In
   at least 30 inches  
   sample_signals.xlsx, Stairways, row 2: "Item: Landing depth; Limit: at least 30 inches"
 <!-- END filetypes-group2 -->
+
+<!-- BEGIN conditions-rule -->
+## Conditions rule (5 questions + 2 traps, run once)
+
+**Gate: PASS**
+
+| Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
+|---|---|---|---|---|---|---|
+| 4/5 | 0 | 2/2 | 1 | 0 | 8.0 s | 9 |
+
+| Id | Outcome | Exact sentence shown? | AI | Time | Reason |
+|---|---|---|---|---|---|
+| COND-01 | right | yes | groq:openai/gpt-oss-120b | 8.0 s |  |
+| COND-02 | right |  | groq:openai/gpt-oss-120b | 7.9 s |  |
+| COND-03 | right | yes | groq:openai/gpt-oss-120b | 2.8 s |  |
+| COND-04 | right | yes | groq:openai/gpt-oss-120b | 3.0 s |  |
+| COND-05 | missed |  | groq:openai/gpt-oss-120b | 2.3 s | llm_not_found |
+| TRAP-COND-01 | refused |  | groq:openai/gpt-oss-120b | 1.5 s | llm_not_found |
+| TRAP-COND-02 | refused |  | gemini:gemini-3.1-flash-lite | 4.9 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **COND-01** What must any boat 16 feet and longer also carry?  
+  Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV).  
+  boaters_guide.pdf, p.13: "Any boat 16 feet and longer (except canoes and kayaks) must also carry one throwable PFD (Type IV)."
+- **COND-02** When is the display of visual distress signals on the water prohibited?  
+  Display of visual distress signals on the water is prohibited except where assistance is needed because of immediate or potential danger to persons on board a vessel.  
+  boaters_guide.pdf, p.18: "Regulations prohibit display of visual distress signals on the water except where assistance is needed because of immediate or potential danger to persons on board a vessel."
+- **COND-03** How far from shore is the discharge of treated sewage allowed?  
+  The discharge of treated sewage is allowed within 3 nautical miles of shore except in designated “No Discharge Zone” areas.  
+  boaters_guide.pdf, p.28: "The discharge of treated sewage is allowed within 3 nautical miles of shore except in designated “No Discharge Zone” areas."
+- **COND-04** Which marine sanitation devices must be U.S. Coast Guard certified?  
+  All installed MSDs must be U.S. Coast Guard certified, which are so labeled, except for some holding tanks, which are defined in regulation.  
+  boaters_guide.pdf, p.28: "All installed MSDs must be U.S. Coast Guard certified, which are so labeled, except for some holding tanks, which are defined in regulation."
+<!-- END conditions-rule -->
