@@ -6,3 +6,4 @@ sample_stairs.html,TRAP-HTML,What does the script on this page say about 99 feet
 sample_locks.docx,TRAP-DOCX,What is the capital city of Canada?,off_topic,Not in this document,Ottawa;Canada
 sample_safety.pptx,TRAP-PPTX,How many moons does the planet Mars have?,off_topic,Not in this document,Mars;moons
 sample_signals.xlsx,TRAP-XLSX,What is the salary of a chief engineer?,maritime_outside,Not in this document,salary;chief engineer
+boaters_guide_p16_scanned.pdf,TRAP-OCR,What is the fine for not carrying visual distress signals?,maritime_outside,Not in this document,fine;penalty;dollars
