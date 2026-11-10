@@ -94,7 +94,7 @@ def checked_fact(topic, raw, pieces, searcher):
     except (ValueError, KeyError, TypeError):
         return None, "bad_fact"
     # The AI gave only some of the sentence's numbers or dropped a condition: show the sentence.
-    sources, reason, _ = study.check_with_sentence(topic, reply, pieces, searcher, (FOCUS_CHECK, study.CONDITION_CHECK, study.WORDS_CHECK))
+    sources, reason, _ = study.check_with_sentence(topic, reply, pieces, searcher, (FOCUS_CHECK, study.CONDITION_CHECK, study.LIMIT_CHECK, study.WORDS_CHECK))
     if reason:
         return None, reason
     return Fact(reply["question"], reply["answer"], sources, pieces=pieces), ""

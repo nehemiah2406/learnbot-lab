@@ -78,3 +78,34 @@ def test_quiz_question_that_drops_the_limit_is_dropped():
     reply["answer"] = "More than 3000"
     reply["wrong"] = ["More than 15", "More than 1", "More than 6"]
     assert options_problem(reply) is None or options_problem(reply)[0] != "limit_dropped"
+
+
+# --- Every document answer keeps the limit of its number (bug: book "3000") ----------
+LIMIT_SOURCES = [{"doc": "coast.pdf", "page": 27, "quote": LIMIT_QUOTE}]
+
+
+def test_chat_answer_without_the_limit_shows_the_sentence():
+    question = "For how many locations can predicted tides be generated?"
+    assert answer_with_conditions(question, "3000", LIMIT_SOURCES) == LIMIT_QUOTE
+    assert answer_with_conditions(question, "More than 3000", LIMIT_SOURCES) == "More than 3000"
+
+
+def test_book_fact_without_the_limit_shows_the_sentence():
+    from learnbot.book import checked_fact
+    from learnbot.chunking import Chunk
+    from learnbot.rule_sets import RuleSets
+
+    piece = Chunk("coast.pdf", 27, "Tides", LIMIT_QUOTE)
+
+    class Searcher:
+        rule_sets = RuleSets([piece])
+
+        class library:
+            @staticmethod
+            def page_text(doc, page):
+                return LIMIT_QUOTE if (doc, page) == ("coast.pdf", 27) else None
+
+    raw = {"question": "For how many locations can predicted tides be generated?", "answer": "3000",
+           "source": {"doc": "coast.pdf", "page": 27, "quote": LIMIT_QUOTE}}
+    fact, reason = checked_fact("tide", raw, [piece], Searcher)
+    assert reason == "" and fact.text == LIMIT_QUOTE

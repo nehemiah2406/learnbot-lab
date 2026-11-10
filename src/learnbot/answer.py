@@ -83,14 +83,17 @@ def attempts_text(attempts):
     return " -> ".join(f"{label} {kind} {seconds:.1f} s" for label, kind, seconds in attempts)
 
 
-CONDITION_DROPPED, WORDS_NOT_IN_QUOTE = "condition_dropped", "words_not_in_quote"
+CONDITION_DROPPED, LIMIT_DROPPED, WORDS_NOT_IN_QUOTE = "condition_dropped", "limit_dropped", "words_not_in_quote"
 
 
 def not_exact(question, text, sources):
-    """Why the answer cannot be shown as it is, or "": it drops a condition of its quote, or
-    (config.EXACT_WORDS_RULE) has content words the quote does not have."""
+    """Why the answer cannot be shown as it is, or "": it drops a condition of its quote, drops
+    the limit of a number ("more than 3000" -> "3000"), or (config.EXACT_WORDS_RULE) has content
+    words the quote does not have."""
     if any(proof.dropped_condition(text, question, proof.quote_text(s)) for s in sources):
         return CONDITION_DROPPED
+    if any(proof.dropped_limit(text, question, proof.quote_text(s)) for s in sources):
+        return LIMIT_DROPPED
     quotes = " ".join(proof.quote_text(s) for s in sources)
     if config.EXACT_WORDS_RULE and proof.new_words(text, quotes):
         return WORDS_NOT_IN_QUOTE

@@ -14,6 +14,9 @@ a chat answer (learnbot.proof), with the item's question as the question. Extra 
   condition_dropped  the answer and question leave out a condition of the quote ("except ...",
                      learnbot.proof.dropped_condition). A flashcard then shows the exact
                      sentence; a quiz question is dropped
+  limit_dropped      the answer leaves out the limit of a number in its quote ("more than 3000"
+                     -> "3000"; learnbot.proof.dropped_limit). A flashcard or book fact then
+                     shows the exact sentence; a quiz question is dropped (learnbot.quiz)
   words_not_in_quote the answer has content words its quote does not have (rule 1, exact
                      answers; learnbot.proof.new_words). A flashcard or book fact then shows
                      the exact sentence. Quiz options are short by design: not checked for now
@@ -36,6 +39,7 @@ from learnbot.llm import AllProvidersFailed
 AI_BUSY_ITEM = "The AI is busy right now. Please try again in a minute."
 CONDITION_CHECK = "condition_dropped"
 WORDS_CHECK = "words_not_in_quote"
+LIMIT_CHECK = "limit_dropped"
 FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
 
 # Rules shared by every item prompt. Same meaning as the chat prompt (learnbot.answer).
@@ -144,6 +148,9 @@ def check_reply(topic, reply, pieces, searcher, extra_check=None, exact_words=Tr
     condition = proof.dropped_condition(reply["answer"], reply["question"], proof.quote_text(checked[0]))
     if condition:
         return None, CONDITION_CHECK, condition
+    limit = proof.dropped_limit(reply["answer"], reply["question"], proof.quote_text(checked[0]))
+    if exact_words and limit:
+        return None, LIMIT_CHECK, limit
     extra = proof.new_words(reply["answer"], proof.quote_text(checked[0]))
     if exact_words and config.EXACT_WORDS_RULE and extra:
         return None, WORDS_CHECK, ", ".join(extra)
@@ -154,7 +161,7 @@ def check_with_sentence(topic, reply, pieces, searcher, sentence_checks=(), extr
     """check_reply; if the only failure is one of sentence_checks, the answer becomes the
     document's exact sentence (without a leading paragraph number) and is checked again.
     Changes reply["answer"]. Only items that may show a sentence check exact words."""
-    exact_words = WORDS_CHECK in sentence_checks
+    exact_words = WORDS_CHECK in sentence_checks  # items that may show the sentence: limit + words checks
     result = check_reply(topic, reply, pieces, searcher, extra_check, exact_words)
     quote = proof.without_paragraph_number(reply["sources"][0]["quote"])
     if result[1] in sentence_checks and len(quote.split()) <= config.MAX_SENTENCE_ANSWER_WORDS:

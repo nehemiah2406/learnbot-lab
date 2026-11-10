@@ -33,7 +33,7 @@ def build_prompt(topic, pieces):
 
 def make_card(topic, searcher, chain, pieces=None):
     """One checked flashcard as a StudyItem (question = front, text = back), or "Not in this document"."""
-    return study.make_item(topic, searcher, chain, build_prompt, pieces=pieces, sentence_checks=(study.CONDITION_CHECK, study.WORDS_CHECK))
+    return study.make_item(topic, searcher, chain, build_prompt, pieces=pieces, sentence_checks=(study.CONDITION_CHECK, study.LIMIT_CHECK, study.WORDS_CHECK))
 
 
 def make_cards(topic, searcher, chain, count):

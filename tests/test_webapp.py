@@ -549,6 +549,26 @@ def test_chat_answer_with_words_not_in_the_quote_shows_the_sentence(make_site):
     assert data["text"] == QUOTE and data["showQuote"] is False
 
 
+TIDES = "NOAA Tide Predictions allows the generation of predicted tides for more than 3000 locations along the coastline."
+TIDES_Q = "For how many locations can predicted tides be generated?"
+
+
+def test_answer_that_drops_more_than_shows_the_sentence_in_every_mode(make_site):
+    site = make_site()
+    (site.uploads / "tides.txt").write_text(TIDES + "\n", encoding="utf-8")
+    site.app.searcher = site.app.make_searcher(site.app.paths())
+    chat = json.dumps({"found": True, "answer": "3000", "sources": [{"doc": "tides.txt", "page": 1, "quote": TIDES}]})
+    card = json.dumps({"found": True, "question": TIDES_Q, "answer": "3000", "source": {"doc": "tides.txt", "page": 1, "quote": TIDES}})
+    site.app.chain.replies = [chat]
+    asked = site.ask(TIDES_Q, document="tides.txt")
+    assert asked["text"] == TIDES and asked["showQuote"] is False
+    assert call(site, "/api/page/ask", document="tides.txt", page=1, question=TIDES_Q)["text"] == TIDES
+    call(site, "/api/notebook/save", id=asked["saveId"])
+    assert call(site, "/api/notebook/ask", question=TIDES_Q)["text"] == TIDES
+    site.app.chain.replies = [card]
+    assert call(site, "/api/flashcard", document="tides.txt", topic="predicted tides")["card"]["text"] == TIDES
+
+
 def test_flashcard_with_words_not_in_the_quote_shows_the_sentence(make_site):
     data = call(make_site(study_reply(answer="12 inches between each step")), "/api/flashcard", document="guide.txt", topic="ladder rungs")
     assert data["card"]["text"] == QUOTE and data["card"]["showQuote"] is False
