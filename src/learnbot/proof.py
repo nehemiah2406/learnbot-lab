@@ -29,6 +29,8 @@ An answer is shown only if ALL checks pass for every source; otherwise the user 
                      measurement ("3 miles") and each count ("one all-round light", "two
                      short blasts"). An answer cannot drop "one" or pick the wrong list item
                      unseen. References ("Rule 22", "33 CFR", "(26)") are not numbers here.
+After the check, the callers show the exact sentence instead of the answer when the answer drops
+a condition (dropped_condition) or has content words its quote does not have (new_words).
 A measurement is a number WITH a unit from learnbot.units; "33 CFR", "Rule 34(d)" or
 "Annex 1" are references, not measurements.
 """
@@ -51,6 +53,10 @@ BULLET = re.compile(r"^[−–•▪·-]\s+")
 ITEM_BREAK = re.compile(r"\s*(?:(?:^|\s)[−–•▪·-]\s+|;\s*|\s(?=\((?:[ivx]+|[a-z]|\d+)\)\s))")
 
 
+# A limit before a number: "more than 3000 locations". An answer of "3000" without it is not exact.
+NUMBER_WORDS = r"one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|fifty|hundred"
+LIMIT = re.compile(rf"\b(not more than|more than|less than|at least|up to)\s+(?=\$?\d|(?:{NUMBER_WORDS})\b)", re.IGNORECASE)
+PARAGRAPH_NUMBER = re.compile(r"^\s*\(\d+\)\s*")
 CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding)\b([^.;,)]*)", re.IGNORECASE)
 
 
@@ -97,6 +103,27 @@ def dropped_condition(answer, question, quote):
         if not key_words(match.group(2)) <= have:
             return match.group(0).strip()
     return ""
+
+
+def dropped_limit(answer, question, quote):
+    """The limit of a number in the quote ("more than", "at least", "up to", ...) that the answer
+    and question both leave out, or "". "3000" for "more than 3000 locations" is not exact."""
+    have = same_text(f"{answer} {question}").lower()
+    for match in LIMIT.finditer(same_text(quote)):
+        if match.group(1).lower() not in have:
+            return match.group(1)
+    return ""
+
+
+def without_paragraph_number(text):
+    """The text without a leading paragraph number: "(36) Squat denotes ..." -> "Squat denotes ..."."""
+    return PARAGRAPH_NUMBER.sub("", text or "")
+
+
+def new_words(answer, quote):
+    """Content words of the answer that its quote does not have, compared by their first
+    STEM_LETTERS letters ("moving" when the quote says "underway"). Numbers are checked elsewhere."""
+    return sorted(key_words(answer) - key_words(quote))
 
 
 def shown_where(source):

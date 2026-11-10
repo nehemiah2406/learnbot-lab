@@ -62,7 +62,7 @@ def parse_reply(text):
     sources = []
     for s in data.get("sources") or []:
         sources.append({"doc": str(s["doc"]).strip(), "page": int(s["page"]), "quote": str(s["quote"])})
-    return {"found": True, "answer": str(data.get("answer") or ""), "sources": sources}
+    return {"found": True, "answer": proof.without_paragraph_number(str(data.get("answer") or "")), "sources": sources}
 
 
 @dataclass
@@ -83,12 +83,26 @@ def attempts_text(attempts):
     return " -> ".join(f"{label} {kind} {seconds:.1f} s" for label, kind, seconds in attempts)
 
 
+CONDITION_DROPPED, WORDS_NOT_IN_QUOTE = "condition_dropped", "words_not_in_quote"
+
+
+def not_exact(question, text, sources):
+    """Why the answer cannot be shown as it is, or "": it drops a condition of its quote, or
+    (config.EXACT_WORDS_RULE) has content words the quote does not have."""
+    if any(proof.dropped_condition(text, question, proof.quote_text(s)) for s in sources):
+        return CONDITION_DROPPED
+    quotes = " ".join(proof.quote_text(s) for s in sources)
+    if config.EXACT_WORDS_RULE and proof.new_words(text, quotes):
+        return WORDS_NOT_IN_QUOTE
+    return ""
+
+
 def answer_with_conditions(question, text, sources):
-    """The answer, or the document's exact sentence if the answer drops a condition of its
-    quote. None if that sentence is too long to show as an answer."""
-    if not any(proof.dropped_condition(text, question, proof.quote_text(s)) for s in sources):
+    """The answer, or the document's exact sentence (without a leading paragraph number) if the
+    answer is not exact (not_exact). None if that sentence is too long to show as an answer."""
+    if not not_exact(question, text, sources):
         return text
-    sentence = " ".join(proof.shown_quote(s) for s in sources)
+    sentence = proof.without_paragraph_number(" ".join(proof.shown_quote(s) for s in sources))
     return sentence if len(sentence.split()) <= config.MAX_SENTENCE_ANSWER_WORDS else None
 
 
@@ -147,7 +161,8 @@ def answer_question(question, searcher, chain, prompt=None):
                for s in result.sources]
     text = reply["answer"]
     if prompt is None:  # document answers only; a web answer keeps its label and link instead
+        why = not_exact(question, text, sources)
         text = answer_with_conditions(question, text, sources)
         if text is None:
-            return done(REFUSED, NOT_FOUND, reason="condition_dropped", **info)
+            return done(REFUSED, NOT_FOUND, reason=why, **info)
     return done(ANSWERED, text, sources=sources, **info)

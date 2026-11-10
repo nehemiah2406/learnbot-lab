@@ -244,7 +244,8 @@ def test_over_the_limit_makes_no_web_call(monkeypatch, tmp_path, key):
 SOURCES = sorted(Path("src/learnbot").glob("*.py"))
 
 
-@pytest.mark.parametrize("source", [p for p in SOURCES if p.name not in ("research.py", "config.py")], ids=lambda p: p.name)
+# webapp.py offers Research as its own mode; tests/test_webapp.py checks that web text stays out of chat.
+@pytest.mark.parametrize("source", [p for p in SOURCES if p.name not in ("research.py", "config.py", "webapp.py")], ids=lambda p: p.name)
 def test_document_code_never_uses_research(source):
     text = source.read_text(encoding="utf-8").lower()
     assert "learnbot.research" not in text and "import research" not in text and "tavily" not in text

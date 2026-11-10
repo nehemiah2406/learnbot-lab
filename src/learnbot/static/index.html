@@ -11,11 +11,12 @@
   --green: #15803D; --red: #B91C1C; --orange: #C2410C; --slate: #475569;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body { display: flex; flex-direction: column; background: var(--page); color: var(--text);
        font: 15px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; }
 button, input, textarea { font: inherit; }
-button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
 
 .topbar { display: flex; align-items: center; gap: 10px; padding: 11px 20px; background: var(--teal); color: #fff; }
 .topbar svg { width: 28px; height: 28px; flex: none; }
@@ -44,22 +45,23 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); 
 .notice.error { background: #FEE2E2; color: #991B1B; }
 
 .modes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.mode { display: flex; align-items: center; justify-content: space-between; padding: 7px 9px; border-radius: 8px; color: var(--muted); }
+.mode { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 7px 9px; border: 0; border-radius: 8px;
+        background: none; color: var(--text); text-align: left; cursor: pointer; }
+.mode:hover { background: var(--page); }
 .mode.active { background: var(--teal); color: #fff; font-weight: 600; }
-.mode small { font-size: 12px; }
 .web { padding: 1px 7px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 12px; font-weight: 600; }
-.mode-right { display: flex; align-items: center; gap: 6px; }
 
 .score { margin-top: auto; padding: 12px; border-radius: 10px; background: var(--amber-soft); border: 1px solid var(--amber); }
 .score b { display: block; color: #92400E; font-size: 13px; }
 .score span { font-size: 14px; }
 
-.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.chat { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.panels { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.messages { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .hint { margin: auto; max-width: 420px; color: var(--muted); text-align: center; }
 .question { align-self: flex-end; max-width: 72%; padding: 9px 14px; border-radius: 14px 14px 3px 14px;
             background: var(--teal); color: #fff; overflow-wrap: anywhere; white-space: pre-wrap; }
-.answer { align-self: flex-start; width: min(720px, 92%); padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px;
+.answer { flex: none; align-self: flex-start; width: min(720px, 92%); padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px;
           background: var(--card); box-shadow: 0 1px 2px rgba(15, 23, 42, .05); }
 .answer.thinking { color: var(--muted); }
 .label { display: inline-block; padding: 2px 9px; border-radius: 999px; color: #fff; font-size: 12.5px; font-weight: 600; }
@@ -67,23 +69,57 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); 
 .label.refused { background: var(--red); }
 .label.web { background: var(--orange); }
 .label.busy { background: var(--slate); }
+.label.note { background: var(--teal); }
 .where { margin-top: 7px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-.text { margin-top: 5px; font-size: 16px; overflow-wrap: anywhere; }
-.show-quote { margin-top: 9px; padding: 3px 11px; border: 1px solid var(--teal); border-radius: 7px; background: #fff; color: var(--teal-dark); font-size: 13px; cursor: pointer; }
-.show-quote:hover { background: var(--teal-soft); }
+.where a { color: var(--teal-dark); }
+.text { margin-top: 5px; font-size: 16px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.small-button { margin-top: 9px; padding: 3px 11px; border: 1px solid var(--teal); border-radius: 7px; background: #fff; color: var(--teal-dark); font-size: 13px; cursor: pointer; }
+.small-button:hover:not(:disabled) { background: var(--teal-soft); }
+.small-button:disabled { border-color: var(--line); color: var(--muted); cursor: default; }
 .quote { margin: 9px 0 0; padding: 8px 12px; border-left: 3px solid var(--teal); background: var(--page); font-size: 14px; overflow-wrap: anywhere; }
+
+.item-title { margin-bottom: 6px; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.options { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.option { padding: 8px 12px; border: 1px solid #94A3B8; border-radius: 8px; background: #fff; color: var(--text); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.option:hover:not(:disabled) { background: var(--teal-soft); }
+.option:disabled { cursor: default; color: var(--text); opacity: .75; }
+.option.right { opacity: 1; border: 2px solid var(--green); background: #DCFCE7; }
+.option.wrong { opacity: 1; border: 2px solid var(--red); background: #FEE2E2; }
+.verdict { margin-top: 10px; font-weight: 600; }
+.verdict.right { color: var(--green); }
+.verdict.wrong { color: var(--red); }
+.part { margin-top: 12px; }
+
+.chapter { margin: 18px 0 2px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 17px; color: var(--teal-dark); overflow-wrap: anywhere; }
+.chapter.first { margin-top: 2px; padding-top: 0; border-top: 0; }
+.fact { margin-top: 12px; }
+.saved-file { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+
+.saved-items { display: flex; flex-direction: column; gap: 10px; }
+.empty-notebook { margin: 0; color: var(--muted); }
+
+.reader { flex: none; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.reader-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.reader-bar .small-button { margin-top: 0; }
+.reader-title { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.reader-bar input { width: 72px; padding: 2px 6px; border: 1px solid #94A3B8; border-radius: 7px; }
+.page-warning { margin-top: 9px; padding: 7px 10px; border-radius: 8px; background: var(--amber-soft); color: #92400E; font-size: 13px; }
+.page-text { margin: 10px 0 0; max-height: 46vh; overflow-y: auto; font: inherit; font-size: 14.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .composer { display: flex; align-items: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--card); }
 .composer textarea { flex: 1; min-width: 0; height: 44px; max-height: 130px; padding: 9px 12px; border: 1px solid #94A3B8; border-radius: 10px; resize: vertical; background: #fff; color: var(--text); }
-.ask { height: 44px; padding: 0 24px; border: 0; border-radius: 10px; background: var(--amber); color: var(--text); font-weight: 700; cursor: pointer; }
+.ask { height: 44px; padding: 0 20px; flex: none; border: 0; border-radius: 10px; background: var(--amber); color: var(--text); font-weight: 700; cursor: pointer; }
 .ask:hover:not(:disabled) { background: #D97706; }
-.ask:disabled { opacity: .55; cursor: default; }
+.ask:disabled, .save-note:disabled { opacity: .55; cursor: default; }
+.save-note { height: 44px; padding: 0 14px; flex: none; border: 1px solid var(--teal); border-radius: 10px; background: #fff; color: var(--teal-dark); font-weight: 600; cursor: pointer; }
 
 @media (max-width: 760px) {
   .layout { flex-direction: column; overflow-y: auto; }
   .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
   .score { margin-top: 0; }
   .chat { min-height: 70vh; }
+  .panels { min-height: 50vh; }
   .question { max-width: 88%; }
   .messages, .composer { padding-left: 16px; padding-right: 16px; }
 }
@@ -111,23 +147,22 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); 
     <section>
       <h2 class="heading">MODE</h2>
       <ul class="modes">
-        <li class="mode active" aria-current="true"><span>Chat</span></li>
-        <li class="mode"><span>Quiz</span><small>Later</small></li>
-        <li class="mode"><span>Flashcards</span><small>Later</small></li>
-        <li class="mode"><span>Notebook</span><small>Later</small></li>
-        <li class="mode"><span>Reading mode</span><small>Later</small></li>
-        <li class="mode"><span>Book maker</span><small>Later</small></li>
-        <li class="mode"><span>Research</span><span class="mode-right"><span class="web">Web</span><small>Later</small></span></li>
+        <li><button class="mode" type="button" data-mode="chat"><span>Chat</span></button></li>
+        <li><button class="mode" type="button" data-mode="quiz"><span>Quiz</span></button></li>
+        <li><button class="mode" type="button" data-mode="flashcards"><span>Flashcards</span></button></li>
+        <li><button class="mode" type="button" data-mode="notebook"><span>Notebook</span></button></li>
+        <li><button class="mode" type="button" data-mode="reading"><span>Reading mode</span></button></li>
+        <li><button class="mode" type="button" data-mode="book"><span>Book maker</span></button></li>
+        <li><button class="mode" type="button" data-mode="research"><span>Research</span><span class="web">Web</span></button></li>
       </ul>
     </section>
-    <section class="score"><b>Quiz score today</b><span>No quiz yet</span></section>
+    <section class="score"><b>Quiz score today</b><span id="score">No quiz yet</span></section>
   </nav>
   <main class="chat">
-    <div class="messages" id="messages" aria-live="polite">
-      <p class="hint" id="hint">LearnBot is starting. This takes a minute or two.</p>
-    </div>
+    <div class="panels" id="panels"></div>
     <form class="composer" id="composer">
-      <textarea id="question" placeholder="Ask a question about your document" aria-label="Your question" maxlength="1000"></textarea>
+      <textarea id="question" aria-label="Your question" maxlength="1000"></textarea>
+      <button class="save-note" id="save-note" type="button" hidden>Save as note</button>
       <button class="ask" id="ask" type="submit">Ask</button>
     </form>
   </main>
@@ -135,14 +170,38 @@ button:focus-visible, textarea:focus-visible { outline: 3px solid var(--amber); 
 <script>
 "use strict";
 // Everything from the server is put on the page with textContent, never as HTML:
-// text from a document can never run as code here.
+// text from a document or a web page can never run as code here.
 const $ = (id) => document.getElementById(id);
 const HEADERS = {"X-LearnBot": "1"};
+const JSON_HEADERS = {...HEADERS, "Content-Type": "application/json"};
 const POLL_MS = 2000;
+const NOT_RUNNING = "LearnBot is not answering. Please check that it is still running.";
+const STARTING = "LearnBot is starting. This takes a minute or two.";
+const NO_DOCUMENT = "Add a document or choose one first.";
+
+// needsDocument: this mode works on the chosen document. optional: the box may be left empty.
+const MODES = {
+  chat: {placeholder: "Ask a question about your document", button: "Ask", needsDocument: true,
+         hint: () => "Ask a question about " + selected + ". Answers come only from this document."},
+  quiz: {placeholder: "Topic of the question (leave empty for any fact)", button: "New question", needsDocument: true, optional: true,
+         hint: () => "Press New question for a question from " + selected + ". Type a topic first if you want one."},
+  flashcards: {placeholder: "Topic of the card (leave empty for any fact)", button: "New card", needsDocument: true, optional: true,
+               hint: () => "Press New card for a flashcard from " + selected + ". Type a topic first if you want one."},
+  notebook: {placeholder: "Ask about your saved items, or type a note", button: "Ask"},
+  reading: {placeholder: "Ask a question about this page", button: "Ask", needsDocument: true, hint: () => ""},
+  book: {placeholder: "Book topics, separated by commas (up to 8)", button: "Make book", needsDocument: true,
+         hint: () => "Type the topics of a study book from " + selected + ". Every fact shows where it came from."},
+  research: {placeholder: "Ask a question for the web", button: "Ask",
+             hint: () => "Ask a question for the web. Answers are labelled \"From the web\" with their link, and are never mixed with your documents."},
+};
+
+let mode = "chat";
 let selected = "";
 let ready = false;
 let asking = false;
 let shownNotices = "";
+let shownPage = {doc: "", page: 0};
+const panels = {};
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -151,6 +210,24 @@ function el(tag, className, text) {
   return node;
 }
 
+function smallButton(text, onClick) {
+  const button = el("button", "small-button", text);
+  button.type = "button";
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+async function send(path, data) {
+  const reply = await fetch(path, {method: "POST", headers: JSON_HEADERS, body: JSON.stringify(data)});
+  const body = await reply.json();
+  return reply.ok ? body : problemCard(body.error);
+}
+
+function problemCard(text) {
+  return {kind: "busy", label: "Please try again", text: text, sources: [], showQuote: false};
+}
+
+// --- Sidebar ---------------------------------------------------------------------------
 function drawDocuments(documents) {
   const list = $("docs");
   list.replaceChildren();
@@ -161,7 +238,7 @@ function drawDocuments(documents) {
     button.title = d.name;
     if (d.name === selected) button.setAttribute("aria-current", "true");
     button.append(el("span", "doc-name", d.name), el("span", "badge " + d.badgeKind, d.badge));
-    button.addEventListener("click", () => { selected = d.name; refresh(); updateAsk(); });
+    button.addEventListener("click", () => { selected = d.name; refresh(); });
     const item = el("li");
     item.append(button);
     list.append(item);
@@ -180,16 +257,30 @@ function drawNotices(notices) {
   }
 }
 
-function drawHint() {
-  const hint = $("hint");
-  if (!hint) return;
-  if (!ready) hint.textContent = "LearnBot is starting. This takes a minute or two.";
-  else if (!selected) hint.textContent = "Add a document, then ask a question about it.";
-  else hint.textContent = "Ask a question about " + selected + ". Answers come only from this document.";
+function drawScore(score) {
+  $("score").textContent = score.asked ? score.right + " of " + score.asked + " right" : "No quiz yet";
+}
+
+function hintFor(name) {
+  if (!ready) return STARTING;
+  if (MODES[name].needsDocument && !selected) return NO_DOCUMENT;
+  return MODES[name].hint ? MODES[name].hint() : "";
+}
+
+function drawHints() {
+  for (const name of Object.keys(MODES)) {
+    const hint = panels[name].querySelector(".hint");
+    if (hint) {
+      hint.textContent = hintFor(name);
+      hint.hidden = !hint.textContent;
+    }
+  }
 }
 
 function updateAsk() {
-  $("ask").disabled = asking || !ready || !selected;
+  const needed = (MODES[mode].needsDocument && !selected) || (mode === "reading" && !shownPage.page);
+  $("ask").disabled = asking || !ready || needed;
+  $("save-note").disabled = asking;
 }
 
 async function refresh() {
@@ -199,8 +290,10 @@ async function refresh() {
     ready = status.ready;
     drawDocuments(status.documents);
     drawNotices(status.notices);
-    drawHint();
+    drawScore(status.quizScore);
+    drawHints();
     updateAsk();
+    if (mode === "reading" && ready && selected && shownPage.doc !== selected) loadPage(1);
     return status;
   } catch (problem) {
     return null;
@@ -212,63 +305,275 @@ async function poll() {
   if (!status || !status.ready || status.working) setTimeout(poll, POLL_MS);
 }
 
-function addMessage(node) {
-  const hint = $("hint");
-  if (hint) hint.remove();
-  const box = $("messages");
-  box.append(node);
-  box.scrollTop = box.scrollHeight;
+function chooseMode(name) {
+  mode = name;
+  for (const button of document.querySelectorAll(".mode")) {
+    const on = button.dataset.mode === name;
+    button.classList.toggle("active", on);
+    if (on) button.setAttribute("aria-current", "true");
+    else button.removeAttribute("aria-current");
+  }
+  for (const key of Object.keys(panels)) panels[key].hidden = key !== name;
+  $("question").placeholder = MODES[name].placeholder;
+  $("ask").textContent = MODES[name].button;
+  $("save-note").hidden = name !== "notebook";
+  updateAsk();
+  if (name === "notebook") loadNotebook();
+  if (name === "reading" && ready && selected && shownPage.doc !== selected) loadPage(1);
 }
 
-function drawCard(node, card) {
-  node.className = "answer";
-  node.replaceChildren(el("span", "label " + card.kind, card.label));
-  for (const s of card.sources) {
-    const place = s.section ? s.location + " · " + s.section : s.location;
-    node.append(el("div", "where", s.doc + ", " + place));
+// --- Cards -----------------------------------------------------------------------------
+function addTo(panel, node) {
+  const hint = panel.querySelector(".hint");
+  if (hint) hint.remove();
+  panel.append(node);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function fillSources(node, sources) {
+  for (const s of sources) {
+    const where = el("div", "where");
+    if (s.link) {
+      const link = el("a", "", s.link);
+      link.href = s.link;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      where.append(link);
+      if (s.section) where.append(" · " + s.section);
+    } else {
+      where.textContent = s.doc + ", " + (s.section ? s.location + " · " + s.section : s.location);
+    }
+    node.append(where);
   }
+}
+
+function saveButton(saveId) {
+  const button = smallButton("Save to notebook", async () => {
+    button.disabled = true;
+    try {
+      const reply = await send("/api/notebook/save", {id: saveId});
+      button.textContent = reply.saved ? "Saved" : reply.text;
+    } catch (problem) {
+      button.textContent = "Could not save";
+    }
+  });
+  return button;
+}
+
+function fillCard(node, card) {
+  node.append(el("span", "label " + card.kind, card.label));
+  fillSources(node, card.sources);
   if (card.text) node.append(el("div", "text", card.text));
+  const actions = el("div", "actions");
+  const quotes = [];
   if (card.showQuote) {
-    const button = el("button", "show-quote", "Show quote");
-    button.type = "button";
-    button.setAttribute("aria-expanded", "false");
-    const quotes = card.sources.map((s) => {
-      const quote = el("blockquote", "quote", "“" + s.quote + "”");
-      quote.hidden = true;
-      return quote;
-    });
-    button.addEventListener("click", () => {
+    const button = smallButton("Show quote", () => {
       const open = quotes[0].hidden;
       quotes.forEach((q) => { q.hidden = !open; });
       button.textContent = open ? "Hide quote" : "Show quote";
       button.setAttribute("aria-expanded", String(open));
     });
-    node.append(button, ...quotes);
+    button.setAttribute("aria-expanded", "false");
+    actions.append(button);
+    for (const s of card.sources) {
+      const quote = el("blockquote", "quote", "“" + s.quote + "”");
+      quote.hidden = true;
+      quotes.push(quote);
+    }
+  }
+  if (card.saveId) actions.append(saveButton(card.saveId));
+  if (actions.childElementCount) node.append(actions);
+  node.append(...quotes);
+}
+
+function drawCard(node, card) {
+  node.className = "answer";
+  node.replaceChildren();
+  fillCard(node, card);
+}
+
+function drawQuiz(node, data) {
+  if (data.kind !== "quiz") return drawCard(node, data);
+  node.className = "answer";
+  node.replaceChildren(el("div", "item-title", data.question));
+  const before = el("div");
+  fillSources(before, data.sources);
+  const options = el("div", "options");
+  const buttons = data.options.map((text, choice) => {
+    const button = el("button", "option", text);
+    button.type = "button";
+    button.addEventListener("click", () => answerQuiz(node, before, buttons, data.id, choice));
+    return button;
+  });
+  options.append(...buttons);
+  node.append(before, options);
+}
+
+async function answerQuiz(node, before, buttons, id, choice) {
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    const reply = await send("/api/quiz/answer", {id: id, choice: choice});
+    if (reply.card === undefined) {
+      fillCard(node.appendChild(el("div", "part")), reply);
+      return;
+    }
+    buttons[reply.correct].classList.add("right");
+    if (!reply.right) buttons[reply.chosen].classList.add("wrong");
+    before.remove();
+    node.append(el("div", "verdict " + (reply.right ? "right" : "wrong"), reply.right ? "Right!" : "Not right"));
+    fillCard(node.appendChild(el("div", "part")), reply.card);
+    drawScore(reply.score);
+  } catch (problem) {
+    fillCard(node.appendChild(el("div", "part")), problemCard(NOT_RUNNING));
   }
 }
 
-function problemCard(text) {
-  return {kind: "busy", label: "Please try again", text: text, sources: [], showQuote: false};
+function drawFlashcard(node, data) {
+  if (data.kind !== "flashcard") return drawCard(node, data);
+  node.className = "answer";
+  node.replaceChildren(el("div", "item-title", data.front));
+  const turn = smallButton("Show answer", () => {
+    turn.remove();
+    fillCard(node.appendChild(el("div", "part")), data.card);
+  });
+  node.append(turn);
 }
 
-async function ask(question) {
-  addMessage(el("div", "question", question));
-  const answer = el("div", "answer thinking", "Looking in " + selected + "…");
-  addMessage(answer);
+function drawBook(node, data) {
+  if (data.kind !== "book") return drawCard(node, data);
+  node.className = "answer";
+  node.replaceChildren();
+  if (data.saved) node.append(el("div", "saved-file", "Saved on this laptop: storage/books/" + data.saved));
+  data.chapters.forEach((chapter, number) => {
+    node.append(el("h3", "chapter" + (number || data.saved ? "" : " first"), chapter.topic));
+    if (chapter.card) fillCard(node.appendChild(el("div", "fact")), chapter.card);
+    for (const fact of chapter.facts) {
+      const part = node.appendChild(el("div", "fact"));
+      part.append(el("div", "item-title", fact.question));
+      fillCard(part, fact.card);
+    }
+  });
+}
+
+async function job(thinking, path, data, draw) {
+  const panel = panels[mode];
+  const node = el("div", "answer thinking", thinking);
+  addTo(panel, node);
   asking = true;
   updateAsk();
   try {
-    const reply = await fetch("/api/ask", {method: "POST", headers: {...HEADERS, "Content-Type": "application/json"},
-                                           body: JSON.stringify({document: selected, question: question})});
-    const data = await reply.json();
-    drawCard(answer, reply.ok ? data : problemCard(data.error));
+    draw(node, await send(path, data));
   } catch (problem) {
-    drawCard(answer, problemCard("LearnBot is not answering. Please check that it is still running."));
+    drawCard(node, problemCard(NOT_RUNNING));
   }
   asking = false;
   updateAsk();
-  $("messages").scrollTop = $("messages").scrollHeight;
-  $("question").focus();
+  panel.scrollTop = panel.scrollHeight;
+}
+
+// --- Notebook --------------------------------------------------------------------------
+async function loadNotebook() {
+  const box = panels.notebook.querySelector(".saved-items");
+  try {
+    const reply = await fetch("/api/notebook");
+    drawNotebook(box, await reply.json());
+  } catch (problem) {
+    box.replaceChildren(el("p", "empty-notebook", NOT_RUNNING));
+  }
+}
+
+function drawNotebook(box, data) {
+  box.replaceChildren();
+  if (!data.items.length) {
+    box.append(el("p", "empty-notebook", "Nothing saved yet. Use Save to notebook on an answer, quiz question or flashcard, or type a note below."));
+  }
+  for (const item of data.items) {
+    const node = el("div", "answer");
+    if (item.question) node.append(el("div", "item-title", item.question));
+    fillCard(node, item.card);
+    node.append(smallButton("Delete", async () => {
+      try {
+        drawNotebook(box, await send("/api/notebook/delete", {id: item.id}));
+      } catch (problem) {
+        loadNotebook();
+      }
+    }));
+    box.append(node);
+  }
+}
+
+async function saveNote() {
+  const text = $("question").value.trim();
+  if (!text) return;
+  try {
+    const box = panels.notebook.querySelector(".saved-items");
+    drawNotebook(box, await send("/api/notebook/note", {text: text}));
+    $("question").value = "";
+  } catch (problem) {
+    drawCard(addAnswer(panels.notebook), problemCard(NOT_RUNNING));
+  }
+}
+
+function addAnswer(panel) {
+  const node = el("div", "answer");
+  addTo(panel, node);
+  return node;
+}
+
+// --- Reading mode ----------------------------------------------------------------------
+async function loadPage(page) {
+  const reader = panels.reading.querySelector(".reader");
+  const hint = panels.reading.querySelector(".hint");
+  if (hint) hint.remove();
+  reader.hidden = false;
+  shownPage = {doc: selected, page: page};
+  try {
+    drawPage(reader, await send("/api/page", {document: selected, page: page}));
+  } catch (problem) {
+    reader.replaceChildren(el("div", "text", NOT_RUNNING));
+  }
+  updateAsk();
+}
+
+function drawPage(reader, view) {
+  if (view.kind === "busy") {
+    reader.replaceChildren(el("div", "text", view.text));
+    shownPage = {doc: "", page: 0};
+    return;
+  }
+  const bar = el("div", "reader-bar");
+  const previous = smallButton("Previous", () => loadPage(view.previous));
+  const next = smallButton("Next", () => loadPage(view.next));
+  previous.disabled = !view.previous;
+  next.disabled = !view.next;
+  const place = view.where ? view.where + ", part " + view.page : "Page " + view.page;
+  const go = el("input");
+  go.type = "number";
+  go.min = "1";
+  go.max = String(view.total);
+  go.value = String(view.page);
+  go.setAttribute("aria-label", "Go to page");
+  go.addEventListener("change", () => {
+    const page = Number(go.value);
+    if (Number.isInteger(page) && page >= 1 && page <= view.total) loadPage(page);
+  });
+  bar.append(previous, next, go, el("span", "reader-title", view.doc + ", " + place + " of " + view.total));
+  reader.replaceChildren(bar);
+  if (view.warning) reader.append(el("div", "page-warning", view.warning));
+  reader.append(el("pre", "page-text", view.text || "This page has no text."));
+}
+
+// --- Sending ---------------------------------------------------------------------------
+function submit(text) {
+  const shown = text || ($("ask").textContent);
+  addTo(panels[mode], el("div", "question", shown));
+  if (mode === "chat") return job("Looking in " + selected + "…", "/api/ask", {document: selected, question: text}, drawCard);
+  if (mode === "quiz") return job("Writing a question…", "/api/quiz", {document: selected, topic: text}, drawQuiz);
+  if (mode === "flashcards") return job("Writing a card…", "/api/flashcard", {document: selected, topic: text}, drawFlashcard);
+  if (mode === "notebook") return job("Looking in your notebook…", "/api/notebook/ask", {question: text}, drawCard);
+  if (mode === "reading") return job("Looking on this page…", "/api/page/ask", {document: shownPage.doc, page: shownPage.page, question: text}, drawCard);
+  if (mode === "book") return job("Writing the book, one chapter at a time…", "/api/book", {document: selected, topics: text}, drawBook);
+  return job("Searching the web…", "/api/research", {question: text}, drawCard);
 }
 
 async function upload(files) {
@@ -288,17 +593,34 @@ async function upload(files) {
   poll();
 }
 
+for (const name of Object.keys(MODES)) {
+  const panel = el("div", "messages");
+  panel.setAttribute("aria-live", "polite");
+  if (name === "notebook") panel.append(el("div", "saved-items"));
+  if (name === "reading") {
+    const reader = el("div", "reader");
+    reader.hidden = true;
+    panel.append(reader);
+  }
+  if (name !== "notebook") panel.append(el("p", "hint"));
+  panels[name] = panel;
+  $("panels").append(panel);
+}
+for (const button of document.querySelectorAll(".mode")) {
+  button.addEventListener("click", () => chooseMode(button.dataset.mode));
+}
 $("add").addEventListener("click", () => $("files").click());
 $("files").addEventListener("change", (event) => {
   upload(Array.from(event.target.files));
   event.target.value = "";
 });
+$("save-note").addEventListener("click", saveNote);
 $("composer").addEventListener("submit", (event) => {
   event.preventDefault();
-  const question = $("question").value.trim();
-  if (!question || $("ask").disabled) return;
-  $("question").value = "";
-  ask(question);
+  const text = $("question").value.trim();
+  if ($("ask").disabled || (!text && !MODES[mode].optional)) return;
+  if (!MODES[mode].optional) $("question").value = "";
+  submit(text);
 });
 $("question").addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
@@ -306,7 +628,8 @@ $("question").addEventListener("keydown", (event) => {
     $("composer").requestSubmit();
   }
 });
-updateAsk();
+chooseMode("chat");
+drawHints();
 poll();
 </script>
 </body>

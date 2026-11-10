@@ -14,6 +14,9 @@ a chat answer (learnbot.proof), with the item's question as the question. Extra 
   condition_dropped  the answer and question leave out a condition of the quote ("except ...",
                      learnbot.proof.dropped_condition). A flashcard then shows the exact
                      sentence; a quiz question is dropped
+  words_not_in_quote the answer has content words its quote does not have (rule 1, exact
+                     answers; learnbot.proof.new_words). A flashcard or book fact then shows
+                     the exact sentence. Quiz options are short by design: not checked for now
 
 Each item has its own time budget (config.QUESTION_TIME_BUDGET_S), so items can be shown
 as they are ready. Quiz rules: learnbot.quiz.
@@ -32,6 +35,7 @@ from learnbot.llm import AllProvidersFailed
 
 AI_BUSY_ITEM = "The AI is busy right now. Please try again in a minute."
 CONDITION_CHECK = "condition_dropped"
+WORDS_CHECK = "words_not_in_quote"
 FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$")
 
 # Rules shared by every item prompt. Same meaning as the chat prompt (learnbot.answer).
@@ -95,7 +99,7 @@ def parse_item(text):
     if not isinstance(wrong, list):
         raise ValueError("wrong is not a list")
     return {"found": True, "question": str(data.get("question") or "").strip(),
-            "answer": str(data.get("answer") or "").strip(), "wrong": [str(w).strip() for w in wrong],
+            "answer": proof.without_paragraph_number(str(data.get("answer") or "")).strip(), "wrong": [str(w).strip() for w in wrong],
             "sources": sources}
 
 
@@ -124,8 +128,9 @@ def item_problem(topic, reply, rule_sets):
     return None
 
 
-def check_reply(topic, reply, pieces, searcher, extra_check=None):
-    """(checked sources, "", "") if every check passes, else (None, failed check, detail)."""
+def check_reply(topic, reply, pieces, searcher, extra_check=None, exact_words=True):
+    """(checked sources, "", "") if every check passes, else (None, failed check, detail).
+    exact_words: also check that the answer has no content word its quote lacks."""
     problem = item_problem(topic, reply, searcher.rule_sets) or (extra_check(reply) if extra_check else None)
     if problem:
         return None, problem[0], problem[1]
@@ -139,17 +144,22 @@ def check_reply(topic, reply, pieces, searcher, extra_check=None):
     condition = proof.dropped_condition(reply["answer"], reply["question"], proof.quote_text(checked[0]))
     if condition:
         return None, CONDITION_CHECK, condition
+    extra = proof.new_words(reply["answer"], proof.quote_text(checked[0]))
+    if exact_words and config.EXACT_WORDS_RULE and extra:
+        return None, WORDS_CHECK, ", ".join(extra)
     return checked, "", ""
 
 
 def check_with_sentence(topic, reply, pieces, searcher, sentence_checks=(), extra_check=None):
     """check_reply; if the only failure is one of sentence_checks, the answer becomes the
-    document's exact sentence and is checked again. Changes reply["answer"]."""
-    result = check_reply(topic, reply, pieces, searcher, extra_check)
-    quote = reply["sources"][0]["quote"]
+    document's exact sentence (without a leading paragraph number) and is checked again.
+    Changes reply["answer"]. Only items that may show a sentence check exact words."""
+    exact_words = WORDS_CHECK in sentence_checks
+    result = check_reply(topic, reply, pieces, searcher, extra_check, exact_words)
+    quote = proof.without_paragraph_number(reply["sources"][0]["quote"])
     if result[1] in sentence_checks and len(quote.split()) <= config.MAX_SENTENCE_ANSWER_WORDS:
         reply["answer"] = quote
-        return check_reply(topic, reply, pieces, searcher, extra_check)
+        return check_reply(topic, reply, pieces, searcher, extra_check, exact_words)
     return result
 
 

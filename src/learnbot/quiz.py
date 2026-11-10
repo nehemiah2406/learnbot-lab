@@ -9,6 +9,9 @@ a question that fails any check is dropped, never shown:
   partly_right_option  a wrong option lists several things and one is in the right answer
   wrong_in_quote  a wrong option is in the source quote, or all its number + unit pairs are:
                   the document may say it is right
+  limit_dropped   the right answer leaves out the limit of its number in the quote ("more
+                  than", "at least", "up to", "less than", "not more than"): "3000" when the
+                  document says "more than 3000" is not exact (learnbot.proof.dropped_limit)
 
 Code cannot prove that each wrong option is wrong according to the document. The eval
 report prints every kept question, for a person to read.
@@ -19,7 +22,7 @@ import re
 from time import perf_counter
 
 from learnbot import config, study
-from learnbot.proof import number_units
+from learnbot.proof import dropped_limit, number_units
 
 BANNED_OPTION = re.compile(r"\b(all|none) of (the above|these|the options|the answers)\b"
                            r"|\b(both|either|neither) [a-d]\b|\b[a-d] (and|or) [a-d]\b", re.IGNORECASE)
@@ -72,6 +75,9 @@ def is_partly_right(option, options, answer):
 def options_problem(reply):
     """(check, detail) of the first failed option check, or None."""
     answer, wrong = reply["answer"], reply["wrong"]
+    limit = dropped_limit(answer, reply.get("question", ""), reply["sources"][0]["quote"])
+    if limit:
+        return "limit_dropped", limit
     if len(wrong) != 3 or not all(wrong):
         return "bad_options", f"{len(wrong)} wrong options"
     options = [answer, *wrong]
