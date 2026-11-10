@@ -3,6 +3,8 @@
 Run:  .venv\\Scripts\\python scripts\\make_sample_files.py
       .venv\\Scripts\\python scripts\\run_filetype_eval.py --group 1 --dry-run     (fake replies, no AI, writes nothing)
       .venv\\Scripts\\python scripts\\run_filetype_eval.py --group 1 --max-calls 32 --pause 6
+      .venv\\Scripts\\python scripts\\run_ocr_check.py boaters_guide.pdf --page 16   (makes the scanned page for --group ocr)
+      .venv\\Scripts\\python scripts\\run_filetype_eval.py --group ocr --dry-run
 
 Each file is asked through the chat pipeline, inside that file only. The gate per type: wrong 0,
 the trap refused, under 10 s, at least 2 of 3 kept: PLAN.md section 3.
@@ -29,7 +31,8 @@ from learnbot.search import default_searcher  # noqa: E402
 
 DATA_DIR = Path("data/raw")
 RESULTS = Path("eval/results.md")
-GROUPS = {"1": (".txt", ".md", ".csv", ".html"), "2": (".docx", ".pptx", ".xlsx")}
+# "ocr": a scanned PDF page made by scripts/run_ocr_check.py (no text layer: read by OCR).
+GROUPS = {"1": (".txt", ".md", ".csv", ".html"), "2": (".docx", ".pptx", ".xlsx"), "ocr": (".pdf",)}
 QUESTIONS, TRAPS = "eval/filetype_questions.csv", "eval/filetype_traps.csv"
 
 

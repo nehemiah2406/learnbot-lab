@@ -5,7 +5,7 @@ LearnBot is an AI tutor for maritime crew training, built from scratch by Hari (
 
 ## Stack
 - Python 3.13, one HTML page served by Python's built-in http.server on localhost (no frameworks, nothing extra installed), code in src/learnbot/, tests in tests/, scripts in scripts/, eval in eval/
-- PDF reading: pdfplumber
+- PDF reading: pdfplumber; scanned PDF pages: OCR with rapidocr (local; pages rendered with pypdfium2). OCR lines below config.OCR_MIN_CONFIDENCE become [unclear text] and are never proof
 - Embeddings: local sentence-transformers; vector store: ChromaDB (local, storage/)
 - LLM: Gemini (main) + Groq (fallback). Keys and model names in .env (template .env.example)
 - Web search (Research mode only): Tavily, key TAVILY_API_KEY in .env

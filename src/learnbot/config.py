@@ -25,7 +25,7 @@ BASELINE_MIN_SCORE = 11.5
 LOG_DIR = "logs"  # the page's self-test results (gitignored)
 STORAGE_DIR = "storage"  # pieces + ChromaDB vectors, cached by file hash (gitignored)
 CACHE_DIR = "cache"  # saved AI answers (gitignored)
-PIECES_VERSION = 1  # raise when chunking changes, so cached pieces are rebuilt
+PIECES_VERSION = 2  # raise when chunking changes, so cached pieces are rebuilt (2: OCR for scanned PDF pages)
 
 # Local embedding model (sentence-transformers). Chosen by eval, see eval/results.md.
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
@@ -96,6 +96,14 @@ STUDY_MIN_ROW_WORDS = 5  # table files have short rows: used if no piece has STU
 # --- Day 3: book maker -----------------------------------------------------------------
 BOOK_FACTS_PER_CHAPTER = 5
 BOOK_MAX_TOPICS = 8
+
+# --- OCR for scanned PDF pages (learnbot.ocr) ---------------------------------------------
+OCR_DPI = 200  # pages are rendered at this resolution for OCR
+# An OCR line scored below this is shown as [unclear text] and is never proof (Hari's rule).
+# Chosen from scripts/run_ocr_check.py on a public test page (10 Nov 2026, PLAN.md), before any
+# question was written: every line of the clear scan scored 0.983 or more; on a blurred copy,
+# lines with misspelled words scored 0.88-0.97.
+OCR_MIN_CONFIDENCE = 0.97
 
 # --- The page ------------------------------------------------------------------------------
 PAGE_STUDY_PIECES = 30  # pieces the page goes through, one click at a time, for a quiz or flashcards

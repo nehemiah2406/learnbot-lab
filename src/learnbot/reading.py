@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import pdfplumber
 
 from learnbot.answer import answer_within
+from learnbot.ocr import OCR_NOTE
 from learnbot.pdf_text import page_is_mixed
 from learnbot.rule_sets import RuleSets
 from learnbot.search import ScopedSearcher
@@ -39,13 +40,15 @@ def view_page(document, path, page):
     """The page's exact text. path: the file itself, for the layout check (PDFs only).
     Raises ValueError."""
     check_page(document, page)
-    mixed = False
-    if not document.labels:
+    warning = ""
+    if page in getattr(document, "ocr_pages", []):
+        warning = OCR_NOTE
+    elif not document.labels:
         with pdfplumber.open(path) as pdf:
-            mixed = page_is_mixed(pdf.pages[page - 1])
+            warning = MIXED_WARNING if page_is_mixed(pdf.pages[page - 1]) else ""
     total = len(document.pages)
     return PageView(document.name, page, total, document.pages[page], page - 1 if page > 1 else None,
-                    page + 1 if page < total else None, MIXED_WARNING if mixed else "", document.labels.get(page, ""))
+                    page + 1 if page < total else None, warning, document.labels.get(page, ""))
 
 
 def page_searcher(document, page):

@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from learnbot import config
-from learnbot.chunking import chunk_pages, read_pdf_pages
+from learnbot import ocr
+from learnbot.chunking import chunk_pages
 from learnbot.readers import PDF, Part, detect_type, part_chunks, read_file
 
 EMBED_BATCH = 256
@@ -37,6 +38,7 @@ class Document:
     pages: dict  # {page number: text}
     chunks: list
     labels: dict = field(default_factory=dict)  # {part number: location}, empty for a PDF
+    ocr_pages: list = field(default_factory=list)  # PDF pages read by OCR (scanned)
 
 
 def load_document(path, storage_dir=None):
@@ -49,12 +51,17 @@ def load_document(path, storage_dir=None):
     if cache.is_file():
         data = json.loads(cache.read_text(encoding="utf-8"))
         pages = {int(n): text for n, text in data["pages"].items()}
+        ocr_pages = data.get("ocr_pages", [])
     else:
-        pages = read_pdf_pages(path)
+        pages, ocr_pages = ocr.read_pdf_pages(path)  # OCR only for scanned pages, once per file
         cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(json.dumps({"pages": pages}, ensure_ascii=False), encoding="utf-8")
+        cache.write_text(json.dumps({"pages": pages, "ocr_pages": ocr_pages}, ensure_ascii=False), encoding="utf-8")
     # Pieces are rebuilt from the cached pages (fast) and use the current file name.
-    return Document(path.name, digest, pages, chunk_pages(path.name, pages))
+    chunks = chunk_pages(path.name, pages)
+    for chunk in chunks:
+        if chunk.page in ocr_pages:
+            chunk.where = ocr.where(chunk.page)  # the user sees the text came from OCR
+    return Document(path.name, digest, pages, chunks, ocr_pages=ocr_pages)
 
 
 def load_parts(path, digest, cache):

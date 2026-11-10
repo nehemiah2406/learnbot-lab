@@ -9,6 +9,7 @@ An answer is shown only if ALL checks pass for every source; otherwise the user 
   page_not_sent      the source's doc + page is one of the pieces sent to the AI
   quote_too_short    the quote has at least config.MIN_QUOTE_WORDS words
   quote_not_on_page  the quote appears word for word (normalised) on that doc + page
+  quote_unclear      the quote touches text that OCR could not read clearly ([unclear text])
   wrong_rule_set     the question names a rule set -> the page has that rule set
   (list item)        a quote that is a list ("In vessels of 50 meters: - a masthead light,
                      6 miles; - a sidelight, 3 miles") is narrowed to the ONE item that holds
@@ -56,6 +57,8 @@ ITEM_BREAK = re.compile(r"\s*(?:(?:^|\s)[−–•▪·-]\s+|;\s*|\s(?=\((?:[ivx
 # A limit before a number: "more than 3000 locations". An answer of "3000" without it is not exact.
 NUMBER_WORDS = r"one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty|fifty|hundred"
 LIMIT = re.compile(rf"\b(not more than|more than|less than|at least|up to)\s+(?=\$?\d|(?:{NUMBER_WORDS})\b)", re.IGNORECASE)
+# What an OCR line below the confidence limit becomes (learnbot.ocr). Never proof.
+UNCLEAR = "[unclear text]"
 PARAGRAPH_NUMBER = re.compile(r"^\s*\(\d+\)\s*")
 CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding)\b([^.;,)]*)", re.IGNORECASE)
 
@@ -204,6 +207,8 @@ def check(question, reply, sent, page_text, rule_sets, topic_score=None):
         text = page_text(s["doc"], s["page"])
         if text is None or same_text(s["quote"]) not in same_text(text):
             return fail("quote_not_on_page", where)
+        if UNCLEAR in text and "unclear text" in same_text(s["quote"]).lower():
+            return fail("quote_unclear", where)
         if not rule_sets.allowed(question, s["doc"], s["page"]):
             return fail("wrong_rule_set", f"{where} is not {rule_sets.asked(question)}")
 

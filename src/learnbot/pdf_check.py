@@ -59,6 +59,7 @@ class PdfCheckResult:
     verdict: str = OK
     reasons: list = field(default_factory=list)
     multi_column_pages: list = field(default_factory=list)
+    ocr_pages: list = field(default_factory=list)  # scanned pages: read by OCR (learnbot.ocr)
     notes: list = field(default_factory=list)  # info only, never changes the verdict
 
 
@@ -271,12 +272,13 @@ def decide_verdict(result):
         return FAIL, list(result.errors)
 
     fail, warn = [], []
-    low = result.low_text_pages
+    # Scanned pages are read by OCR, so they no longer count as pages without text.
+    low = [p for p in result.low_text_pages if p not in result.ocr_pages]
     ratio = len(low) / result.page_count if result.page_count else 0
     if low and ratio >= config.LOW_TEXT_FAIL_RATIO:
         fail.append(
             f"{len(low)} of {result.page_count} pages have almost no text "
-            "(maybe scanned). Scanned PDFs are not supported yet."
+            "and no scanned image to read. Please upload a PDF with text."
         )
     elif low and ratio >= config.LOW_TEXT_WARN_RATIO:
         warn.append(f"Pages {page_ranges(low)} have almost no text, maybe blank or scanned.")
@@ -302,6 +304,8 @@ def make_notes(result):
     notes = []
     if not result.headings:
         notes.append("No numbered headings (Rule, Section, Chapter, 1.2 ...); normal for many books.")
+    if result.ocr_pages:
+        notes.append(f"Scanned pages read by OCR (check numbers on the page): {page_ranges(result.ocr_pages)}.")
     if result.multi_column_pages:
         notes.append(
             f"Multi-column pages read column by column: {page_ranges(result.multi_column_pages)}."
@@ -361,6 +365,8 @@ def read_pdf(path, result):
             for page_no, page in enumerate(pdf.pages, start=1):
                 text, columns = read_page(page)
                 texts.append(text)
+                if len(text.strip()) < config.LOW_TEXT_CHARS and page.images:
+                    result.ocr_pages.append(page_no)
                 if columns > 1:
                     result.multi_column_pages.append(page_no)
                 table_counts.append(len(page.find_tables()))

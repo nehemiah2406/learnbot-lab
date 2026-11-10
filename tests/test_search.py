@@ -97,9 +97,9 @@ def test_unchanged_file_is_not_read_again(tmp_path, monkeypatch):
 
     def fake_reader(path):
         reads.append(path)
-        return {1: "(a) A vessel shall keep a proper look-out at all times by sight and hearing."}
+        return {1: "(a) A vessel shall keep a proper look-out at all times by sight and hearing."}, []
 
-    monkeypatch.setattr(index_module, "read_pdf_pages", fake_reader)
+    monkeypatch.setattr(index_module.ocr, "read_pdf_pages", fake_reader)
     pdf = tmp_path / "book.pdf"
     pdf.write_bytes(b"version 1")
     first = load_document(pdf, tmp_path / "storage")
