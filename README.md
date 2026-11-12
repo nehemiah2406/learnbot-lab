@@ -9,11 +9,11 @@ Built for maritime crew training, but it works on any readable file of a support
 | | |
 |---|---|
 | ![Chat answer with its page and quote](docs/screenshots/chat.png) | ![Quiz after answering, with today's score](docs/screenshots/quiz.png) |
-| Chat: green label, location, answer, "Show quote" | Quiz: right and wrong option, source, today's score |
+| Chat: green label, location and answer (here the exact sentence, so no "Show quote" button) | Quiz: right and wrong option, source, today's score |
 | ![Reading mode on a scanned page read by OCR](docs/screenshots/reading-ocr.png) | ![Book maker chapter with checked facts](docs/screenshots/book.png) |
 | Reading mode on a scanned page (OCR note) | Book maker: every fact with its page and quote |
-| ![Research answer from the web with its link](docs/screenshots/research.png) | |
-| Research: orange "From the web" label and the link | |
+| ![Research answer from the web with its link to safeboatingamerica.com](docs/screenshots/research.png) | |
+| Research: orange "From the web" label and the source link (safeboatingamerica.com) | |
 
 ## The 7 modes
 
