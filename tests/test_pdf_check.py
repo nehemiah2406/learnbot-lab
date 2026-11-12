@@ -254,3 +254,9 @@ def test_non_pdf_file_fails_with_friendly_message(tmp_path):
     result = check_pdf(fake)
     assert result.verdict == FAIL
     assert "could not be" in result.reasons[0]
+
+
+def test_spread_pages_noted():
+    result = analysed([f"Rule 1\n{FULL}"] * 4)
+    result.spread_pages = [9, 10, 11]
+    assert "2-page spreads read half by half (left page, then right page): 9-11." in make_notes(result)

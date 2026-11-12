@@ -167,3 +167,101 @@ def test_models_load_when_the_search_starts_not_on_the_first_question(monkeypatc
     monkeypatch.setattr(Searcher, "search", lambda self, question, k=None: searches.append(question) or [])
     default_searcher(Library([Document("a.pdf", "h", {1: "text"}, [Chunk("a.pdf", 1, "T", "text")])]))
     assert len(searches) == 1
+
+
+# --- Vectors are kept per file: only a file whose pieces changed is embedded again ------
+from learnbot import config  # noqa: E402
+from learnbot.index import pieces_fingerprint  # noqa: E402
+
+
+class CountingEmbedder(FakeEmbedder):
+    def __init__(self):
+        super().__init__()
+        self.texts = 0
+
+    def encode_documents(self, texts):
+        self.texts += len(texts)
+        return super().encode_documents(texts)
+
+
+def stored(store, digest):
+    got = store.collection.get(where={"file_hash": digest}, include=["embeddings", "metadatas"])
+    return {i: (dict(m), [round(x, 6) for x in v]) for i, m, v in zip(got["ids"], got["metadatas"], got["embeddings"])}
+
+
+def add_old_style(store, document, texts=None):
+    """Vectors as stored before fingerprints: no pieces_hash in the metadata."""
+    texts = texts or [c.search_text for c in document.chunks]
+    store.collection.add(ids=[f"{document.file_hash}:{i}" for i in range(len(texts))],
+                         embeddings=store.embedder.encode_documents(texts),
+                         metadatas=[{"file_hash": document.file_hash, "piece": i} for i in range(len(texts))])
+
+
+def test_changed_pieces_are_embedded_again_and_other_files_are_not_touched(tmp_path):
+    embedder = CountingEmbedder()
+    store = VectorStore(embedder, tmp_path)
+    keep, change = Document("keep.pdf", "hash1", {}, CHUNKS[:2]), Document("spread.pdf", "hash2", {}, CHUNKS[2:3])
+    assert store.add(keep) and store.add(change)
+    before_keep = stored(store, "hash1")
+    embedder.texts = 0
+    new_reading = Document("spread.pdf", "hash2", {}, [CHUNKS[3], CHUNKS[2]])  # same file, new pieces
+    again = VectorStore(embedder, tmp_path)
+    assert not again.add(keep) and again.add(new_reading)
+    assert embedder.texts == 2  # only the changed file was embedded
+    assert stored(again, "hash1") == before_keep  # the other file's vectors and ids are untouched
+    now = stored(again, "hash2")
+    assert sorted(now) == ["hash2:0", "hash2:1"]
+    assert {m["pieces_hash"] for m, _ in now.values()} == {pieces_fingerprint(new_reading)}
+    assert not again.add(new_reading)  # stored now: nothing to do
+
+
+def test_fewer_pieces_leave_no_old_vectors_behind(tmp_path):
+    store = VectorStore(CountingEmbedder(), tmp_path)
+    store.add(Document("a.pdf", "hash1", {}, CHUNKS[:3]))
+    store.add(Document("a.pdf", "hash1", {}, CHUNKS[:1]))
+    assert sorted(stored(store, "hash1")) == ["hash1:0"]
+
+
+def test_old_vectors_that_still_match_are_kept_and_stamped(tmp_path):
+    embedder = CountingEmbedder()
+    store = VectorStore(embedder, tmp_path)
+    doc = Document("rules.pdf", "hash1", {}, CHUNKS[:3])
+    add_old_style(store, doc)
+    before = stored(store, "hash1")
+    assert not store.add(doc)  # same texts: the stored vectors are kept
+    after = stored(store, "hash1")
+    assert {i: v for i, (_, v) in after.items()} == {i: v for i, (_, v) in before.items()}
+    assert {m["pieces_hash"] for m, _ in after.values()} == {pieces_fingerprint(doc)}
+    embedder.texts = 0
+    assert not store.add(doc) and embedder.texts == 0  # stamped: no embedding needed any more
+
+
+def test_old_vectors_of_other_texts_are_replaced(tmp_path):
+    store = VectorStore(CountingEmbedder(), tmp_path)
+    doc = Document("rules.pdf", "hash1", {}, CHUNKS[:3])
+    add_old_style(store, doc, texts=["mixed columns text one two", "mixed columns three four five", "six seven"])
+    assert store.add(doc)
+    assert {m["pieces_hash"] for m, _ in stored(store, "hash1").values()} == {pieces_fingerprint(doc)}
+
+
+def test_old_vectors_with_another_number_of_pieces_are_replaced(tmp_path):
+    store = VectorStore(CountingEmbedder(), tmp_path)
+    doc = Document("rules.pdf", "hash1", {}, CHUNKS[:3])
+    add_old_style(store, doc, texts=[c.search_text for c in CHUNKS[:2]])
+    assert store.add(doc)
+    assert sorted(stored(store, "hash1")) == ["hash1:0", "hash1:1", "hash1:2"]
+
+
+def test_fingerprint_changes_with_text_and_order():
+    a = Document("a.pdf", "h", {}, CHUNKS[:2])
+    assert pieces_fingerprint(a) == pieces_fingerprint(Document("b.pdf", "h", {}, CHUNKS[:2]))
+    assert pieces_fingerprint(a) != pieces_fingerprint(Document("a.pdf", "h", {}, [CHUNKS[1], CHUNKS[0]]))
+    assert pieces_fingerprint(a) != pieces_fingerprint(Document("a.pdf", "h", {}, CHUNKS[:3]))
+
+
+def test_new_pieces_version_keeps_the_vector_collection(monkeypatch):
+    name = collection_name("BAAI/bge-small-en-v1.5")
+    monkeypatch.setattr(config, "PIECES_VERSION", config.PIECES_VERSION + 1)
+    assert collection_name("BAAI/bge-small-en-v1.5") == name
+    assert name.startswith(f"pieces-v{config.VECTORS_VERSION}-")
+    assert config.VECTORS_VERSION == 2  # the existing collection keeps its name, so it is reused

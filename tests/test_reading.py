@@ -38,6 +38,7 @@ class FakePdf:
 def clean_layout(monkeypatch):
     monkeypatch.setattr(reading.pdfplumber, "open", lambda path: FakePdf("page"))
     monkeypatch.setattr(reading, "page_is_mixed", lambda page: False)
+    monkeypatch.setattr(reading, "page_is_spread", lambda page: False)
 
 
 # --- Reading --------------------------------------------------------------------------
@@ -62,6 +63,7 @@ def test_page_outside_the_document_is_a_clear_error(page):
 def test_mixed_page_shows_the_warning(monkeypatch):
     monkeypatch.setattr(reading.pdfplumber, "open", lambda path: FakePdf("page"))
     monkeypatch.setattr(reading, "page_is_mixed", lambda page: True)
+    monkeypatch.setattr(reading, "page_is_spread", lambda page: False)
     assert view_page(DOCUMENT, "g.pdf", 2).warning == MIXED_WARNING
     assert "mixed columns" in MIXED_WARNING
 
@@ -111,7 +113,7 @@ def test_busy_ai_is_a_friendly_message():
 
 # --- Mixed-page check -----------------------------------------------------------------
 class FakePage:
-    width = 612
+    width, height = 612, 792  # a portrait letter page
 
     def __init__(self, lines):
         self.lines = lines
@@ -144,3 +146,18 @@ def test_table_with_short_cells_is_not_mixed():
 
 def test_a_few_gaps_on_a_long_page_are_not_mixed():
     assert not page_is_mixed(FakePage([(4, 4)] * 2 + [(9, 0)] * 30))
+
+
+def test_spread_page_says_left_page_first(monkeypatch):
+    monkeypatch.setattr(reading.pdfplumber, "open", lambda path: FakePdf("page"))
+    monkeypatch.setattr(reading, "page_is_mixed", lambda page: False)
+    monkeypatch.setattr(reading, "page_is_spread", lambda page: True)
+    assert view_page(DOCUMENT, "g.pdf", 2).warning == reading.SPREAD_NOTE
+    assert "2 printed pages" in reading.SPREAD_NOTE and "left page" in reading.SPREAD_NOTE
+
+
+def test_mixed_spread_page_shows_both(monkeypatch):
+    monkeypatch.setattr(reading.pdfplumber, "open", lambda path: FakePdf("page"))
+    monkeypatch.setattr(reading, "page_is_mixed", lambda page: True)
+    monkeypatch.setattr(reading, "page_is_spread", lambda page: True)
+    assert view_page(DOCUMENT, "g.pdf", 2).warning == f"{MIXED_WARNING} {reading.SPREAD_NOTE}"

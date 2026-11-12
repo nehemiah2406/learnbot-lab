@@ -17,6 +17,18 @@ from learnbot.chunking import chunk_pages
 from learnbot.readers import PDF, Part, detect_type, part_chunks, read_file
 
 EMBED_BATCH = 256
+# Vectors stored before fingerprints existed are kept if the current pieces embed to (almost)
+# the same vectors: cosine at least this for every piece, and the same number of pieces.
+SAME_VECTOR = 0.999
+
+
+def pieces_fingerprint(document):
+    """A short hash of the document's piece texts, in order: it changes when any piece changes."""
+    digest = hashlib.sha256()
+    for chunk in document.chunks:
+        digest.update(chunk.search_text.encode("utf-8"))
+        digest.update(b"\x00")
+    return digest.hexdigest()[:32]
 # Some models want a short instruction before the question (not before the pieces).
 QUERY_PREFIX = {
     "BAAI/bge-small-en-v1.5": "Represent this sentence for searching relevant passages: ",
@@ -101,13 +113,16 @@ class Embedder:
 
 
 def collection_name(model_name):
-    """ChromaDB collection per embedding model and pieces version (3-63 safe characters)."""
+    """ChromaDB collection per embedding model and vectors version (3-63 safe characters).
+    Not per pieces version: a file whose pieces changed is embedded again by itself."""
     slug = re.sub(r"[^A-Za-z0-9]+", "-", model_name).strip("-")[-48:]
-    return f"pieces-v{config.PIECES_VERSION}-{slug}"
+    return f"pieces-v{config.VECTORS_VERSION}-{slug}"
 
 
 class VectorStore:
-    """Piece embeddings in ChromaDB. Piece id = '<file hash>:<piece number>'."""
+    """Piece embeddings in ChromaDB. Piece id = '<file hash>:<piece number>'. Every piece also
+    stores its file's pieces fingerprint, so a file whose pieces changed (a new reading) is
+    embedded again, and only that file: the vectors of unchanged files are never touched."""
 
     def __init__(self, embedder, storage_dir=None):
         import chromadb
@@ -126,17 +141,53 @@ class VectorStore:
         return bool(self.collection.get(where={"file_hash": digest}, limit=1)["ids"])
 
     def add(self, document):
-        """Embed and store the document's pieces, unless this file is already stored."""
-        if self.has(document.file_hash) or not document.chunks:
+        """Embed and store the document's pieces, unless they are stored already. True if
+        (re)embedded. Stored pieces with another fingerprint are replaced; stored pieces with no
+        fingerprint (stored before fingerprints) are kept and stamped if they still match."""
+        if not document.chunks:
             return False
+        fingerprint = pieces_fingerprint(document)
+        stored = self.collection.get(where={"file_hash": document.file_hash}, limit=1, include=["metadatas"])
+        if stored["ids"]:
+            known = stored["metadatas"][0].get("pieces_hash")
+            if known == fingerprint:
+                return False
+            if known is None and self.stamp_if_same(document, fingerprint):
+                return False
+            self.collection.delete(where={"file_hash": document.file_hash})
         texts = [c.search_text for c in document.chunks]
         for start in range(0, len(texts), EMBED_BATCH):
             batch = texts[start:start + EMBED_BATCH]
             self.collection.add(
                 ids=[f"{document.file_hash}:{start + i}" for i in range(len(batch))],
                 embeddings=self.embedder.encode_documents(batch),
-                metadatas=[{"file_hash": document.file_hash, "piece": start + i} for i in range(len(batch))],
+                metadatas=[self.metadata(document, start + i, fingerprint) for i in range(len(batch))],
             )
+        return True
+
+    @staticmethod
+    def metadata(document, number, fingerprint):
+        return {"file_hash": document.file_hash, "piece": number, "pieces_hash": fingerprint}
+
+    def stamp_if_same(self, document, fingerprint):
+        """Old vectors (no fingerprint): True, and the fingerprint is added to their metadata
+        (the vectors stay as they are), if the current pieces embed to the same vectors."""
+        stored = self.collection.get(where={"file_hash": document.file_hash}, include=["embeddings", "metadatas"])
+        if len(stored["ids"]) != len(document.chunks):
+            return False
+        old = {m["piece"]: list(v) for m, v in zip(stored["metadatas"], stored["embeddings"])}
+        if set(old) != set(range(len(document.chunks))):
+            return False
+        texts = [c.search_text for c in document.chunks]
+        for start in range(0, len(texts), EMBED_BATCH):
+            fresh = self.embedder.encode_documents(texts[start:start + EMBED_BATCH])
+            for i, vector in enumerate(fresh):
+                if sum(a * b for a, b in zip(vector, old[start + i])) < SAME_VECTOR:
+                    return False
+        for start in range(0, len(texts), EMBED_BATCH):
+            numbers = range(start, min(start + EMBED_BATCH, len(texts)))
+            self.collection.update(ids=[f"{document.file_hash}:{n}" for n in numbers],
+                                   metadatas=[self.metadata(document, n, fingerprint) for n in numbers])
         return True
 
     def query(self, text, digests, n):

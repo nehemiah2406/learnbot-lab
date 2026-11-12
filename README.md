@@ -31,7 +31,7 @@ Built for maritime crew training, but it works on any readable file of a support
 
 | Type | Location shown |
 |---|---|
-| PDF with a text layer | page ("p.12") |
+| PDF with a text layer (multi-column pages read column by column; 2-page spreads read left page, then right page) | page ("p.12") |
 | **Scanned PDF pages, read by OCR** (rapidocr, runs locally) | "p.3 (scanned, OCR)" |
 | .docx | heading + paragraph |
 | .pptx | slide |

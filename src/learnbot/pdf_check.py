@@ -13,7 +13,7 @@ from pdfminer.pdfdocument import PDFPasswordIncorrect
 from pdfplumber.utils.exceptions import PdfminerException
 
 from learnbot import config
-from learnbot.pdf_text import read_page
+from learnbot.pdf_text import read_layout
 
 OK, WARNING, FAIL = "OK", "WARNING", "FAIL"
 
@@ -59,6 +59,7 @@ class PdfCheckResult:
     verdict: str = OK
     reasons: list = field(default_factory=list)
     multi_column_pages: list = field(default_factory=list)
+    spread_pages: list = field(default_factory=list)  # 2 printed pages side by side, read half by half
     ocr_pages: list = field(default_factory=list)  # scanned pages: read by OCR (learnbot.ocr)
     notes: list = field(default_factory=list)  # info only, never changes the verdict
 
@@ -310,6 +311,10 @@ def make_notes(result):
         notes.append(
             f"Multi-column pages read column by column: {page_ranges(result.multi_column_pages)}."
         )
+    if result.spread_pages:
+        notes.append(
+            f"2-page spreads read half by half (left page, then right page): {page_ranges(result.spread_pages)}."
+        )
     return notes
 
 
@@ -363,7 +368,9 @@ def read_pdf(path, result):
                 return
             texts, table_counts = [], []
             for page_no, page in enumerate(pdf.pages, start=1):
-                text, columns = read_page(page)
+                text, columns, spread = read_layout(page)
+                if spread:
+                    result.spread_pages.append(page_no)
                 texts.append(text)
                 if len(text.strip()) < config.LOW_TEXT_CHARS and page.images:
                     result.ocr_pages.append(page_no)

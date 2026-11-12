@@ -2,7 +2,8 @@
 
 Reading needs no AI and shows no summaries. A question goes through the chat pipeline and proof
 check (learnbot.answer), with only that page's pieces; anything else is "Not on this page".
-A page whose columns may be mixed (learnbot.pdf_text.page_is_mixed) shows a warning.
+A page whose columns may be mixed (learnbot.pdf_text.page_is_mixed) shows a warning, and a
+2-page spread (learnbot.pdf_text.page_is_spread) says it is read left page first.
 """
 
 from dataclasses import dataclass
@@ -11,12 +12,13 @@ import pdfplumber
 
 from learnbot.answer import answer_within
 from learnbot.ocr import OCR_NOTE
-from learnbot.pdf_text import page_is_mixed
+from learnbot.pdf_text import page_is_mixed, page_is_spread
 from learnbot.rule_sets import RuleSets
 from learnbot.search import ScopedSearcher
 
 NOT_ON_PAGE = "Not on this page"
 MIXED_WARNING = "Warning: this page has mixed columns, so its lines may be out of order."
+SPREAD_NOTE = "This PDF page holds 2 printed pages side by side: the left page is shown first, then the right page."
 
 
 @dataclass
@@ -45,7 +47,10 @@ def view_page(document, path, page):
         warning = OCR_NOTE
     elif not document.labels:
         with pdfplumber.open(path) as pdf:
-            warning = MIXED_WARNING if page_is_mixed(pdf.pages[page - 1]) else ""
+            pdf_page = pdf.pages[page - 1]
+            notes = [MIXED_WARNING] if page_is_mixed(pdf_page) else []
+            notes += [SPREAD_NOTE] if page_is_spread(pdf_page) else []
+            warning = " ".join(notes)
     total = len(document.pages)
     return PageView(document.name, page, total, document.pages[page], page - 1 if page > 1 else None,
                     page + 1 if page < total else None, warning, document.labels.get(page, ""))

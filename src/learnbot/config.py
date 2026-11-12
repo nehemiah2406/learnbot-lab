@@ -25,7 +25,11 @@ BASELINE_MIN_SCORE = 11.5
 LOG_DIR = "logs"  # the page's self-test results (gitignored)
 STORAGE_DIR = "storage"  # pieces + ChromaDB vectors, cached by file hash (gitignored)
 CACHE_DIR = "cache"  # saved AI answers (gitignored)
-PIECES_VERSION = 2  # raise when chunking changes, so cached pieces are rebuilt (2: OCR for scanned PDF pages)
+PIECES_VERSION = 3  # raise when chunking changes, so cached pieces are rebuilt (2: OCR for scanned PDF pages; 3: 2-page spreads read half by half)
+# The search vectors have their own version. A file whose pieces changed is embedded again by
+# itself (index.VectorStore keeps a fingerprint per file), so raising PIECES_VERSION never
+# rebuilds the vectors of unchanged files. Raise this only to rebuild every file's vectors.
+VECTORS_VERSION = 2
 
 # Local embedding model (sentence-transformers). Chosen by eval, see eval/results.md.
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"

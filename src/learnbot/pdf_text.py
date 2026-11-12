@@ -5,6 +5,12 @@ strip in the middle of the page that (almost) no word crosses. Each column is
 then read top to bottom, left column first, so sentences are not mixed.
 Lines that cross the gutter (titles, headers) are kept full width in place.
 
+A 2-page spread (two printed pages side by side on one wide PDF page, bug #24) is
+cut at its empty middle strip and read half by half: the left page, then the right
+page, each with the column reader. Inside a half, a line is a full-width title only
+if a word covers the middle of a column gap (a body line whose last word pokes into
+a narrow gap stays in its column). Pages that are not spreads are read as before.
+
 Everything that reads page text (self-check, eval checker, later the app) must
 use read_page_text(), so quotes always match the same reading.
 """
@@ -31,6 +37,13 @@ LINE_TOLERANCE = 3
 MIN_WORDS_PER_SIDE = 3
 MIN_MIXED_LINES = 5
 MIN_MIXED_SHARE = 0.15
+# A 2-page spread: the page is at least this many times as wide as it is tall, an empty
+# strip (as for a gutter) lies in this middle part of the width, and each half holds at
+# least this share of the words. Shape alone is not enough: a landscape page (a wide
+# table, a diagram) has no empty middle strip and is read as one page.
+SPREAD_MIN_RATIO = 1.25
+SPREAD_MIDDLE = (0.45, 0.55)
+SPREAD_MIN_HALF_SHARE = 0.20
 
 
 def group_lines(words, tolerance=LINE_TOLERANCE):
@@ -48,8 +61,15 @@ def line_text(line):
     return " ".join(w["text"] for w in line)
 
 
-def find_gutters(words, page_width):
-    """x-ranges [(start, end)] of column gutters, left to right; [] = one column."""
+def crossing_allowed(words):
+    """How many words may cross a gutter: full-width titles/headers."""
+    return max(MIN_CROSSING, int(MAX_CROSSING_SHARE * len(group_lines(words))))
+
+
+def find_gutters(words, page_width, max_crossing=None):
+    """x-ranges [(start, end)] of column gutters, left to right; [] = one column.
+    max_crossing: words allowed to cross (default: from this page's lines; a spread half
+    keeps the whole page's number, so it is exactly as tolerant as before the split)."""
     if len(words) < MIN_WORDS_FOR_COLUMNS:
         return []
     width = int(page_width) + 1
@@ -57,7 +77,8 @@ def find_gutters(words, page_width):
     for w in words:
         for x in range(max(0, int(w["x0"])), min(width, int(w["x1"]) + 1)):
             coverage[x] += 1
-    max_crossing = max(MIN_CROSSING, int(MAX_CROSSING_SHARE * len(group_lines(words))))
+    if max_crossing is None:
+        max_crossing = crossing_allowed(words)
 
     gutters, start = [], None
     lo, hi = int(width * GUTTER_SEARCH[0]), int(width * GUTTER_SEARCH[1])
@@ -109,8 +130,14 @@ def column_index(word, gutters):
     return sum(1 for start, end in gutters if centre > (start + end) / 2)
 
 
-def order_words(words, gutters):
-    """Text of the words in reading order: columns one after another, between full-width lines."""
+def covers_middle(word, gutters):
+    """True if the word covers the middle of a gutter (a real full-width title does)."""
+    return any(word["x0"] < (start + end) / 2 < word["x1"] for start, end in gutters)
+
+
+def order_words(words, gutters, full_width=crosses):
+    """Text of the words in reading order: columns one after another, between full-width lines.
+    full_width(word, gutters): True if that word makes its line a full-width line."""
     if not gutters:
         return "\n".join(line_text(line) for line in group_lines(words))
 
@@ -123,7 +150,7 @@ def order_words(words, gutters):
         block.clear()
 
     for line in group_lines(words):
-        if any(crosses(w, gutters) for w in line):
+        if any(full_width(w, gutters) for w in line):
             flush()
             out.append(line_text(line))
         else:
@@ -132,13 +159,68 @@ def order_words(words, gutters):
     return "\n".join(out)
 
 
-def read_page(page):
-    """(text in reading order, number of columns) for a pdfplumber page."""
+def spread_cut(words, width, height):
+    """x where a 2-page spread is cut (middle of its empty middle strip), or None."""
+    if width < SPREAD_MIN_RATIO * height or len(words) < MIN_WORDS_FOR_COLUMNS:
+        return None
+    size = int(width) + 1
+    coverage = [0] * size
+    for w in words:
+        for x in range(max(0, int(w["x0"])), min(size, int(w["x1"]) + 1)):
+            coverage[x] += 1
+    max_crossing = crossing_allowed(words)
+    lo, hi = int(width * SPREAD_MIDDLE[0]), int(width * SPREAD_MIDDLE[1])
+    strips, start = [], None
+    for x in range(lo, hi + 1):
+        free = x < hi and coverage[x] <= max_crossing
+        if free and start is None:
+            start = x
+        elif not free and start is not None:
+            if x - start >= MIN_GUTTER_WIDTH:
+                strips.append((start, x - 1))
+            start = None
+    if not strips:
+        return None
+    first, last = max(strips, key=lambda s: s[1] - s[0])
+    cut = (first + last) / 2
+    left = sum(1 for w in words if (w["x0"] + w["x1"]) / 2 < cut)
+    need = SPREAD_MIN_HALF_SHARE * len(words)
+    return cut if left >= need and len(words) - left >= need else None
+
+
+def spread_halves(words, cut):
+    """(left words, right words), the right ones moved so the right half starts at x = 0."""
+    left = [w for w in words if (w["x0"] + w["x1"]) / 2 < cut]
+    right = [{**w, "x0": w["x0"] - cut, "x1": w["x1"] - cut} for w in words if (w["x0"] + w["x1"]) / 2 >= cut]
+    return left, right
+
+
+def read_half(words, width, max_crossing):
+    """(text, columns) of one half of a spread, with the stricter full-width line rule."""
+    gutters = find_gutters(words, width, max_crossing)
+    return order_words(words, gutters, full_width=covers_middle), len(gutters) + 1
+
+
+def read_layout(page):
+    """(text in reading order, number of columns, 2-page spread?) for a pdfplumber page."""
     words = page.extract_words()
+    cut = spread_cut(words, page.width, page.height)
+    if cut is not None:
+        left, right = spread_halves(words, cut)
+        allowed = crossing_allowed(words)
+        (left_text, left_cols), (right_text, right_cols) = (read_half(left, cut, allowed),
+                                                            read_half(right, page.width - cut, allowed))
+        return "\n".join(t for t in (left_text, right_text) if t), left_cols + right_cols, True
     gutters = find_gutters(words, page.width)
     if not gutters:
-        return page.extract_text() or "", 1
-    return order_words(words, gutters), len(gutters) + 1
+        return page.extract_text() or "", 1, False
+    return order_words(words, gutters), len(gutters) + 1, False
+
+
+def read_page(page):
+    """(text in reading order, number of columns) for a pdfplumber page."""
+    text, columns, _ = read_layout(page)
+    return text, columns
 
 
 def read_page_text(page):
@@ -156,12 +238,26 @@ def line_has_two_sides(line, page_width):
     return False
 
 
+def page_is_spread(page):
+    """True if the page is a 2-page spread, read half by half (left page, then right page)."""
+    return spread_cut(page.extract_words(), page.width, page.height) is not None
+
+
 def page_is_mixed(page):
     """True if the page looks like two columns but was read row by row, so its lines may be
     out of order. A page read column by column is not mixed; table rows have short cells."""
     words = page.extract_words()
-    if find_gutters(words, page.width):
+    cut = spread_cut(words, page.width, page.height)
+    if cut is not None:  # a spread: each half is checked as its own page
+        left, right = spread_halves(words, cut)
+        allowed = crossing_allowed(words)
+        return words_are_mixed(left, cut, allowed) or words_are_mixed(right, page.width - cut, allowed)
+    return words_are_mixed(words, page.width)
+
+
+def words_are_mixed(words, width, max_crossing=None):
+    if find_gutters(words, width, max_crossing):
         return False
     lines = group_lines(words)
-    sides = sum(line_has_two_sides(line, page.width) for line in lines)
+    sides = sum(line_has_two_sides(line, width) for line in lines)
     return sides >= MIN_MIXED_LINES and sides >= MIN_MIXED_SHARE * len(lines)
