@@ -1506,3 +1506,32 @@ Run once on new topics, committed before the run; nothing changed after it. **In
   All installed MSDs must be U.S. Coast Guard certified, which are so labeled, except for some holding tanks, which are defined in regulation.  
   boaters_guide.pdf, p.28: "All installed MSDs must be U.S. Coast Guard certified, which are so labeled, except for some holding tanks, which are defined in regulation."
 <!-- END conditions-rule -->
+
+<!-- BEGIN filetypes-groupocr -->
+## File types, group ocr (.pdf): 3 questions + 1 trap per type, run once
+
+| Type | Right | Wrong | Trap refused | Missed | Not tested | Slowest | Gate |
+|---|---|---|---|---|---|---|---|
+| .pdf | 3/3 | 0 | 1/1 | 0 | 0 | 2.6 s | PASS |
+
+4 AI calls.
+
+| Id | Outcome | Location | AI | Time | Reason |
+|---|---|---|---|---|---|
+| OCR-01 | right | p.1 (scanned, OCR) | gemini:gemini-3.1-flash-lite | 2.4 s |  |
+| OCR-02 | right | p.1 (scanned, OCR) | gemini:gemini-3.1-flash-lite | 2.6 s |  |
+| OCR-03 | right | p.1 (scanned, OCR) | gemini:gemini-3.1-flash-lite | 1.8 s |  |
+| TRAP-OCR | refused |  | gemini:gemini-3.1-flash-lite | 2.5 s | llm_not_found |
+
+### Answers shown, for a person to read
+
+- **OCR-01** How long after the date of manufacture do pyrotechnic visual distress signals expire?  
+  Check the expiration date (42 months after the date of manufacture).  
+  boaters_guide_p16_scanned.pdf, p.1 (scanned, OCR): "Check the expiration date (42 months after the date of manufacture)."
+- **OCR-02** If pyrotechnic devices are selected, how many signals are required for day use?  
+  a minimum of three signals are required for day use  
+  boaters_guide_p16_scanned.pdf, p.1 (scanned, OCR): "If pyrotechnic devices are selected, a minimum of three signals are required for day use and three signals for night use."
+- **OCR-03** Launchers manufactured before what date are not required to be U.S. Coast Guard-approved?  
+  Launchers manufactured before January 1, 1981, are not required to be U.S. Coast Guard-approved.  
+  boaters_guide_p16_scanned.pdf, p.1 (scanned, OCR): "Launchers manufactured before January 1, 1981, and intended for use with approved signals, are not required to be U.S. Coast Guard- approved as long as they remain in serviceable condition."
+<!-- END filetypes-groupocr -->
