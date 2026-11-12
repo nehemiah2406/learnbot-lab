@@ -165,6 +165,7 @@ def warm_up(chain):
     try:
         main.ask(WARM_UP_PROMPT)
     except LLMError as err:
+        chain.log_failure(main.label, err.kind, time.perf_counter() - start)
         chain.switched_off.add(main.label)
         if isinstance(err, LLMDailyLimit):
             chain.daily_limit.add(main.label)

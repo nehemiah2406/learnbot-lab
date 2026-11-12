@@ -119,7 +119,7 @@ The tests use a fake AI, so they make no AI calls and cost no quota. A few tests
   - "How long does a tsunami warning stay in effect?" → "several hours" (that is how long the flooding may last).
   - A hurricane-watch wind speed taken from a mixed two-column page.
 - **Quiz:** not passed yet (2 of 5 kept on the latest run; 3 needed). The checks drop many questions, which is safe but means fewer questions.
-- **AI busy.** Free AI tiers are sometimes slow. A question then gets "The AI is busy right now. Please try again in a minute.", never a guess. After an internet outage the page can keep saying "AI busy" for up to about 4 more questions (restart it to clear).
+- **AI busy.** Free AI tiers are sometimes slow. A question then gets "The AI is busy right now. Please try again in a minute.", never a guess. After an internet outage the page can keep saying "AI busy" for up to about 4 more questions (restart it to clear). Each failed AI call is listed in `logs/ai_errors.log` (time, AI name, error type and seconds only).
 - **OCR:**
   - It takes about 6-18 s per page, so a long scan takes minutes after upload.
   - Some letter swaps can still score above the 0.97 limit ("low" read for "law" on a blurred test copy), so check numbers on the page.

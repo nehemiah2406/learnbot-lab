@@ -11,6 +11,8 @@
   while: every config.RETRY_SWITCHED_OFF_EVERY questions it is tried once more, and if
   it answers it is used again. One failure only sends that question to the fallback.
 - If every provider fails, the caller shows a friendly "AI busy" note instead.
+- Every failed AI call adds one line to config.LOG_DIR/ai_errors.log (default_chain):
+  time | AI name | error type | seconds. Never the question, the error message or a key.
 - Error messages never contain keys: only the error kind (and HTTP status) is kept.
 - An optional call limit (LLMChain.max_calls, used by the eval scripts) is checked
   before EVERY real call; when it is reached, CallLimitReached stops the run.
@@ -23,6 +25,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -74,6 +77,8 @@ class AllProvidersFailed(Exception):
 # Room for calls that timed out on our clock but still run in the background, so a new
 # call never waits in the queue.
 _executor = concurrent.futures.ThreadPoolExecutor(max_workers=8)
+_log_lock = threading.Lock()  # failed-call log lines from two threads never mix
+AI_ERRORS_LOG = "ai_errors.log"  # in config.LOG_DIR
 
 
 def with_timeout(fn, timeout_s):
@@ -193,8 +198,9 @@ class ReplyCache:
 class LLMChain:
     """Ask providers in order; first success wins. Counts real (not cached) calls."""
 
-    def __init__(self, providers, cache=None, read_cache=True, max_calls=None):
+    def __init__(self, providers, cache=None, read_cache=True, max_calls=None, failure_log=None):
         self.providers = list(providers)
+        self.failure_log = failure_log  # file for one line per failed AI call (None = no log)
         self.max_calls = max_calls  # None = no limit (the app); checked before every call
         self.cache = cache
         self.read_cache = read_cache  # False: ask again, but still save the new replies
@@ -210,6 +216,21 @@ class LLMChain:
         if self.max_calls is not None and self.calls >= self.max_calls:
             raise CallLimitReached(self.max_calls)
         self.calls += 1
+
+    def log_failure(self, label, kind, seconds):
+        """One line per failed AI call: time | AI name | error type | seconds. Never the
+        question, the reply, the error message or a key. A log that cannot be written never
+        stops the question."""
+        if self.failure_log is None:
+            return
+        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S')} | {label} | {kind} | {seconds:.1f} s\n"
+        try:
+            path = Path(self.failure_log)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with _log_lock, path.open("a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError:
+            pass
 
     def cache_key(self, prompt):
         return ReplyCache.key([p.label for p in self.providers], prompt)
@@ -248,6 +269,7 @@ class LLMChain:
                 reply = p.ask(prompt, timeout)
             except LLMError as err:
                 attempts.append((p.label, err.kind, time.perf_counter() - start))
+                self.log_failure(*attempts[-1])
                 if isinstance(err, LLMDailyLimit):
                     self.switched_off.add(p.label)
                     self.daily_limit.add(p.label)
@@ -277,4 +299,5 @@ def default_chain(cache=True):
             # The first (main) AI gets the short timeout, every fallback the longer one.
             timeout = config.FALLBACK_LLM_TIMEOUT_S if providers else config.MAIN_LLM_TIMEOUT_S
             providers.append(maker(os.getenv(env), timeout_s=timeout))
-    return LLMChain(providers, ReplyCache() if cache else None)
+    return LLMChain(providers, ReplyCache() if cache else None,
+                    failure_log=Path(config.LOG_DIR) / AI_ERRORS_LOG)

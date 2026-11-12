@@ -345,3 +345,85 @@ def test_fresh_run_asks_again_but_still_saves(tmp_path):
     fresh = LLMChain([gemini], cache, read_cache=False)
     assert not fresh.is_cached("p") and fresh.ask("p")[2] is False and gemini.calls == 2
     assert LLMChain([gemini], cache).is_cached("p")
+
+
+# --- "AI busy" log (Hari 12 Nov 2026): one line per failed AI call -------------------
+def log_lines(path):
+    return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+
+
+def test_each_failed_call_writes_one_line_with_time_name_kind_seconds(tmp_path):
+    log = tmp_path / "logs" / "ai_errors.log"
+    gemini = Fake("gemini", HttpError(503))
+    groq = Fake("groq", HttpError(429, "per minute"))
+    with pytest.raises(AllProvidersFailed):
+        LLMChain([gemini, groq], failure_log=log).ask("q")
+    lines = log_lines(log)
+    assert len(lines) == 2
+    when, name, kind, seconds = lines[0].split(" | ")
+    assert time.strptime(when, "%Y-%m-%dT%H:%M:%S")
+    assert (name, kind) == ("gemini:fake-model", "unavailable")
+    assert seconds.endswith(" s") and float(seconds[:-2]) >= 0
+    assert lines[1].split(" | ")[1:3] == ["groq:fake-model", "rate_limit"]
+
+
+def test_timeout_and_daily_limit_are_logged_by_kind(tmp_path):
+    log = tmp_path / "ai_errors.log"
+    chain = LLMChain([Fake("gemini", "sleep", timeout_s=0.05), Fake("groq", HttpError(429, "per day"))], failure_log=log)
+    with pytest.raises(AllProvidersFailed):
+        chain.ask("q")
+    assert [line.split(" | ")[2] for line in log_lines(log)] == ["timeout", "daily_limit"]
+
+
+def test_log_has_no_question_message_or_key(tmp_path):
+    log = tmp_path / "ai_errors.log"
+    gemini = Fake("gemini", HttpError(429, "key AIzaSECRET123 over quota"))
+    groq = Fake("groq", HttpError(500, "key gsk_SECRET456 broken"))
+    with pytest.raises(AllProvidersFailed):
+        LLMChain([gemini, groq], failure_log=log).ask("How many hours did the outages take?")
+    text = log.read_text(encoding="utf-8")
+    assert "SECRET" not in text and "AIza" not in text and "gsk_" not in text
+    assert "hours" not in text and "outages" not in text and "quota" not in text
+    assert all(len(line.split(" | ")) == 4 for line in text.splitlines())
+
+
+def test_success_cached_and_skipped_ais_write_nothing(tmp_path):
+    log = tmp_path / "ai_errors.log"
+    chain = LLMChain([Fake("gemini", "ok")], cache=ReplyCache(tmp_path / "cache"), failure_log=log)
+    chain.ask("q")
+    chain.ask("q")  # from the cache
+    assert log_lines(log) == []
+    # A daily limit switches gemini off: the next question skips it without a call or a line.
+    chain = LLMChain([Fake("gemini", HttpError(429, "per day")), Fake("groq", "ok")], failure_log=log)
+    chain.ask("q1")
+    chain.ask("q2")
+    assert [line.split(" | ")[1:3] for line in log_lines(log)] == [["gemini:fake-model", "daily_limit"]]
+
+
+def test_fallback_success_still_logs_the_main_ai_failure(tmp_path):
+    log = tmp_path / "ai_errors.log"
+    reply, provider, _ = LLMChain([Fake("gemini", HttpError(503)), Fake("groq", "ok")], failure_log=log).ask("q")
+    assert (reply, provider) == ("ok", "groq:fake-model")
+    assert [line.split(" | ")[1] for line in log_lines(log)] == ["gemini:fake-model"]
+
+
+def test_log_that_cannot_be_written_never_stops_the_question(tmp_path):
+    blocked = tmp_path / "a_file"
+    blocked.write_text("x", encoding="utf-8")  # a file where the log folder should be
+    chain = LLMChain([Fake("gemini", HttpError(503)), Fake("groq", "ok")], failure_log=blocked / "ai_errors.log")
+    assert chain.ask("q")[0] == "ok"
+
+
+def test_no_log_file_given_writes_nothing(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(AllProvidersFailed):
+        LLMChain([Fake("gemini", HttpError(503))]).ask("q")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_default_chain_logs_to_logs_ai_errors(monkeypatch):
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)  # never read the real .env
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    from pathlib import Path
+    assert llm.default_chain(cache=False).failure_log == Path(llm.config.LOG_DIR) / "ai_errors.log"
