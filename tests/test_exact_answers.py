@@ -109,3 +109,20 @@ def test_book_fact_without_the_limit_shows_the_sentence():
            "source": {"doc": "coast.pdf", "page": 27, "quote": LIMIT_QUOTE}}
     fact, reason = checked_fact("tide", raw, [piece], Searcher)
     assert reason == "" and fact.text == LIMIT_QUOTE
+
+
+# --- "as long as" is a condition (OCR-03, 12 Nov 2026) --------------------------------
+LAUNCHERS = ("Launchers manufactured before January 1, 1981, and intended for use with approved signals, "
+             "are not required to be U.S. Coast Guard- approved as long as they remain in serviceable condition.")
+
+
+def test_as_long_as_is_a_condition():
+    question = "Launchers manufactured before what date are not required to be U.S. Coast Guard-approved?"
+    short = "Launchers manufactured before January 1, 1981, are not required to be U.S. Coast Guard-approved."
+    assert proof.dropped_condition(short, question, LAUNCHERS) == "as long as they remain in serviceable condition"
+    assert answer_with_conditions(question, short, [{"doc": "a.pdf", "page": 1, "quote": LAUNCHERS}]) == LAUNCHERS
+
+
+def test_answer_that_keeps_as_long_as_is_kept():
+    answer = "Before January 1, 1981, as long as they remain in serviceable condition."
+    assert proof.dropped_condition(answer, "Which launchers need no approval?", LAUNCHERS) == ""

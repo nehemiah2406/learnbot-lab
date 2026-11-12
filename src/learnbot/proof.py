@@ -60,7 +60,8 @@ LIMIT = re.compile(rf"\b(not more than|more than|less than|at least|up to)\s+(?=
 # What an OCR line below the confidence limit becomes (learnbot.ocr). Never proof.
 UNCLEAR = "[unclear text]"
 PARAGRAPH_NUMBER = re.compile(r"^\s*\(\d+\)\s*")
-CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding)\b([^.;,)]*)", re.IGNORECASE)
+# "as long as" added 12 Nov 2026 (OCR-03 dropped "as long as they remain in serviceable condition").
+CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding|as long as)\b([^.;,)]*)", re.IGNORECASE)
 
 
 def same_text(text):
