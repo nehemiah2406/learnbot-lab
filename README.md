@@ -67,7 +67,7 @@ All numbers come from [eval/results.md](eval/results.md) and the progress log in
 | Notebook (5 + 2) | 5/5 | **0** | 2/2 | 6.5 s |
 | Reading mode (5 + 2) | 5/5 | **0** | 2/2 | 6.1 s |
 | Book maker, new topics (5 + 2) | 4/5 (1 not tested, AI busy) | **0** | 2/2 | 9.0 s |
-| Research (5 + 2) | 3/5 | **0** after a scoring change ("156.800" = "156.8"); **1** in the original score | 2/2 | 9.0 s |
+| Research (5 + 2) | 4/5 (re-scored 12 Nov; first scored 3/5) | **0** after two scoring changes ("156.800" = "156.8"; an exact-quote answer with every expected number); **1** in the original score | 2/2 | 9.0 s |
 | Upload self-test, coast_pilot4_ch1.pdf | 5/5 (third try, not one clean run) | | normal traps 2/2 | 7.1 s |
 | Conditions rule (5 + 2) | 4/5 | **0** | 2/2 | 8.0 s |
 | File types .txt .md .csv .html .docx .pptx .xlsx (3 + 1 each) | 3/3 each | **0** | 1/1 each | |

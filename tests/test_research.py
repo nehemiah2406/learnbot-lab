@@ -80,6 +80,44 @@ def test_unproved_answer_says_not_found_on_the_web(text, reason):
     assert show(ans) == NOT_FOUND_WEB and FROM_THE_WEB not in show(ans) and NOT_FOUND not in show(ans)
 
 
+# --- Exception (bug #23): a web sentence with other numbers shows the exact sentence ---
+WIND_URL = "https://example.org/king-rocks"
+WIND = ("The King Rocks Wind Farm is a planned 105 megawatt (MW) wind farm, to be located approximately "
+        "35 kilometres north-east of Hyden and 350 kilometres east of Perth.")
+WIND_WEB = [{"title": "King Rocks Wind Farm", "url": WIND_URL, "content": f"Project page. {WIND} More soon."}]
+WIND_Q = "What is the capacity of the King Rocks Wind Farm?"
+
+
+def wind(answer="105 megawatt (MW)", quote=WIND):
+    return research(WIND_Q, FakeChain(json.dumps({"found": True, "answer": answer, "sources": [
+        {"doc": WIND_URL, "page": 1, "quote": quote}]})), web(WIND_WEB))
+
+
+def test_answer_that_leaves_out_other_numbers_shows_the_exact_sentence_with_its_link():
+    ans = wind()
+    assert ans.status == ANSWERED and ans.text == WIND and ans.sources[0]["doc"] == WIND_URL
+    assert show(ans).startswith(FROM_THE_WEB) and f"Source: {WIND_URL}" in show(ans)
+
+
+def test_sentence_over_60_words_is_still_refused():
+    long = WIND[:-1] + ", " + " ".join(["and the site is near the old rail line"] * 6) + "."
+    results = [{"title": "King Rocks", "url": WIND_URL, "content": long}]
+    ans = research(WIND_Q, FakeChain(json.dumps({"found": True, "answer": "105 megawatt (MW)", "sources": [
+        {"doc": WIND_URL, "page": 1, "quote": long}]})), web(results))
+    assert len(long.split()) > config.MAX_SENTENCE_ANSWER_WORDS
+    assert (ans.status, ans.text, ans.reason) == (REFUSED, NOT_FOUND_WEB, "proof:quote_not_focused")
+
+
+def test_quote_not_on_the_web_page_is_still_refused():
+    ans = wind(quote=WIND.replace("105", "150"))
+    assert (ans.status, ans.reason) == (REFUSED, "proof:quote_not_on_page")
+
+
+def test_number_not_in_the_quote_is_still_refused():
+    ans = wind(answer="120 megawatt (MW)")
+    assert (ans.status, ans.reason) == (REFUSED, "proof:number_not_in_quote")
+
+
 def test_no_web_results_asks_no_ai():
     chain = FakeChain()
     assert research(QUESTION, chain, web([])).text == NOT_FOUND_WEB
@@ -313,3 +351,40 @@ def test_scoring():
     assert score_web(ROW, True, ask('{"found": false}'))[0] == TRAP_REFUSED
     assert score_web(ROW, False, research(QUESTION, FakeChain(), failing("timeout")))[0] == NOT_TESTED
     assert score_web(ROW, True, research(QUESTION, FakeChain(fail=True), web()))[0] == NOT_TESTED
+
+
+# --- Page heading and the research scoring change (bug #23) ----------------------------
+GALE = ("Gale Warning\n:   A warning of sustained surface winds, or frequent gusts, in the range of 34 knots (39 mph) "
+        "to 47 knots (54 mph) inclusive, either predicted or occurring.")
+
+
+def test_heading_on_its_own_line_is_dropped_from_the_shown_sentence_only():
+    from learnbot.proof import without_heading
+    assert without_heading(GALE).startswith("A warning of sustained surface winds")
+    assert without_heading("Note: the answer is 5 knots.") == "Note: the answer is 5 knots."  # same line: kept
+    assert without_heading("Rule 9\n: keep to the side") == "Rule 9\n: keep to the side"  # digits: not a heading
+    assert without_heading("A long line of many words that is not a heading at all\n: x").startswith("A long line")
+
+
+def test_gale_sentence_is_shown_without_its_heading_and_keeps_its_quote():
+    results = [{"title": "Glossary", "url": URL, "content": GALE}]
+    text = json.dumps({"found": True, "answer": "34 knots to 47 knots", "sources": [{"doc": URL, "page": 1, "quote": GALE}]})
+    ans = research("What wind speeds does a gale warning indicate?", FakeChain(text), web(results))
+    assert ans.status == ANSWERED and ans.text.startswith("A warning of sustained") and "34 knots (39 mph)" in ans.text
+    assert ans.sources[0]["quote"] == GALE
+
+
+def test_exact_quote_with_every_expected_number_scores_right_even_with_extra_numbers():
+    row = {"expected_answer": "34 to 47 knots", "question": "What range of wind speeds does a gale warning indicate?"}
+    exact = SimpleAnswer("A warning of sustained surface winds, or frequent gusts, in the range of 34 knots (39 mph) to 47 knots (54 mph) inclusive, either predicted or occurring.", GALE)
+    assert score_web(row, False, exact) == (RIGHT, "exact quote with every expected number")
+    missing = SimpleAnswer("in the range of 34 knots (39 mph) inclusive", "in the range of 34 knots (39 mph) inclusive")
+    assert score_web(row, False, missing)[0] == WRONG  # an expected number is missing
+    short = SimpleAnswer("34 to 54 knots", GALE)
+    assert score_web(row, False, short)[0] == WRONG  # not the exact quote: the old strict rule applies
+
+
+class SimpleAnswer:
+    def __init__(self, text, quote):
+        self.status, self.text, self.reason, self.detail = "answered", text, "", ""
+        self.sources = [{"doc": URL, "page": 1, "quote": quote}]

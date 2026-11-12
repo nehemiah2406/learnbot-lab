@@ -126,9 +126,13 @@ def answer_within(question, searcher, chain, refusal):
     return ans
 
 
-def answer_question(question, searcher, chain, prompt=None):
+def answer_question(question, searcher, chain, prompt=None, sentence_if_unfocused=False):
     """Search, ask the AI, check the proof. Returns an Answer (never raises for AI errors).
-    prompt(question, pieces) -> text; default: the document prompt."""
+    prompt(question, pieces) -> text; default: the document prompt.
+    sentence_if_unfocused (Research only, Hari 12 Nov 2026): if the ONLY failure is that the
+    quote has other numbers the answer leaves out (quote_not_focused), the answer becomes the
+    exact quote (at most config.MAX_SENTENCE_ANSWER_WORDS words), checked again. Web sentences
+    often hold several facts ("105 MW ... 35 km ... 350 km")."""
     start = time.perf_counter()
     pieces = searcher.search(question)
 
@@ -156,6 +160,13 @@ def answer_question(question, searcher, chain, prompt=None):
     reranker = getattr(searcher, "reranker", None)
     topic_score = (lambda q, t: float(reranker.scores(q, [t])[0])) if reranker else None
     result = proof.check(question, reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
+    if not result.ok and sentence_if_unfocused and result.reason == "quote_not_focused" and len(reply["sources"]) == 1:
+        sentence = reply["sources"][0]["quote"]
+        if len(sentence.split()) <= config.MAX_SENTENCE_ANSWER_WORDS:
+            reply = {**reply, "answer": sentence}
+            result = proof.check(question, reply, pieces, searcher.library.page_text, searcher.rule_sets, topic_score)
+            if result.ok:  # shown without a page heading ("Gale Warning:"); the quote keeps it
+                reply = {**reply, "answer": proof.without_heading(sentence)}
     if not result.ok:
         return done(REFUSED, NOT_FOUND, reason=f"proof:{result.reason}", detail=result.detail, **info)
     # The source title (rule / section) comes from our piece, not from the AI. A list quote

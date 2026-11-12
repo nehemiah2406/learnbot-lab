@@ -59,6 +59,9 @@ NUMBER_WORDS = r"one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen
 LIMIT = re.compile(rf"\b(not more than|more than|less than|at least|up to)\s+(?=\$?\d|(?:{NUMBER_WORDS})\b)", re.IGNORECASE)
 # What an OCR line below the confidence limit becomes (learnbot.ocr). Never proof.
 UNCLEAR = "[unclear text]"
+# A page heading on its own line, then a colon at the start of the next line ("Gale Warning",
+# new line, ":   A warning ..."), as glossary web pages write it: at most 6 words, letters only. Shown answers drop it.
+PAGE_HEADING = re.compile(r"^\s*[A-Za-z][A-Za-z '()-]{0,60}\n\s*:\s*")
 PARAGRAPH_NUMBER = re.compile(r"^\s*\(\d+\)\s*")
 # "as long as" added 12 Nov 2026 (OCR-03 dropped "as long as they remain in serviceable condition").
 CONDITION = re.compile(r"\b(except|unless|only if|provided that|other than|excluding|as long as)\b([^.;,)]*)", re.IGNORECASE)
@@ -117,6 +120,14 @@ def dropped_limit(answer, question, quote):
         if match.group(1).lower() not in have:
             return match.group(1)
     return ""
+
+
+def without_heading(text):
+    """The text without a leading page heading of the shape PAGE_HEADING, else unchanged."""
+    match = PAGE_HEADING.match(text or "")
+    if match and len(match.group(0).split()) <= 7:  # up to 6 heading words + the colon
+        return text[match.end():]
+    return text or ""
 
 
 def without_paragraph_number(text):

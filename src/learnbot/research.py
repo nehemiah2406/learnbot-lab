@@ -147,7 +147,7 @@ def research(question, chain, search_web=tavily_search):
     """An Answer that is safe to show: from the web, not found, or a friendly message.
     The type of any web or AI failure is recorded and kept in the answer's reason."""
     try:
-        ans = answer_question(question, WebSearcher(search_web), chain, build_prompt)
+        ans = answer_question(question, WebSearcher(search_web), chain, build_prompt, sentence_if_unfocused=True)
     except WebSearchFailed as failed:
         text = {"no_key": NO_KEY, "daily_limit": DAILY_LIMIT}.get(failed.kind, WEB_BUSY)
         record_failure(f"web:{failed.kind}")

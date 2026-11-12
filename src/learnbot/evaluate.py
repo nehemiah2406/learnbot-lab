@@ -4,7 +4,7 @@
 
 from collections import Counter
 
-from learnbot import config
+from learnbot import config, proof
 from learnbot.baseline import NOT_FOUND, Hit, tokenize
 from learnbot.eval_check import (
     normalize, numbers_in, parse_other_answers, parse_sources, row_pages, split_pair,
@@ -134,10 +134,20 @@ def same_values(text):
     return {n.rstrip("0").rstrip(".") if "." in n else n for n in same_numbers(text)}
 
 
+def is_exact_quote(ans):
+    """True if the shown answer is its one source's exact quote (a leading page heading may be dropped)."""
+    if len(ans.sources) != 1:
+        return False
+    quote = ans.sources[0]["quote"]
+    return proof.same_text(ans.text) in (proof.same_text(quote), proof.same_text(proof.without_heading(quote)))
+
+
 def score_web(row, is_trap, ans):
     """(outcome, reason) for one research answer. Web sources cannot be listed in advance, so
     a real question is right if the numbers match the expected answer. Web pages write the
-    same value in different forms, so "156.800" and "156.8" count as the same number here."""
+    same value in different forms, so "156.800" and "156.8" count as the same number here.
+    An answer that IS its exact quote (research exception, bug #23) is right if it contains every
+    expected number, even with extra ones: "34 knots (39 mph) to 47 knots (54 mph)" (Hari, 12 Nov 2026)."""
     if ans.status == "ai_busy":
         return NOT_TESTED, ans.reason
     if is_trap:
@@ -145,6 +155,8 @@ def score_web(row, is_trap, ans):
     if ans.status != "answered":
         return MISSED, ans.reason + (f" ({ans.detail})" if ans.detail else "")
     expected, shown = same_values(row["expected_answer"]), same_values(ans.text)
+    if is_exact_quote(ans) and expected <= shown:
+        return RIGHT, "exact quote with every expected number"
     if not expected <= shown or not shown <= expected | same_values(row["question"]):
         return WRONG, f"numbers differ: expected {sorted(expected)}, shown {sorted(shown)}"
     return RIGHT, ""

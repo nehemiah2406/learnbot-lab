@@ -753,15 +753,17 @@ Refused 6/7; answered 1; not tested (AI busy) 0; 9 AI calls; slowest 7.1 s.
 
 Hari approved the change after the run: in research scoring only, the same value written differently counts as the same number ("156.800" and "156.8"). WEB-04 was re-scored from its recorded answer (0 AI calls, 0 searches); the answer itself did not change. Document scoring stays exact, and the two refusals were not loosened. Not a clean first run.
 
+**Re-scored on 12 Nov 2026 after a code change and a second scoring change (bug #23, Hari's OK; 0 AI calls, 0 searches).** Research now shows the exact sentence when the only failure is `quote_not_focused` (the quote has other numbers) and the sentence has at most 60 words; a leading page heading on its own line ("Gale Warning" + new line + ":") is dropped from the shown sentence. Research scoring only: an answer that is its exact quote counts as right when it contains every expected number, even with extra ones. WEB-01 was replayed from its saved AI reply, re-checked with its quote as the page text (the web pages of this run were not saved). **WEB-01 original score: missed (proof:quote_not_focused).** With the new code and the old scoring it would have been wrong (39 and 54 are the same speeds in mph); with the new scoring it is right. Now: right 4/5, wrong 0.
+
 Web text changes, so these numbers are for this run only. "Wrong" means the numbers differ from the expected answer, or a trap got an answer.
 
 | Right | Wrong | Traps refused | Missed | Not tested | Slowest | AI calls |
 |---|---|---|---|---|---|---|
-| 3/5 | 0 | 2/2 | 2 | 0 | 9.0 s | 8 |
+| 4/5 (before 12 Nov: 3/5) | 0 | 2/2 | 1 | 0 | 9.0 s | 8 |
 
 | Id | Outcome | AI | Time | Reason |
 |---|---|---|---|---|
-| WEB-01 | missed | gemini:gemini-3.1-flash-lite | 3.9 s | proof:quote_not_focused (quote has other measurements: 39 mph, 54 mph) |
+| WEB-01 | right (original: missed) | gemini:gemini-3.1-flash-lite | 3.9 s | re-scored 12 Nov: shows the exact sentence "A warning of sustained surface winds, or frequent gusts, in the range of 34 knots (39 mph) to 47 knots (54 mph) inclusive, ..."; originally proof:quote_not_focused (quote has other measurements: 39 mph, 54 mph) |
 | WEB-02 | right | groq:openai/gpt-oss-120b | 9.0 s |  |
 | WEB-03 | missed | gemini:gemini-3.1-flash-lite | 3.2 s | proof:off_topic (question numbers not in the quote: one) |
 | WEB-04 | right (original: wrong) | gemini:gemini-3.1-flash-lite | 3.0 s | re-scored: 156.800 and 156.8 are the same value |
