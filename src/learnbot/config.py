@@ -88,6 +88,7 @@ STUDY_MIN_PIECE_WORDS = 25  # a shorter piece is not used for a quiz with no top
 
 # --- Day 2: upload self-test, notebook, reading mode ----------------------------------
 UPLOAD_DIR = "data/uploads"  # uploaded files (gitignored)
+RAW_DIR = "data/raw"  # the public test PDFs: the app never changes or deletes them
 TEST_DOCS_DIR = "data/raw"  # the public test documents (gitignored)
 SELF_TEST_QUESTIONS = 5
 SELF_TEST_MIN_PASS = 3  # below this the user sees a warning but can still use the file

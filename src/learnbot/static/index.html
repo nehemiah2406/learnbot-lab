@@ -37,6 +37,16 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visib
 .badge.good { background: #DCFCE7; color: #166534; }
 .badge.busy { background: #E0F2FE; color: #075985; }
 .empty-docs { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.doc-row { display: flex; align-items: center; gap: 2px; }
+.doc-row .doc { flex: 1; min-width: 0; }
+.trash { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent;
+         border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
+.trash:hover, .trash:focus-visible { color: var(--red); background: #FEE2E2; }
+.confirm { margin: 2px 0 4px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--page);
+           font-size: 13px; overflow-wrap: anywhere; }
+.confirm .small-button { margin: 7px 6px 0 0; }
+.small-button.danger { border-color: var(--red); color: var(--red); }
+.small-button.danger:hover:not(:disabled) { background: #FEE2E2; }
 .add { width: 100%; padding: 8px; border: 1px dashed var(--teal); border-radius: 8px; background: #fff;
        color: var(--teal-dark); font-weight: 600; cursor: pointer; }
 .add:hover { background: var(--teal-soft); }
@@ -176,6 +186,22 @@ const HEADERS = {"X-LearnBot": "1"};
 const JSON_HEADERS = {...HEADERS, "Content-Type": "application/json"};
 const POLL_MS = 2000;
 const NOT_RUNNING = "LearnBot is not answering. Please check that it is still running.";
+const CHOOSE_A_DOCUMENT = "Choose a document.";
+const TRASH_PATHS = ["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6", "M10 11v6", "M14 11v6"];
+
+function trashIcon() {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  const look = {width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2",
+                "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true"};
+  for (const [key, value] of Object.entries(look)) svg.setAttribute(key, value);
+  for (const d of TRASH_PATHS) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}
 const STARTING = "LearnBot is starting. This takes a minute or two.";
 const NO_DOCUMENT = "Add a document or choose one first.";
 
@@ -201,6 +227,9 @@ let ready = false;
 let asking = false;
 let shownNotices = "";
 let shownPage = {doc: "", page: 0};
+let confirming = "";  // the file whose "Delete ...?" row is open
+let cleared = false;  // the selected file was deleted: wait until the user chooses one
+let shownDocuments = [];
 const panels = {};
 
 function el(tag, className, text) {
@@ -231,19 +260,67 @@ function problemCard(text) {
 function drawDocuments(documents) {
   const list = $("docs");
   list.replaceChildren();
-  if (!documents.some((d) => d.name === selected)) selected = documents.length ? documents[0].name : "";
+  shownDocuments = documents;
+  if (!documents.some((d) => d.name === selected)) selected = documents.length && !cleared ? documents[0].name : "";
+  if (!documents.some((d) => d.name === confirming && d.badgeKind === "good")) confirming = "";
   for (const d of documents) {
     const button = el("button", "doc" + (d.name === selected ? " selected" : ""));
     button.type = "button";
     button.title = d.name;
     if (d.name === selected) button.setAttribute("aria-current", "true");
     button.append(el("span", "doc-name", d.name), el("span", "badge " + d.badgeKind, d.badge));
-    button.addEventListener("click", () => { selected = d.name; refresh(); });
+    button.addEventListener("click", () => { selected = d.name; cleared = false; refresh(); });
+    const row = el("div", "doc-row");
+    row.append(button);
+    if (d.badgeKind === "good") {  // a file still being added can't be deleted yet
+      const trash = el("button", "trash");
+      trash.type = "button";
+      trash.title = "Delete " + d.name;
+      trash.setAttribute("aria-label", "Delete " + d.name);
+      trash.append(trashIcon());
+      trash.addEventListener("click", () => { confirming = d.name; drawDocuments(shownDocuments); });
+      row.append(trash);
+    }
     const item = el("li");
-    item.append(button);
+    item.append(row);
+    if (confirming === d.name) item.append(confirmDelete(d.name));
     list.append(item);
   }
   $("no-docs").hidden = documents.length > 0;
+}
+
+function confirmDelete(name) {
+  const box = el("div", "confirm", "Delete " + name + "?");
+  box.setAttribute("role", "group");
+  const yes = smallButton("Yes, delete", () => deleteDocument(name));
+  yes.classList.add("danger");
+  const cancel = smallButton("Cancel", () => { confirming = ""; drawDocuments(shownDocuments); });
+  box.append(el("br"), yes, cancel);
+  return box;
+}
+
+async function deleteDocument(name) {
+  confirming = "";
+  let reply;
+  try {
+    reply = await send("/api/document/delete", {document: name});
+  } catch (problem) {
+    reply = problemCard(NOT_RUNNING);
+  }
+  if (reply.kind === "busy") {
+    drawDocuments(shownDocuments);
+    $("notices").prepend(el("div", "notice error", name + ": " + reply.text));
+    return;
+  }
+  if (selected === name) {
+    selected = "";
+    cleared = true;
+  }
+  if (shownPage.doc === name) {
+    shownPage = {doc: "", page: 0};
+    panels.reading.querySelector(".reader").replaceChildren(el("div", "text", CHOOSE_A_DOCUMENT));
+  }
+  await refresh();
 }
 
 function drawNotices(notices) {
@@ -263,7 +340,7 @@ function drawScore(score) {
 
 function hintFor(name) {
   if (!ready) return STARTING;
-  if (MODES[name].needsDocument && !selected) return NO_DOCUMENT;
+  if (MODES[name].needsDocument && !selected) return cleared ? CHOOSE_A_DOCUMENT : NO_DOCUMENT;
   return MODES[name].hint ? MODES[name].hint() : "";
 }
 

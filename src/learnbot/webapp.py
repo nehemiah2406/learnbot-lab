@@ -43,7 +43,7 @@ from learnbot.quiz import make_question
 from learnbot.reading import NOT_ON_PAGE, ask_page, view_page
 from learnbot.research import FROM_THE_WEB, NOT_FOUND_WEB, research, tavily_search
 from learnbot.search import Searcher, default_searcher
-from learnbot.selftest import self_test_once
+from learnbot.selftest import saved_path, self_test_once
 from learnbot.upload import upload_file
 
 HOST = "127.0.0.1"
@@ -60,6 +60,8 @@ AI_NOT_SET = "The AI is not set up: no AI key was found."
 AI_LIMIT = "The AI call limit for this session is used up. Please restart LearnBot."
 UPLOAD_FAILED = "This file could not be added. Please try again."
 CHOOSE_DOCUMENT = "Please add or choose a document first."
+DELETE_BUSY = "LearnBot is busy with a file or a question. Please try again in a minute."
+NOT_UPLOADED = "This document is not in your uploaded files."
 ITEM_GONE = "This item is too old. Please make a new one."
 WENT_WRONG = "Something went wrong. Please try again."
 SECURITY_HEADERS = {
@@ -171,6 +173,43 @@ class App:
         documents += [{"name": name, "badge": ADDING, "badgeKind": "busy"} for name in sorted(active - known)]
         return {"ready": self.ready.is_set(), "working": bool(active), "documents": documents, "notices": notices,
                 "quizScore": self.quiz_score()}
+
+    def delete_document(self, name):
+        """Delete one uploaded file (only from the upload folder, never data/raw), then its pieces,
+        vectors and saved self-test, unless the same file is still in data/raw or uploaded under
+        another name (they share them). Notebook items stay. Returns the new status()."""
+        if not self.ready.is_set():
+            raise BadRequest(STILL_LOADING)
+        uploads = {p.name: p for p in self.paths()}
+        if not name or Path(name).name != name or "/" in name or "\\" in name or name not in uploads:
+            raise BadRequest(NOT_UPLOADED)
+        with self.state_lock:
+            being_added = name in self.active
+        if being_added or not self.ai_lock.acquire(blocking=False):
+            raise BadRequest(DELETE_BUSY)
+        try:
+            path = uploads[name]
+            digest = file_hash(path)
+            path.unlink()
+            raw = Path(config.RAW_DIR)
+            others = list(self.paths()) + (sorted(p for p in raw.iterdir() if p.is_file()) if raw.is_dir() else [])
+            if digest not in {file_hash(p) for p in others}:
+                self.forget_stored(digest)
+            self.used_pieces = {key: used for key, used in self.used_pieces.items() if key[1] != name}
+            self.searcher = self.make_searcher(self.paths(), self.searcher)
+        finally:
+            self.ai_lock.release()
+        return self.status()
+
+    def forget_stored(self, digest):
+        """Remove one file's pieces, vectors and saved self-test from storage."""
+        storage = Path(self.storage_dir or config.STORAGE_DIR)
+        for pieces in (storage / "pieces").glob(f"{digest}-v*.json"):
+            pieces.unlink(missing_ok=True)
+        saved_path(digest, self.storage_dir).unlink(missing_ok=True)
+        store = getattr(getattr(self.searcher, "library", None), "store", None)
+        if store is not None:
+            store.remove(digest)
 
     def add_upload(self, name, data):
         """Queue one uploaded file. The page polls status() for the result."""
@@ -492,6 +531,7 @@ ROUTES = {
     "/api/page/ask": lambda app, d: app.ask_on_page(str(d["document"]), int(d["page"]), field_text(d, "question")),
     "/api/book": lambda app, d: app.make_book(str(d["document"]), field_topics(d)),
     "/api/research": lambda app, d: app.research(field_text(d, "question")),
+    "/api/document/delete": lambda app, d: app.delete_document(str(d["document"])),
 }
 
 

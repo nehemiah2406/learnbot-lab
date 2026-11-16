@@ -165,6 +165,10 @@ class VectorStore:
             )
         return True
 
+    def remove(self, digest):
+        """Delete every stored vector of one file (a deleted upload)."""
+        self.collection.delete(where={"file_hash": digest})
+
     @staticmethod
     def metadata(document, number, fingerprint):
         return {"file_hash": document.file_hash, "piece": number, "pieces_hash": fingerprint}
